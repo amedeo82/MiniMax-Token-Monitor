@@ -1,0 +1,100 @@
+{
+	"type": "npm",
+	"name": "creditgauge",
+	"tags": {
+		"latest": "1.2.4"
+	},
+	"versions": [
+		{
+			"version": "1.2.4",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.2.4",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.2.4/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.2.4"
+			}
+		},
+		{
+			"version": "1.2.1",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.2.1",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.2.1/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.2.1"
+			}
+		},
+		{
+			"version": "1.2.0",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.2.0",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.2.0/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.2.0"
+			}
+		},
+		{
+			"version": "1.1.11",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.11",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.11/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.1.11"
+			}
+		},
+		{
+			"version": "1.1.10",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.10",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.10/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.1.10"
+			}
+		},
+		{
+			"version": "1.1.9",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.9",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.9/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.1.9"
+			}
+		},
+		{
+			"version": "1.1.8",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.8",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.8/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.1.8"
+			}
+		},
+		{
+			"version": "1.1.7",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.7",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.7/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.1.7"
+			}
+		},
+		{
+			"version": "1.1.6",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.6",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.6/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.1.6"
+			}
+		},
+		{
+			"version": "1.1.0",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.0",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.1.0/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.1.0"
+			}
+		},
+		{
+			"version": "1.0.0",
+			"links": {
+				"self": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.0.0",
+				"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.0.0/entrypoints",
+				"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.0.0"
+			}
+		}
+	],
+	"links": {
+		"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge"
+	}
+}

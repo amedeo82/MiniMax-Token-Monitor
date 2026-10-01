@@ -1,0 +1,20 @@
+[
+  {
+    "url": "https://github.com/steipete/CodexBar/issues/1326",
+    "name": "MiniMax usage not updating — stuck at 100% remaining, 0",
+    "snippet": "... token-plan remains responses, zero count fields with remaining-percent usage, weekly lanes, and the API-token /v1/token_plan/remains path.",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://m5ware.com/projects/3878?from=%2F%3Fq%3Dopenai",
+    "name": "Token Link · M5Ware",
+    "snippet": "Requests are restricted to the selected official host ( www.minimax.io or www.minimaxi.com ) and use the Token Plan remains endpoint. GLM. Store a GLM Coding ...",
+    "host_name": "m5ware.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  }
+]

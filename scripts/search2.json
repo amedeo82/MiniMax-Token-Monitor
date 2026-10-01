@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://platform.minimax.io/docs/api-reference/api-overview",
+    "name": "API Overview - Models - MiniMax API Docs",
+    "snippet": "MiniMax API capabilities including language, speech, This API includes 5 endpoints: Upload, List, Retrieve, Retrieve Content, Delete. Missing:  quota  remaining",
+    "host_name": "platform.minimax.io",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/token-plan/faq",
+    "name": "FAQs - Models - MiniMax API Docs",
+    "snippet": "For API endpoints that have pay-as-you-go pricing, usage deducts from the included Token Plan quota according to the corresponding endpoint pricing. The usage ... Missing:  minimaxi.  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/MiniMax-AI/MiniMax-M2/issues/88",
+    "name": "API endpoint /coding_plan/remains requires cookie session",
+    "snippet": "The API endpoint https://www.minimaxi.com/v1/api/openplatform/coding_plan/remains documented for checking Token Plan usage does not work with ... Missing:  remaining  | Show results with:",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/MiniMax_AI/comments/1ttirg0/can_someone_explain_how_the_new_token_plan_quota",
+    "name": "Can someone explain how the new Token Plan Quota works?",
+    "snippet": "Minimax API through New-API proxy, which allows me to track and log the exact number of requests and token usage. The system logs clearly prove ... Missing:  endpoint  | Show results with:",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://minimax-ai.chat/docs/minimax-api-key-base-url",
+    "name": "MiniMax API Key: Base URLs, Regions & Authentication",
+    "snippet": "This guide gives you the base URLs verified on July 18, 2026, dashboard links, authentication headers, environment variables, model-listing ... Missing:  remaining  | Show results with:",
+    "host_name": "minimax-ai.chat",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/pricing/overview",
+    "name": "Pricing Overview - Models - MiniMax API Docs",
+    "snippet": "Pricing Update Notice — Effective July 22, 2026, the API-vlm price will be adjusted to $0.01 per call. Accordingly, the token quota deducted per API-vlm call ...",
+    "host_name": "platform.minimax.io",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/@rowanblackwoon/how-id-start-using-minimax-m3-a-hands-on-guide-to-the-1m-token-model-5e2c6329277f",
+    "name": "How I'd Start Using MiniMax M3: A Hands-On Guide to the 1M",
+    "snippet": "MiniMax M3 gives you a 1,000,000-token context window, MiniMax charges a standard rate for calls with 512K input tokens or fewer, and a context ...",
+    "host_name": "medium.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/MiniMax-AI/MiniMax-M2/issues/99",
+    "name": "returns remaining quota, not consumed usage · Issue #99",
+    "snippet": "The MiniMax API endpoint /coding_plan/remains returns fields current_interval_usage_count and current_weekly_usage_count which are ... Missing:  minimaxi.  | Show results with:",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/subscribe/token-plan",
+    "name": "Token Plan - MiniMax API Platform",
+    "snippet": "The Token Plan is designed for individual, interactive developer use, with higher-tier plans offering increased quotas. It is recommended to use pay-as-you-go ...",
+    "host_name": "platform.minimax.io",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dev.to/karleeov/minimax-api-keys-auth-getting-started-video-generation-basics-43ji",
+    "name": "MiniMax API Keys & Auth: Getting Started (Video Generation",
+    "snippet": "Before you generate a single frame with MiniMax, you need to understand how the API authenticates, where it lives, and why everything is ...",
+    "host_name": "dev.to",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

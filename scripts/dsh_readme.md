@@ -1,0 +1,254 @@
+<p align="right">
+  <strong>English</strong> · <a href="./README_ZH.md">简体中文</a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/dsh-provider-usage"><img src="https://img.shields.io/npm/v/dsh-provider-usage.svg?cacheSeconds=300" alt="npm version"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/DeepSeek%20Harness-plugin-202724" alt="DeepSeek Harness plugin">
+</p>
+
+# dsh-provider-usage
+
+**Every provider's balance, one glance away.** A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that floats a small draggable usage ball over the Web GUI — no more logging into each provider console to check whether you are about to run out of credit mid-session.
+
+## Features
+
+- **Auto-detection** — enumerates the provider routes registered in the current profile (`ctx.llm`); zero configuration for well-known routes.
+- **Per-kind wire adapters** — routes with no public balance/usage API (Google, Mistral, Groq, Bedrock, Azure, Qwen Token Plan, …) are listed as `unsupported` instead of being silently dropped:
+
+  | kind | routes | query | shows |
+  |---|---|---|---|
+  | `deepseek` | `deepseek-official`, `deepseek` | `GET {baseURL}/user/balance` | total / granted / topped-up balance |
+  | `moonshot` | `moonshotai-cn`, `moonshotai` | `GET {baseURL}/users/me/balance` | available / voucher / cash balance |
+  | `kimi-coding` | `kimi-coding` | `GET {baseURL}/v1/usages` | weekly usage + rate-limit windows, reset countdown |
+  | `openrouter` | `openrouter` | `GET {origin}/api/v1/credits` | credits used / total |
+  | `github-copilot` | `github-copilot` | `GET api.github.com/copilot_internal/user` | plan usage snapshots (paid) or monthly usage (free) |
+  | `openai-codex` | `openai-codex` | `GET {baseURL}/wham/usage` | ChatGPT subscription 5h / weekly windows + credits + spend control (**OAuth login**, not an API key — see [OpenAI Codex via OAuth](#openai-codex-via-oauth)) |
+  | `openai` | `openai` | `GET {origin}/v1/organization/costs` | current-month spend (**admin key required**; a regular key fails with 403) |
+  | `anthropic` | `anthropic` | `GET {baseURL}/v1/organizations/cost_report` | current-month spend (**admin key required**, `x-api-key` auth) |
+  | `minimax` | `minimax`, `minimax-cn` | `GET {origin}/v1/api/openplatform/coding_plan/remains` | Coding Plan 5h / weekly remaining % |
+  | `zai` | `zai`, `zai-coding-cn` | `GET {origin}/api/monitor/usage/quota/limit` | GLM Coding Plan windows (raw key in `Authorization`, no Bearer) |
+  | `opencode` | `opencode`, `opencode-go` | `GET {baseURL}/usage` | Zen Go rolling / weekly / monthly windows |
+  | `vercel-ai-gateway` | `vercel-ai-gateway` | `GET {baseURL}/v1/credits` | team credit balance |
+  | `xai` | `xai` | `GET {baseURL}/billing/credits` | prepaid balance (USD) |
+  | `volcengine-ark-agent` | `ark-agent-plan`, `ark-agent-plan-cn` | `POST open.volcengineapi.com GetAFPUsage` | Volcengine Ark Agent Plan 5h / weekly / monthly windows (**needs IAM AK/SK signing**, not the inference key — see [Volcengine Ark Agent Plan / Coding Plan](#volcengine-ark-agent-plan--coding-plan)) |
+  | `volcengine-ark-coding` | `ark-coding-plan`, `ark-coding-plan-cn` | `POST open.volcengineapi.com GetCodingPlanUsage` | Volcengine Ark Coding Plan session / weekly / monthly windows (same AK/SK pair) |
+- **Credentials stay safe** — API keys are resolved per request through the harness credentials service (environment variables / `~/.dsh/.credentials.yaml`); never cached, never written to disk. For OAuth providers (OpenAI Codex) the plugin reads the grant record the sign-in flow stored, and refreshes it transparently when it is about to expire. The Volcengine Ark plan routes are the one case where a query needs more than the route's own key: plan usage is a *signed control-plane* call, so those two kinds read an IAM AK/SK pair instead (see [Volcengine Ark Agent Plan / Coding Plan](#volcengine-ark-agent-plan--coding-plan)).
+- **Floating ball widget** — a draggable floating ball opens the usage panel. Drop it anywhere in the viewport (position persisted); it docks by default at the bottom-left of the chat area with equal margins, and the panel-header home button sends it back. The panel scrolls when the provider list grows past its height, and its top edge is draggable to resize it taller or shorter (height persisted). The halo around the ball encodes the health of the provider **in use** — the focused session's own selection (its composer's model seat), tracked live on the client, so switching sessions re-highlights that session's provider immediately without re-selecting a model: green all good, amber when a usage window has under 30% left or a balance below the yellow threshold, red on query failure / missing key / usage ≥90% / balance below the red threshold. Idle providers running low do not color the ball — switch to another provider with enough headroom and the ball turns green again; the panel marks the in-use provider and still lists every provider's numbers.
+- **Version badge** — the panel header shows the running plugin version next to the title, so it is obvious which release is loaded.
+- **Bilingual panel** — built-in Chinese/English UI; follows the harness language by default, with a one-click toggle in the panel header (persisted in localStorage).
+- **Configurable refresh** — adjustable in the panel (15s–30min, persisted in localStorage); the default comes from the plugin config.
+- **Configurable balance thresholds** — balance-type providers (DeepSeek, Moonshot, Vercel AI Gateway, xAI) and the `credits` rows of usage-type providers (OpenRouter, OpenAI Codex) turn red below the red threshold and yellow below the yellow threshold, compared in the balance's own currency (defaults: red < 10, yellow < 30, whether CNY or USD). Both values are editable directly in the panel footer (persisted in localStorage); the defaults come from the plugin config. For providers reporting both a subscription plan and credits (e.g. OpenAI Codex), the two are OR'ed: the ball stays green while either one has enough left, and when both are running low the lighter warning wins (the plan is normally consumed before credits).
+- **Manual providers** — add arbitrary gateways (e.g. a self-hosted DeepSeek-compatible endpoint) via config.
+
+## Screenshots
+
+The floating ball (bottom-left, with the green healthy halo) and the open usage panel:
+
+| DeepSeek in use | OpenAI Codex in use |
+| --- | --- |
+| ![DeepSeek balance panel (English)](docs/panel-ds-en.png) | ![OpenAI Codex usage panel (English)](docs/panel-codex-en.png) |
+
+## OpenAI Codex via OAuth
+
+OpenAI Codex is a **ChatGPT-subscription** provider: it authenticates with an OAuth access token, not an API key, so there is nothing to paste into a key field. dsh itself has no OAuth *button* for this route — but this plugin can still query its usage, because it reads the OAuth grant out of the harness credential store. Set the provider up once, and the usage panel shows your real 5-hour / weekly Codex windows.
+
+### 1. Make sure the route exists
+
+The sign-in writes a grant record addressed `llm-pi-ai/openai-codex`, and the route has to be configured for `ctx.llm` to list it. With the stock `llm-pi-ai` adapter mounted (default in the web profile), an empty profile is enough — e.g. in `~/.dsh/settings.yaml`:
+
+```yaml
+llm-pi-ai:
+  providers:
+    openai-codex: {}
+```
+
+### 2. Sign in through the harness authorization seam
+
+`dsh-llm-pi-ai` registers an "OpenAI (ChatGPT Plus/Pro)" OAuth flow for `openai-codex` on the harness authorization seam (`ctx.authorization`, credential key `llm-pi-ai/openai-codex`). Complete it from any surface that runs that flow — a sign-in entry on the harness model/authorization UI, or any pi-ai client whose login persists through the harness credential store. Finish the browser (or device-code) flow with your ChatGPT account. The harness then stores the grant under `~/.dsh/.credentials.yaml` as `llm-pi-ai/openai-codex`:
+
+```yaml
+records:
+  llm-pi-ai/openai-codex:
+    kind: grant
+    payload:
+      type: oauth
+      access: <access token>
+      refresh: <refresh token>
+      expires: <epoch ms>
+      accountId: <chatgpt account id>
+```
+
+> The grant must land in the harness credential store (the record above). Codex clients that keep their own credential file (e.g. `dsh-codex`'s `$DSH_HOME/.openai-codex-auth.json`, or the Codex CLI's `~/.codex/auth.json`) do not write this record, so this plugin cannot see them.
+
+### 3. Watch the usage
+
+That's it. The route is auto-detected (`ctx.llm` lists `openai-codex`), and the plugin:
+
+1. reads the grant record from the credential store on every poll (no caching),
+2. refreshes the OAuth token automatically when it is within 30 s of expiry, deciding **and** rotating inside the store's exclusive lock — so a concurrent process that already rotated the grant is adopted instead of spending the same single-use refresh token twice, and a write that fails is reported rather than swallowed,
+3. calls `GET https://chatgpt.com/backend-api/wham/usage` with `Authorization: Bearer <access>` and the `ChatGPT-Account-Id` header derived from the token's own JWT claim, retrying once after a refresh if the endpoint answers `401`.
+
+The panel then shows your subscription's **5h limit**, **weekly** windows (used %, reset countdown) plus **credits** and **spend control** balances when the plan reports them. If the grant is missing the card reads "OAuth authorization missing (llm-pi-ai/openai-codex)" — sign in again with step 2. If upstream instead *rejects* the stored refresh token (`refresh_token_reused` / `invalid_grant`, i.e. the token was already spent or revoked and the rotation never landed here), the card reads "OAuth authorization expired — sign in to Codex again" with the raw upstream detail on hover, and the plugin stops calling the token endpoint for ten minutes instead of once per poll.
+
+### 4. Troubleshooting: intermittent "Our servers are currently overloaded"
+
+The Codex backend occasionally answers with `Codex error: Our servers are currently overloaded. Please try again later.`, and the harness fails the round with `PI_AI_ERROR`. This is **transient overload on OpenAI's side** (account, quota, and network are usually fine — `GET /wham/usage` confirms window headroom), yet the default configuration never retries, for two reasons:
+
+1. pi-ai's Codex client recognizes `overloaded` as retryable, but its default retry count is 0 (`dsh-llm-pi-ai` explicitly passes `maxRetries: 0`);
+2. once the error bubbles up, its text contains no `5xx` / `rate limit` / `timeout` keyword, so it is classified as the catch-all `PI_AI_ERROR` — which is **not** among `dsh-llm-retry`'s default retryable codes (`EMPTY_RESPONSE` / `RATE_LIMIT` / `SERVER` / `TIMEOUT` / `TRANSPORT`), so the round fails immediately.
+
+Add a `retryPolicy` for this provider in `~/.dsh/settings.yaml` that includes `PI_AI_ERROR` in the retryable codes (takes effect on a new session):
+
+```yaml
+llm-pi-ai:
+  providers:
+    openai-codex:
+      retryPolicy:
+        mode: normal
+        maxRetries: 10
+        retryableCodes:
+          - EMPTY_RESPONSE
+          - RATE_LIMIT
+          - SERVER
+          - TIMEOUT
+          - TRANSPORT
+          - PI_AI_ERROR
+        backoff:
+          initialDelayMs: 2000   # first retry delay, doubled each attempt
+          maxDelayMs: 60000      # per-attempt delay cap
+          jitterRatio: 0.2       # ±20% jitter
+```
+
+Do not confuse this with the other, **deterministic** failure: some models are unavailable to ChatGPT-subscription accounts, and the backend answers `400 The '<model>' model is not supported when using Codex with a ChatGPT account.` (observed with e.g. `gpt-5.3-codex-spark`, `gpt-5-codex`). That is a permanent error — retrying won't help; switch to a model your account supports (e.g. the `gpt-5.4` / `gpt-5.5` / `gpt-5.6` families).
+
+## Volcengine Ark Agent Plan / Coding Plan
+
+Volcengine Ark's **subscription plans** (Agent Plan / Coding Plan) do not expose their quota on the inference endpoint. It lives on Volcengine's **control plane** (OpenTOP OpenAPI) and has to be signed with an **IAM AK/SK pair** (V4 HMAC-SHA256). The plan key on the route (`ARK_AGENT_PLAN_API_KEY`, …) is a data-plane key that only authorizes model calls — quoting it for usage is refused upstream (observed: `GetAFPUsage requires Volcengine Ark SSO STS`), so those routes need the AK/SK pair *in addition to* the inference key.
+
+### 1. The route
+
+The `baseURL` picks the adapter: a path containing `/api/plan` is an Agent Plan, `/api/coding` a Coding Plan.
+
+```yaml
+llm-pi-ai:
+  providers:
+    ark-agent-plan:
+      displayName: Volcengine Ark - Agent Plan
+      apiKeyEnv: ARK_AGENT_PLAN_API_KEY
+      api: openai-responses
+      baseURL: https://ark.cn-beijing.volces.com/api/plan/v3
+    ark-coding-plan:
+      displayName: Volcengine Ark - Coding Plan
+      apiKeyEnv: ARK_CODING_PLAN_API_KEY
+      baseURL: https://ark.cn-beijing.volces.com/api/coding   # Anthropic wire; use /api/coding/v3 for the OpenAI-compatible endpoint
+```
+
+The route id is arbitrary; the well-known ids `ark-agent-plan`, `ark-coding-plan`, `ark-agent-plan-cn` and `ark-coding-plan-cn` are recognized even when the profile omits `baseURL`.
+
+### 2. Configure the AK/SK pair
+
+Create or read an Access Key ID / Secret Access Key in the Volcengine console under Access Control (IAM) → Access keys (read access is enough for quota), then supply it either way:
+
+```yaml
+# ~/.dsh/.credentials.yaml (a process environment variable or a project .env of the same name works too)
+refs:
+  VOLC_ARK_ACCESS_KEY_ID: AKLT...
+  VOLC_ARK_ACCESS_KEY_SECRET: ...
+```
+
+Each half takes the first ref that resolves: `VOLC_ARK_ACCESS_KEY_ID` → `VOLC_ACCESS_KEY_ID` → `VOLC_ACCESSKEY`, and `VOLC_ARK_ACCESS_KEY_SECRET` → `VOLC_ACCESS_KEY_SECRET` → `VOLC_SECRETKEY` → `VOLC_SECRET_KEY`.
+
+Until the pair is configured the card reads "missing key (VOLC_ARK_ACCESS_KEY_ID + VOLC_ARK_ACCESS_KEY_SECRET)"; a wrong pair surfaces the control-plane error verbatim (e.g. `HTTP 401: InvalidAccessKey: The security token[...] is invalid.`).
+
+### 3. What it shows
+
+- **Agent Plan** — the 5h, weekly and monthly windows, with the used percentage derived from the absolute `Used`/`Quota` pair and a reset countdown (`AFPDaily` is omitted, matching the Ark console and `arkcli`).
+- **Coding Plan** — the session (5h), weekly and monthly windows, using the backend's own used percentage. A plan that is unsubscribed or reclaimed reports no rows.
+
+## Install
+
+> [!NOTE]
+> Requires an existing [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) installation.
+
+### npm
+
+```sh
+dsh plugin --profile web add dsh-provider-usage@latest
+```
+
+### Build from source
+
+```sh
+git clone https://github.com/lizhouai/dsh-provider-usage.git
+cd dsh-provider-usage
+pnpm install
+pnpm build
+pnpm pack   # produces dsh-provider-usage-<version>.tgz
+dsh plugin --profile web add ./dsh-provider-usage-<version>.tgz
+```
+
+Install the **tarball**, not the repo directory: `dsh plugin --profile web add .` links the repo, whose own `node_modules` then shadows the harness's shared `@deepseek-ai/cordis` instance and the host half never registers (RPC 404). The link form is still handy for client-only UI iteration — the browser bundle is self-contained, so a rebuild + page refresh picks it up — but switch to the tarball (or the npm release) whenever you need the host half. If pnpm fails with `EPERM ... symlink` while replacing a linked install, delete the stale `node_modules/dsh-provider-usage` junction in the profile directory and retry.
+
+Restart `dsh web` after changing the plugin set (a plugin add/remove requires a restart; afterwards, code changes only need a rebuild + re-add + page refresh).
+
+## Upgrade
+
+```sh
+dsh plugin --profile web add dsh-provider-usage@latest
+```
+
+Then restart `dsh web` and refresh the page. If the release you want was published very recently, your profile's supply-chain cooldown (`minimumReleaseAge`) may silently keep the older version — pin the exact version instead (`dsh plugin --profile web add dsh-provider-usage@0.3.10`) and dsh will exempt it automatically. The version badge in the panel header confirms which release is actually loaded.
+
+## Configuration
+
+Defaults work out of the box: the plugin auto-detects every provider route of the active profile. A trusted profile can tune behavior in `~/.dsh/profiles/web/cordis.patch.yml` — **override the bundle's row by id** (the package's own bundle patch already inserts it; a second `insert` of the same id fails the boot with `duplicate loader entry id`):
+
+```yaml
+- id: provider-usage
+  name: dsh-provider-usage
+  config:
+    refreshSeconds: 60          # suggested panel refresh interval (5–86400)
+    balanceRedThreshold: 10     # balance below this turns red (per the balance's own currency)
+    balanceYellowThreshold: 30  # balance below this turns yellow (per the balance's own currency)
+    autoDetect: true            # enumerate provider routes from the llm registry
+    queryTimeoutMs: 20000       # per-attempt query timeout; each retry gets a fresh timeout
+    queryRetries: 2             # retries for transient errors (timeout/network/HTTP 408/425/429/5xx)
+    queryRetryDelayMs: 2000     # base retry delay, doubled per attempt, capped at 10s
+    providers: []               # manual specs; an id matching a detected route overrides it
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `refreshSeconds` | number | `60` | Suggested widget refresh interval in seconds (5–86400) |
+| `balanceRedThreshold` | number | `10` | Balance below this amount turns red, compared in the balance's own currency |
+| `balanceYellowThreshold` | number | `30` | Balance below this amount turns yellow, compared in the balance's own currency |
+| `autoDetect` | boolean | `true` | Enumerate live provider routes from the llm registry |
+| `queryTimeoutMs` | number | `20000` | Per-attempt query timeout (1000–120000); each retry gets a fresh timeout |
+| `queryRetries` | number | `2` | Retries for transient errors — timeout / network / HTTP 408, 425, 429, 5xx (0–10); permanent 4xx errors fail immediately |
+| `queryRetryDelayMs` | number | `2000` | Base delay between retries (100–60000), doubled per attempt, capped at 10s |
+| `providers` | array | `[]` | Manual provider specs: `{id, kind, baseURL, apiKeyEnv, displayName?, enabled?}`; `kind` is one of the adapter table above |
+
+The same fields can be hot-updated under the `provider-usage:` namespace in `~/.dsh/settings.yaml`.
+
+### Adding a manual provider
+
+```yaml
+config:
+  providers:
+    - id: my-deepseek-gateway
+      kind: deepseek
+      baseURL: https://my-gateway.example.com
+      apiKeyEnv: MY_GATEWAY_KEY
+      displayName: My Gateway
+```
+
+## How it works
+
+- **Host half** (`src/index.ts`): `UsageService extends TypertRemoteService` exposes `usage/list` via the `Remote('list')` marker, applied without decorator syntax (SRC mode, no codegen). Config is declared with schemastery, and the settings provider's `installSection` enables hot updates from the settings document.
+- **Client half** (`src/client/`): a `window.__ModuleLoader__.load({id, factory})` bundle (built by tsdown) mounts through the `sidebar.footer.action` slot (used purely as a mount point — the trigger itself is a floating ball portaled to `document.body`) and polls `usage/list` through `ctx.connection.rpc.call('/api', 'usage/list', {args:{}})` on its own interval. The service stays stateless — every poll fetches live values.
+
+## License
+
+[MIT](./LICENSE)
