@@ -1,0 +1,457 @@
+{
+	"type": "npm",
+	"name": "creditgauge",
+	"version": "1.2.4",
+	"default": null,
+	"files": [
+		{
+			"name": "/.claude-plugin/marketplace.json",
+			"hash": "zekABgtl22tdxwKXTzrJf8ZK9nOurkMZuctTkxhNiBI=",
+			"size": 530
+		},
+		{
+			"name": "/.claude-plugin/plugin.json",
+			"hash": "CJxjNenweS8viJSkp7F0itaIS6yBGMiq1Z8KWgvPCa8=",
+			"size": 1150
+		},
+		{
+			"name": "/bin/cli.js",
+			"hash": "wXxHlnCmlCpTh8zyker88C9L0/otFFyOsgdePNU31+0=",
+			"size": 16429
+		},
+		{
+			"name": "/bin/commands/config.js",
+			"hash": "56RUs6GgaeXtmoYBpDVqMptXuT5OeIfBv7gb4wG1gL8=",
+			"size": 1575
+		},
+		{
+			"name": "/bin/commands/plugin-add.js",
+			"hash": "80/UQJIBQn89xfu9rHRhjSeaxI6OhvIdG40+fcn790A=",
+			"size": 7953
+		},
+		{
+			"name": "/bin/commands/plugin-auth.js",
+			"hash": "OlWaK658FHjxCf5KgbiM1nkYxKPhDYojj+GhiB9xVoY=",
+			"size": 2262
+		},
+		{
+			"name": "/bin/commands/plugin-list.js",
+			"hash": "DTCM5YpFMOWt3jSze/I8Z+6qDVhclxdvsXo5/zFQ/UU=",
+			"size": 535
+		},
+		{
+			"name": "/bin/commands/plugin-remove.js",
+			"hash": "HijUb8FPdl4Ajh/T+HMV5yYvLDo7CHKtNJETfLXpyJU=",
+			"size": 3109
+		},
+		{
+			"name": "/bin/commands/registry.js",
+			"hash": "GY99J8XysgL3ILXIwM2LKabI5XYUWacdtydFm86JFeU=",
+			"size": 1890
+		},
+		{
+			"name": "/bin/commands/status.js",
+			"hash": "PsS49APaQ4QXC71JQHptskC8OLsGz8bPzy8WlhoBNrI=",
+			"size": 16986
+		},
+		{
+			"name": "/bin/commands/utils.js",
+			"hash": "yMi/HcOlMHCGMFgUgO7afobyFf1nxDRnyzkcgMcI42U=",
+			"size": 3509
+		},
+		{
+			"name": "/CHANGELOG.md",
+			"hash": "V4nE1qay0Wi6/XAW/20p7GavlbVjTuExhDAuqSJ/Lws=",
+			"size": 83257
+		},
+		{
+			"name": "/commands/clean.md",
+			"hash": "OwNB4WaENNWwEoWaIq0ZwE+2wltO0H82J9K7jUvtHuE=",
+			"size": 2910
+		},
+		{
+			"name": "/commands/clean-cache.md",
+			"hash": "Alzb6WH9zpCt+Ap2dpEjGO/vimxyFaz4tmHlqiAQU5E=",
+			"size": 1689
+		},
+		{
+			"name": "/commands/clean-journal.md",
+			"hash": "sUaVq6mh4udQdCjgvpQIbBnyNmI93IpJBQ/Ndj+2eJ4=",
+			"size": 1059
+		},
+		{
+			"name": "/commands/config.md",
+			"hash": "r7Ffe8mQxnNEIVLGiG0zkWycOLcSA0KoQyYSmwbq8jw=",
+			"size": 1493
+		},
+		{
+			"name": "/commands/install.md",
+			"hash": "aQRcvHw0AMNbBW4XY8eRuLE+7JkhE11TL1QLoVMby1Y=",
+			"size": 1604
+		},
+		{
+			"name": "/commands/reset.md",
+			"hash": "EVvZcxjSXgK0z2FUB0s1Y4ljaMOIAv0vtHzscDDZFYg=",
+			"size": 1911
+		},
+		{
+			"name": "/commands/uninstall.md",
+			"hash": "eKIQf1MqWc6hL6ej5Sg4DSV8zlrDJ8aWsO7YQ2tf7mc=",
+			"size": 2725
+		},
+		{
+			"name": "/dist/index.js",
+			"hash": "H+6xCU0AQfoBlXlKFC8VRY9gjJFwOxJmBLLFXAdq87o=",
+			"size": 306645
+		},
+		{
+			"name": "/dist/plugins/deepseek/index.js",
+			"hash": "MPhYCPROSdoEWZYzRvjy7PMktnyXVC80Hg8GRaA8Zv4=",
+			"size": 2753
+		},
+		{
+			"name": "/dist/plugins/minimax/index.js",
+			"hash": "/K5sdExaldZzjbdWiyHAL0tGQ/t2QHq4y+ESLu60g2E=",
+			"size": 2547
+		},
+		{
+			"name": "/docs/audit-report-2026-08-09.md",
+			"hash": "Gk4byJxZRCRDRJWhQ+MY3ylTWk4nowmez4HsBFKPjFU=",
+			"size": 9701
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-07-creditgauge-config-command.md",
+			"hash": "W7fldod/OQrcb97LLKNn6FCGQEwiw/o8AwbslCvzupA=",
+			"size": 34552
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-08-m-affix-autospace.md",
+			"hash": "HB9tX9ZtEnNcK8zMknrLGQxHk+z1cTZCVhYkNgxY+48=",
+			"size": 28053
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-08-m-branch-withstatus.md",
+			"hash": "iXKLJT4Wqj5PXknwl3nC2b20rNEDHCX+RPmm0UnsIvc=",
+			"size": 13261
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-08-m-contextusage.md",
+			"hash": "FgSToRyXhLOYO6heRtXF8hV2Ti/h1rh30PGqcUfHrVs=",
+			"size": 18909
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-08-m-quota-valueonly.md",
+			"hash": "ZPXPZrkXPI2VsKAQsn8PeOteLFNX1xAV4a0WvY2obUo=",
+			"size": 18847
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-08-memusage-bandcolor.md",
+			"hash": "o5l+PEZ+F+lh5w5P8SKFm2iYsVxc6/75L/9q7mmtivY=",
+			"size": 19009
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-09-s-move-width-aware.md",
+			"hash": "PEWMx8i7bPVYu71JL1GZIF8L9mVSPVQs3UjP75TjuiQ=",
+			"size": 17630
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-10-m-windowquota-bar-label.md",
+			"hash": "AkvN+MYA0AtP+bid5xcRcz2QqaBoP21xKF1K/JJNsVM=",
+			"size": 30200
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-10-name-modules-width-limit.md",
+			"hash": "Q95bJ1A3z7dWPjP6G2zGLTZElTnjpuZzW7Dx2MjxMcU=",
+			"size": 27349
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-17-stale-color-usage-components.md",
+			"hash": "XrDC4wgFQMmyASB0+wlmf3PVOzD0Dp4Mf2EnBywG99g=",
+			"size": 11442
+		},
+		{
+			"name": "/docs/superpowers/plans/2026-08-24-token-input-invariant.md",
+			"hash": "yQSYs5T8+L9LCQSK3gUdQ4Nk71hSKZXmhTsPu6HL//g=",
+			"size": 8957
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-07-creditgauge-config-command-design.md",
+			"hash": "4L16fP14EaVLYN+4wRlaDpxcONInJD4CgQ7ZLOqzKO4=",
+			"size": 6792
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-08-m-affix-autospace-design.md",
+			"hash": "q+LT8XxwVz1qAB2hsNMfCzKj3/9CLsVPlIjbGGkKou4=",
+			"size": 10148
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-08-m-branch-withstatus-design.md",
+			"hash": "0Ftq3y1ZzQ3wVGojz1WF0i/HLF+mW0qMI+MGzk0IREw=",
+			"size": 4482
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-08-m-contextusage-design.md",
+			"hash": "FAvE5y0i5TpQqnGEyOa/0u/DER++3BhP1kchwfN7T/Q=",
+			"size": 5999
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-08-m-quota-valueonly-design.md",
+			"hash": "LSn/3xDszix9S9kV7lJ09TH5zk19Mx4gHrchXV2NNtQ=",
+			"size": 5700
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-08-memusage-bandcolor-design.md",
+			"hash": "yAiK1s72VlYoa8xGiOeS8Zwp23PagU7wdDBKwTslUJw=",
+			"size": 4738
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-09-s-move-width-aware-design.md",
+			"hash": "ryOLQOzzjJuhaOjRAsfLE9YArKQLxfdhlySW7BzEqrA=",
+			"size": 5846
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-10-m-windowquota-bar-label-design.md",
+			"hash": "/XPRtzrVZOWtSm0hMjEeA71WKTr3QufxxnU0piLZ/Oo=",
+			"size": 7431
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-10-name-modules-width-limit-design.md",
+			"hash": "OtdVtqrYqxxL1FQqGy6nQZmjifgdyekdF0vkS5ONBzY=",
+			"size": 3802
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-17-stale-color-usage-components-design.md",
+			"hash": "YDtdT9OyAvkfzYrJm2xslnrk+VXmHVG2n5ExXau3Ay8=",
+			"size": 5147
+		},
+		{
+			"name": "/docs/superpowers/specs/2026-08-24-token-input-invariant-design.md",
+			"hash": "w9p6tViJDCzedmRaV6qzsjZkOIzB8cuzwZ77X3mUBJE=",
+			"size": 3901
+		},
+		{
+			"name": "/HOW_TO_CREATE_A_PLUGIN.md",
+			"hash": "88axjPduvaLo/fjkAQ4vKGzm+XAI4AbyRnT1GDfKcL4=",
+			"size": 24398
+		},
+		{
+			"name": "/LICENSE",
+			"hash": "iz2R9OBmZjGGE1810L9UhCJM3EA+nSYzybNRLxDTm64=",
+			"size": 1062
+		},
+		{
+			"name": "/MANUAL.md",
+			"hash": "WnE6lyQTPqvFwjGQwmyLx1dSc0EjgQaSiwXMcnikFEo=",
+			"size": 58043
+		},
+		{
+			"name": "/package.json",
+			"hash": "+hb2Ne9nB/uD2bF7WVkBnIB6kOgERhrt4Rkr8du/wW0=",
+			"size": 2240
+		},
+		{
+			"name": "/query_plugins/auth-cdp.cjs",
+			"hash": "6grCLkbRopFl/n3dHS4P1rrBaq6a8tei+W+84bNuUuY=",
+			"size": 21063
+		},
+		{
+			"name": "/query_plugins/bigmodel/index.js",
+			"hash": "EycjC08l2X+K0RRZk3uk5HRgrpYRaeDkYxSLlQwNsA0=",
+			"size": 8569
+		},
+		{
+			"name": "/query_plugins/commandcode/auth.cjs",
+			"hash": "mcsCr0jxwBKXaZH+y9LQ+2Ir9CB4FzyMgTUtVHE+uOs=",
+			"size": 544
+		},
+		{
+			"name": "/query_plugins/commandcode/auth-playwright.cjs",
+			"hash": "KOxo/nS/gKSwGs5lE1iMs2590EAQGhX2zWLODWfn7XA=",
+			"size": 20794
+		},
+		{
+			"name": "/query_plugins/commandcode/export-cookies.mjs",
+			"hash": "phrNAFLVGnwxjGYSak1lAGTdgWxdaRsU+z1sgdRwLCc=",
+			"size": 5254
+		},
+		{
+			"name": "/query_plugins/commandcode/index.js",
+			"hash": "LFR7hG3+13GpGvgVts6Ia/SGLVtgV9qQq/rOEsBnpzw=",
+			"size": 11444
+		},
+		{
+			"name": "/query_plugins/commandcode/test.mjs",
+			"hash": "znIFG4rnVwm5i/reeXstW9x4xcrnZtgJVOgYscQFCaY=",
+			"size": 2306
+		},
+		{
+			"name": "/query_plugins/copilot-api/index.js",
+			"hash": "tPC0cR0RTHmXk68a3cCXJvJJnFcsyvdacwF2SznKF6k=",
+			"size": 4820
+		},
+		{
+			"name": "/query_plugins/deepseek/index.js",
+			"hash": "MPhYCPROSdoEWZYzRvjy7PMktnyXVC80Hg8GRaA8Zv4=",
+			"size": 2753
+		},
+		{
+			"name": "/query_plugins/kimi/index.js",
+			"hash": "RMcsXSsPTizipOCz3vlJUgW4hxiqXKR0oSNkByq7EFI=",
+			"size": 7334
+		},
+		{
+			"name": "/query_plugins/minimax/index.js",
+			"hash": "/K5sdExaldZzjbdWiyHAL0tGQ/t2QHq4y+ESLu60g2E=",
+			"size": 2547
+		},
+		{
+			"name": "/query_plugins/opencode/auth.cjs",
+			"hash": "6Ni/8ZXEW+vIXbUaN/dcQJ5hacI70AeXJzvrXv57izg=",
+			"size": 528
+		},
+		{
+			"name": "/query_plugins/opencode/auth-playwright.cjs",
+			"hash": "OzCu9wQS8AjZ1zTj0peyL9tQIEtvVmvgkSITVYgIFb0=",
+			"size": 18140
+		},
+		{
+			"name": "/query_plugins/opencode/index.js",
+			"hash": "ptYrusD7tcITQL02RTp5V7pVqC2LbkN42MF7Nc6vRtk=",
+			"size": 11565
+		},
+		{
+			"name": "/query_plugins/opencode/test.mjs",
+			"hash": "ed60JFsu7k4NF5OuhdkWCG9zjLW9sr5LnVJYpJGD1Js=",
+			"size": 1668
+		},
+		{
+			"name": "/query_plugins/plugins.json",
+			"hash": "bgpySSujtRXXbseqdILZTKAQ6Ocf9jde1oc43zVSjic=",
+			"size": 2788
+		},
+		{
+			"name": "/README.md",
+			"hash": "rA3zA1h6tuDWnKLk5iCFYjzSF6YuwixvzEFpVqB+/5c=",
+			"size": 33762
+		},
+		{
+			"name": "/scripts/clean.sh",
+			"hash": "ZyxtWhftQUfh7Peo6Nf2LNSuBp2tslDGrHHaNajhDfs=",
+			"size": 7503
+		},
+		{
+			"name": "/scripts/clean-cache.sh",
+			"hash": "h8+XUAmxgODKQBvocK8H1hfaHfokaCkmYId3iGcdZxE=",
+			"size": 5555
+		},
+		{
+			"name": "/scripts/clean-journal.sh",
+			"hash": "pknDpRbJesCrFpMmR7OH+ktbP1jjsj41/dNYafdyvMs=",
+			"size": 2570
+		},
+		{
+			"name": "/scripts/config.sh",
+			"hash": "FGexlY+oAR8bdwpmSopLliNdUQVLWO7UN1IOJlwTdto=",
+			"size": 6817
+		},
+		{
+			"name": "/scripts/dev-uninstall.sh",
+			"hash": "J/ifUEW5JOznE9gweYKMK9CIB38iS7E4OW5h7/0p8rQ=",
+			"size": 1782
+		},
+		{
+			"name": "/scripts/install.sh",
+			"hash": "06nxu81HECLyQ7R8DBd5xqAdqx7XPb5/9JfCevjrYvE=",
+			"size": 26261
+		},
+		{
+			"name": "/scripts/lib/edit-config.mjs",
+			"hash": "3odThfFjcnaXNSDOllIO0wWZFQd498PnyP5zixkJgSE=",
+			"size": 2628
+		},
+		{
+			"name": "/scripts/lib/edit-settings.mjs",
+			"hash": "BaTfvzo3duUL1aYw7inq042IfFgHWmJ5ZHo/kzdQhE4=",
+			"size": 32554
+		},
+		{
+			"name": "/scripts/lib/journal.mjs",
+			"hash": "v+JA9NjumjHBXP9ya+iaGdodxF1xhyiv/CHsD8K4ViQ=",
+			"size": 9785
+		},
+		{
+			"name": "/scripts/lib/project-hash.sh",
+			"hash": "cHSj5bRpvDt1siQfvfa7SJ8ltiKP0kMrdD2iZ1unLYM=",
+			"size": 2725
+		},
+		{
+			"name": "/scripts/migrate-state.sh",
+			"hash": "qjykqyxxf1hBlgmH31JlAeqIN4WFuk/Vz5RS8NgULCY=",
+			"size": 4875
+		},
+		{
+			"name": "/scripts/reset.sh",
+			"hash": "/YIzbrMB882Dd43yzaqeh9zy5+xfSoHxB9b3RnKV1LA=",
+			"size": 6099
+		},
+		{
+			"name": "/scripts/test-clean-cache.sh",
+			"hash": "FBNiiseM/vNlR6rYsCscXB/uG1TRA0TyyllSuml9cfE=",
+			"size": 7433
+		},
+		{
+			"name": "/scripts/test-config.sh",
+			"hash": "xVOP52P9lG+dE6IoLOUfhz+AeRmAo320OdXX7Pmvc98=",
+			"size": 10340
+		},
+		{
+			"name": "/scripts/test-edit-settings.sh",
+			"hash": "GfBOINIxO1M2oi2oBVL42ntiV+yrsl+f8C1LzTEyI4c=",
+			"size": 18553
+		},
+		{
+			"name": "/scripts/test-install.sh",
+			"hash": "uKm+bFETfczdEN5WoSSskhVOiTONpVaYbqjOTwaJjuU=",
+			"size": 21224
+		},
+		{
+			"name": "/scripts/test-rename-consistency.sh",
+			"hash": "MpMIxIEKr9BP31kvrKa8lmn9VWoNUUCX9V8W8EG2b+0=",
+			"size": 2642
+		},
+		{
+			"name": "/scripts/test-reset.sh",
+			"hash": "p8GXtyPUxKV6r2G5KFrtS+YAvl7bkwH0OvIDVaKulYk=",
+			"size": 15836
+		},
+		{
+			"name": "/scripts/test-uninstall.sh",
+			"hash": "c+fKMGfxK6/uJr7ZEN8oHJNOFMIKwKzTXonuDSaD15w=",
+			"size": 56514
+		},
+		{
+			"name": "/scripts/uninstall.sh",
+			"hash": "41DMOhdlyZfp9pFpxv0vKdrMgeJ4KqiHZPMI7lIAMOg=",
+			"size": 41351
+		},
+		{
+			"name": "/scripts/wrapper.sh",
+			"hash": "SP1V8cIC0TYdxChNBYpfaiTXcmF+lQjEkYBnJf2CL3k=",
+			"size": 3458
+		},
+		{
+			"name": "/SECURITY.md",
+			"hash": "77Wl0e7Lzp6rCax1UtNMxM/VA6NtO6ZxfHVwQsV8ZAU=",
+			"size": 1128
+		},
+		{
+			"name": "/快速上手指南.md",
+			"hash": "z1JTOQAhOCZI1LNmE8jOMzT1/BvoPVOPYTWcoSXeJzc=",
+			"size": 13987
+		}
+	],
+	"links": {
+		"stats": "https://data.jsdelivr.com/v1/stats/packages/npm/creditgauge@1.2.4",
+		"entrypoints": "https://data.jsdelivr.com/v1/packages/npm/creditgauge@1.2.4/entrypoints"
+	}
+}

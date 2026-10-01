@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://docs.openclaw.ai/providers/minimax",
+    "name": "MiniMax - OpenClaw Docs",
+    "snippet": "Manifest model fieldsManifest provider fieldsManifest setup and auth fieldsManifest capability fields ... v1/token_plan/remains or https://api.minimax.io/v1/ ...",
+    "host_name": "docs.openclaw.ai",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/steipete/CodexBar/issues/1326",
+    "name": "MiniMax usage not updating — stuck at 100% remaining, 0",
+    "snippet": "... coding_plan/remains → {\"base_resp\":{\"status_code\":1004,\"status_msg ... v1/token_plan/remains → {\"base_resp\":{\"status_code\":2049 ...",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://pi.dev/packages/@cwillam/pi-minimax-usage?page=69",
+    "name": "@cwillam/pi-minimax-usage · Packages · Pi",
+    "snippet": "... v1/token_plan/remains\" // overrides host, must be on the allowlist ... The response's general bucket gives two *_remaining_percent fields ...",
+    "host_name": "pi.dev",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/MiniMax-AI/MiniMax-M2.7/issues/47",
+    "name": "[Bug] remains_time drains passively without API calls + cache",
+    "snippet": "Bug 1 — CRITICAL: remains_time drains passively (no API calls made). The remains_time field in /v1/token_plan/remains decreases continuously",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://marketplace.visualstudio.com/items?itemName=Jochenyang.minimax-status-vscode",
+    "name": "MiniMax Status - Visual Studio Marketplace",
+    "snippet": "国际版： https://www.minimax.io/v1/api/openplatform/coding_plan/remains. 请勿将普通按量API Key 当作Token Plan Key 使用，也不要混用不同区域的Key。 4. 查看状态.",
+    "host_name": "marketplace.visualstudio.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://gitlawb.com/node/repos/z6MkgKkb/steipete-CodexBar?tab=code&path=docs&file=docs/minimax.md",
+    "name": "steipete-CodexBar — gitlawb",
+    "snippet": "#41 ; #42, ## Endpoints ; #43, - API token endpoint: `https://api.minimax.io/v1/coding_plan/remains` ; #44, - Requires `Authorization: Bearer <api_token>`. ; #45, - ...",
+    "host_name": "gitlawb.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.answeroverflow.com/m/1461649642797142147",
+    "name": "Using MiniMax M2.1 and getting the following response to all",
+    "snippet": "... minimax.io/v1/coding_plan/remains. curl -H \"Authorization: Bearer ... The anthropic provider needs more fields. Try this complete config ...",
+    "host_name": "www.answeroverflow.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/steipete/CodexBar/blob/main/docs/minimax.md",
+    "name": "CodexBar/docs/minimax.md at main - GitHub",
+    "snippet": "Open the Coding Plan page and DevTools → Network. Select the request to /v1/api/openplatform/coding_plan/remains . Copy the Cookie request header (or use “ ...",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://cdn.jsdelivr.net/npm/dsh-provider-usage@0.3.15/README.md",
+    "name": "Untitled",
+    "snippet": "... minimax` | `minimax`, `minimax-cn` | `GET {origin}/v1/api/openplatform/coding_plan/remains ... responses ... fields can be hot-updated under the `provider ...",
+    "host_name": "cdn.jsdelivr.net",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.jsdelivr.com/package/npm/creditgauge",
+    "name": "creditgauge CDN by jsDelivr - A CDN for npm and GitHub",
+    "snippet": "MiniMax — Usage: … / Remain: … (5-hour + weekly windows), from /v1/token_plan/remains; DeepSeek — Balance: … ( ...",
+    "host_name": "www.jsdelivr.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

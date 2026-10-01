@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://platform.minimax.io/docs/api-reference/api-overview",
+    "name": "API Overview - Models - MiniMax API Docs",
+    "snippet": "This API is for file management and is used with other MiniMax APIs. API Description This API includes 5 endpoints: Upload, List, Retrieve, Retrieve Content, ... Missing:  get_usage_quota  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/guides/models-intro",
+    "name": "Models - MiniMax API Docs",
+    "snippet": "Overview of MiniMax AI models and their capabilities. Use this file to discover all available pages before exploring further. A new-generation open general- ... Missing:  get_usage_quota  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/m-plan/usage-rules",
+    "name": "Usage - Models - MiniMax API Docs",
+    "snippet": "On the Plan usage page, you can see your current plan's usage and detailed usage analytics. With MiniMax CLI, run mmx quota to check your usage directly from ... Missing:  get_usage_quota  endpoint",
+    "host_name": "platform.minimax.io",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/guides/quickstart-preparation",
+    "name": "Prerequisites - Models - MiniMax API Docs",
+    "snippet": "Before using the MiniMax API, you need to complete account registration and obtain an API Key. supports all modality models, including language, Video, Speech, ... Missing:  get_usage_quota  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/api-reference/models/openai/list-models",
+    "name": "List Models - MiniMax API Docs",
+    "snippet": "Returns a list of all available models compatible with OpenAI API specification. A new-generation open general-purpose multimodal video model. max.io/v1/models ... Missing:  get_usage_quota  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/pricing/overview",
+    "name": "Pricing Overview - Models - MiniMax API Docs",
+    "snippet": "Use any MiniMax model or tool and pay for what you use, with the flexibility to support a wide range of business needs and API workloads. For speech or video ... Missing:  get_usage_quota  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/solutions",
+    "name": "Cookbook - Models - MiniMax API Docs",
+    "snippet": "Explore practical use cases and solutions for MiniMax API to quickly build AI applications. MiniMax Oauth + Telegram Setup Guide Missing:  get_usage_quota  endpoint",
+    "host_name": "platform.minimax.io",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/token-plan/other-tools",
+    "name": "Other Tools - Models - MiniMax API Docs",
+    "snippet": "Configure the latest MiniMax M-series models in any AI coding tool that supports custom OpenAI-compatible or Anthropic-compatible endpoints. Missing:  get_usage_quota  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/api-reference/text-openai-api",
+    "name": "OpenAI SDK - MiniMax API Docs",
+    "snippet": "1. Install OpenAI SDK. Python. Node.js. pip install openai. npm install openai · 2. Configure Environment Variables. export OPENAI_BASE_URL=https://api.minimax. Missing:  get_usage_quota  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://minimax-ai.chat/docs/api",
+    "name": "Get Your Key, Base URL and First Request - MiniMax API",
+    "snippet": "The MiniMax API gives developers server-side access to MiniMax language, speech, video, image, music, voice, and file services. For a new text ... Missing:  get_usage_quota  | Show results with:",
+    "host_name": "minimax-ai.chat",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]
