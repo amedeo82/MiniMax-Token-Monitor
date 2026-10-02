@@ -96,7 +96,14 @@ GET https://api.minimaxi.com/v1/api/openplatform/coding_plan/remains  ← Cina
 - CodexBar supporta anche la via **cookie di sessione web** (`platform.minimaxi.com`)
   con override `MINIMAX_REMAINS_URL` — utile solo se l'API key non viene accettata.
 - ❓ Da verificare: se con i piani attuali (M Plan) questo endpoint restituisce gli
-  stessi dati di `/v1/token_plan/remains` o solo una sottocompatibilità.
+  stessi dati di `/v1/token_plan/remains` o solo una sottocompatibilità → verifica **V4**
+  (`docs/04` §4, runbook `docs/05` §6, comando `v4` del toolkit `scripts/verifiche/verifica.mjs`).
+- 🔶 **Evidenza parziale (02/10/2026, chiave non valida, toolkit `v4`)**: entrambi gli
+  endpoint rispondono `HTTP 200` con `base_resp.status_code = 1004`, ma con messaggi
+  diversi: `token_plan` → «login fail: Please carry the API secret key in the
+  'Authorization' field…», `coding_plan` → «cookie is missing, log in again». I due
+  servizi gestiscono l'auth in modo distinto (coerente con l'origine console/web di
+  coding_plan); la compatibilità dei **dati** resta da confermare con chiave reale.
 
 ---
 
@@ -187,7 +194,8 @@ Strategie, in ordine di utilità:
 
 > Il parser normalizza numeri e stringhe in `string` e applica `statusLabel()`
 > (`src/lib/minimax.ts`). Procedura di verifica del codice `2`:
-> vedi `docs/04` §5 (V1).
+> verifica **V1** (`docs/04` §5) eseguibile con il toolkit
+> `node scripts/verifiche/verifica.mjs v1` — runbook `docs/05` §3.
 
 ---
 

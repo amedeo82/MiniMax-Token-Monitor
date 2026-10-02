@@ -1,0 +1,36 @@
+{
+  "id": "V1",
+  "domanda": "Il codice di stato 2 significa «esaurita»?",
+  "avvio": "02/10/26, 19:57:24",
+  "fine": "02/10/26, 19:57:30",
+  "config": {
+    "comando": "v1",
+    "regione": "eu",
+    "chiave": "VERI…V1V6 (32 caratteri)",
+    "intervalloS": 30,
+    "durataMin": 0.02,
+    "endpoint": "https://www.minimax.io/v1/token_plan/remains",
+    "modello": null
+  },
+  "campioni": [
+    {
+      "t": 1790963844106,
+      "tRoma": "02/10/26, 19:57:24",
+      "http": 200,
+      "ok": true,
+      "ms": 1005,
+      "errore": null,
+      "statusCode": 1004,
+      "statusMsg": "login fail: Please carry the API secret key in the 'Authorization' field of the request header",
+      "piano": null,
+      "finestre": {}
+    }
+  ],
+  "transizioni": [],
+  "esito": {
+    "verdetto": "NON CONCLUSIVA — stato 2 mai osservato: serve consumare la finestra fino a esaurimento durante la verifica.",
+    "note": [
+      "base_resp.status_code = 1004 (login fail: Please carry the API secret key in the 'Authorization' field of the request header): chiave non valida o endpoint in errore — verifica ripetibile solo con chiave reale."
+    ]
+  }
+}

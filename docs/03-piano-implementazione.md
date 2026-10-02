@@ -332,6 +332,9 @@ con i calcoli manuali, pannello endpoint, console pulita.
    5h e settimanali rilevati dai salti di reset nello storico, con durata/consumo/ritmo
    medi e tabella comparativa (`lib/cycles.ts` + `analysis-panel.tsx`).
 2. **Fallback automatico** su `coding_plan/remains` se `token_plan/remains` fallisse (V4 in `docs/04`).
+   *Toolkit verifiche pronto (I29): `scripts/verifiche/verifica.mjs v4` con runbook `docs/05` §6;
+   evidenza parziale senza chiave → entrambi gli endpoint HTTP 200 + 1004 con messaggi di auth diversi
+   (dettagli in `docs/01` §4). L'esito di V4 con chiave reale decide l'implementazione.*
 3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
 4. **PWA/offline**: installazione e ultima snapshot cache; notifiche soglia anche a tab
    chiuso via Service Worker (oggi: banner + toast + Notification API solo a tab aperto).
