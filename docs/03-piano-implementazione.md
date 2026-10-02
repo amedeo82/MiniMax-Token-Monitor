@@ -66,7 +66,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 |------|----------------|
 | `src/lib/minimax.ts` | Tipi (`UsageSnapshot`, `ModelQuota`, `QuotaWindow`, `ApiError`), `REGION_ENDPOINTS`, `parseUsageResponse()` (tollerante: risposta piatta o sotto `data`, epoch s/ms, status numerici o testuali), `statusLabel()`, `consumedPercent()`, `inferServerTime()`, `quotaLevel()`, `modelLabel()`, `EXTRA_ENDPOINTS` |
 | `src/lib/time.ts` | `TZ_ROME`, `LOCALE_IT`, `toDate()` (accetta epoch s/ms, ISO, Date), `formatFullRome/DateTimeRome/TimeRome/DateRome/ShortRome`, `romeZoneInfo()`, `formatCountdown()`, `formatDuration()`, `msUntil()`, `windowProgress()` |
-| `src/lib/usage-events.ts` | Motore di monitoraggio: registro eventi (`mm-dash-events-v1`, max 200: `loadEvents/appendEvents/clearEvents/replaceEvents/makeEvent`), `deriveBanner()` (banner quota bassa stateless), `evaluateTransitions()` (soglie warn/crit + reset tra due snapshot), `canNotify()/notifyBrowser()` (Notification API), `AlertConfig` |
+| `src/lib/usage-events.ts` | Motore di monitoraggio: registro eventi (`mm-dash-events-v1`, max 200: `loadEvents/appendEvents/clearEvents/replaceEvents/makeEvent`), `deriveBanner()` (banner quota bassa stateless), `evaluateTransitions()` (soglie warn/crit + reset tra due snapshot), `canNotify()/notifyBrowser()` (Notification API), `AlertConfig` con **soglie per tipo di finestra** (I28: `AlertThresholds {h5,h24,weekly}`, `windowThresholdKey()` risolve il tipo dalla durata reale start→end, `migrateLegacyThresholds()` per il vecchio formato globale) |
 | `src/lib/export.ts` | Esportazione locale: `historyToCsv()/eventsToCsv()` (CSV «;» + BOM UTF-8, Excel it-IT), `exportHistoryCsv/Json()`, `exportEventsCsv()`, `downloadTextFile()` |
 | `src/lib/server-history.ts` | I16 sync client↔server dello storico: `pushPointToServer()` (fire-and-forget, con callback `onTotal`), `fetchServerHistory()`, `mergeHistories()` (dedup per timestamp, vince il punto locale), `serverPointsToHistory()`, `clearServerHistory()` |
 | `src/lib/server-events.ts` | I27 sync client↔server del registro eventi (stesso schema di I16): `pushEventsToServer()` (fire-and-forget batch), `fetchServerEvents()`, `mergeEvents()` (dedup per id, vince il locale), `serverEventsToEvents()`, `clearServerEvents()` |
@@ -179,8 +179,14 @@ Un tick `setInterval` 1s aggiorna `now`; i countdown sono `msUntil(end_time, now
 ### 5.5 Avvisi di soglia, reset e registro eventi (F6b)
 Il motore (`lib/usage-events.ts`) lavora SOLO sugli snapshot già ricevuti (zero chiamate
 extra, zero consumo quota):
-- **Banner** (`deriveBanner`): stateless, derivato dallo snapshot corrente — se una delle
-  due finestre di «general» è sotto le soglie configurate appare l'Alert amber/rose;
+- **Soglie per finestra (I28)**: ogni finestra usa le soglie del proprio tipo —
+  `h5` (5 ore, modelli testo), `h24` (giornaliera, video), `weekly` (settimanale);
+  il tipo è risolto da `windowThresholdKey()` con la durata reale start→end
+  (23–25h → h24, 4–6h → h5) e fallback sul nome modello; migrazione automatica
+  dalle vecchie soglie globali (`migrateLegacyThresholds`, ADR-12);
+- **Banner** (`deriveBanner`): stateless, derivato dallo snapshot corrente — ogni
+  (modello, finestra) sotto la PROPRIA soglia produce una voce dell'Alert
+  amber/rose (crit prevale su warn);
 - **Transizioni** (`evaluateTransitions`): confronta lo snapshot precedente col nuovo
   (ref interno di `page.tsx`); genera toast + notifiche browser solo sugli
   ATTRAVERSAMENTI (prev ≥ soglia > next; reset = salto ≥ +25 punti fino a ≥ 90%);
@@ -251,7 +257,7 @@ Stesso schema offline-first del §5.7, applicato agli eventi (reset, soglie, err
 ```
 ┌ Header: titolo · stato dati (API/demo/importato) · ultimo aggiornamento (Roma) · refresh · settings ┐
 │ Alert errori (autenticazione/HTTP/rete) quando presenti                                            │
-│ Banner avvisi soglia (amber/rose) quando una finestra «general» è sotto le soglie                   │
+│ Banner avvisi soglia (amber/rose) quando una finestra è sotto la propria soglia                       │
 ├ MainWindows: riepilogo grande delle due finestre del general (QuotaRing + countdown + badge)       │
 ├ HistoryChart: andamento % nel tempo (switch interval/weekly) + export CSV/JSON                      │
 ├ StatsPanel: consumo medio · esaurimento previsto · rilevamenti · VERDETTO esaurimento vs reset     │
@@ -332,8 +338,10 @@ con i calcoli manuali, pannello endpoint, console pulita.
 5. ~~**Statistiche aggregate di lungo periodo**~~ — **implementato (I26)**: consumo medio
    per giorno della settimana (Europe/Rome, drawdown del minimo progressivo) e media
    mobile (SMA-10) attivabile sul grafico principale.
-6. **Soglie personalizzate per finestra**: oggi le soglie sono globali (warn/crit);
-   potrebbe avere senso differenziarle tra finestra 5h e settimanale.
+6. ~~**Soglie personalizzate per finestra**~~ — **implementato (I28)**: matrice soglie
+   (attenzione/critica) indipendente per finestra 5 ore / 24 ore (video) / settimanale
+   nel tab «Avvisi»; il motore risolve il tipo di finestra dalla durata reale
+   start→end; migrazione automatica dalle soglie globali legacy (ADR-12).
 7. ~~**Storico eventi oltre 200**~~ — **implementato (I27)**: il registro locale resta un
    diario di 200 voci, ma ogni evento è replicato su SQLite (`/api/events`, upsert per id,
    pruning 5.000 eventi / 180 giorni) con export CSV/JSON dell'archivio completo e filtri

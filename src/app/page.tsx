@@ -21,6 +21,7 @@ import {
   replaceEvents,
   makeEvent,
   notifyBrowser,
+  migrateLegacyThresholds,
   type UsageEvent,
   type BannerInfo,
 } from "@/lib/usage-events";
@@ -65,8 +66,15 @@ function loadSettings(): DashboardSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(raw) as Partial<DashboardSettings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    const parsed = JSON.parse(raw) as Partial<DashboardSettings> & Record<string, unknown>;
+    /* I28 — migrazione delle vecchie soglie globali (alertThresholdWarn/Crit):
+       i valori legacy si applicano a TUTTE le finestre, così il comportamento
+       scelto dall'utente resta identico dopo l'aggiornamento. */
+    const thresholds = migrateLegacyThresholds(parsed) ?? DEFAULT_SETTINGS.thresholds;
+    const cleaned: Record<string, unknown> = { ...parsed };
+    delete cleaned.alertThresholdWarn;
+    delete cleaned.alertThresholdCrit;
+    return { ...DEFAULT_SETTINGS, ...cleaned, thresholds } as DashboardSettings;
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -193,8 +201,6 @@ export default function DashboardPage() {
       onTotal: (total) => setServerCount(total),
     });
   }, []);
-
-  const winShortLabel = (win: "interval" | "weekly") => (win === "interval" ? "finestra di 5 ore" : "finestra settimanale");
 
   /** I27: registra gli eventi nel registro locale e li replica sull'archivio server (fire-and-forget). */
   const addEvents = React.useCallback((evs: UsageEvent | UsageEvent[]) => {
@@ -370,7 +376,7 @@ export default function DashboardPage() {
 
     for (const r of result.resets) {
       toast.success("Finestra resettata", {
-        description: `${r.modelLabel} — ${winShortLabel(r.win)} tornata al ${r.to.toFixed(1)}%`,
+        description: `${r.modelLabel} — ${r.winLabel} tornata al ${r.to.toFixed(1)}%`,
       });
       if (settings.browserNotifications) {
         notifyBrowser("MiniMax · Finestra resettata", `${r.modelLabel}: quota tornata al ${r.to.toFixed(1)}%`);
@@ -378,7 +384,7 @@ export default function DashboardPage() {
     }
     for (const a of result.alerts) {
       const title = a.level === "crit" ? "Quota quasi esaurita" : "Soglia di attenzione superata";
-      const desc = `${a.modelLabel} — ${winShortLabel(a.win)} al ${a.to.toFixed(1)}%`;
+      const desc = `${a.modelLabel} — ${a.winLabel} al ${a.to.toFixed(1)}%`;
       if (a.level === "crit") toast.error(title, { description: desc });
       else toast.warning(title, { description: desc });
       if (settings.browserNotifications) notifyBrowser(`MiniMax · ${title}`, desc);
@@ -656,7 +662,7 @@ export default function DashboardPage() {
                     <ul className={`mt-1 space-y-0.5 ${banner.level === "crit" ? "text-rose-200/90" : "text-amber-200/90"}`}>
                       {banner.items.map((item) => (
                         <li key={`${item.model}-${item.win}`}>
-                          {item.modelLabel} · {item.win === "interval" ? "finestra di 5 ore" : "finestra settimanale"}{" "}
+                          {item.modelLabel} · {item.winLabel}{" "}
                           al <strong>{item.remaining.toFixed(1)}%</strong> (soglia {item.threshold}%)
                         </li>
                       ))}
@@ -712,8 +718,9 @@ export default function DashboardPage() {
               {/* Card dettaglio "general" se ha dati extra (es. stato, boost) */}
               {general ? null : null}
 
-              {/* JSON + dettagli tecnici */}
-              <div className="grid gap-4 lg:grid-cols-2">
+              {/* JSON + dettagli tecnici (min-w-0: permette alle card di restringersi
+                  sotto il min-content del <pre> JSON, evitando overflow orizzontale) */}
+              <div className="grid min-w-0 gap-4 lg:grid-cols-2">
                 <RawJsonPanel rawJson={rawJson} fetchedAt={lastFetch} endpoint={lastEndpoint} ok={lastOk} />
                 <TechInfo
                   region={settings.region as Region}

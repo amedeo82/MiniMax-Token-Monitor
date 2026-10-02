@@ -104,20 +104,20 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
 
   return (
     <Card className="border-white/[0.07] bg-white/[0.04] backdrop-blur">
-      <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
-        <div className="space-y-1">
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0 pb-2">
+        <div className="min-w-0 space-y-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-            <Activity className="size-4 text-zinc-400" />
+            <Activity className="size-4 shrink-0 text-zinc-400" />
             Andamento quota rimanente
           </CardTitle>
-          <CardDescription className="text-xs text-zinc-500">
+          <CardDescription className="break-words text-xs text-zinc-500">
             Cronologia degli ultimi rilevamenti (orario Europe/Rome)
             {serverCount !== null && serverCount > 0
               ? ` · ${serverCount.toLocaleString("it-IT")} punti salvati sul server`
               : ""}
           </CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
           <Button
             variant="outline"
             size="sm"
