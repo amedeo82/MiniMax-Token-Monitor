@@ -11,6 +11,7 @@ import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/component
 import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
 import { EventLog } from "@/components/event-log";
 import { PanoramicTable } from "@/components/model-table";
+import { LongTermAnalysis } from "@/components/analysis-panel";
 import {
   deriveBanner,
   evaluateTransitions,
@@ -648,6 +649,9 @@ export default function DashboardPage() {
 
               {/* Vista panoramica: tutte le finestre del piano a confronto */}
               <PanoramicTable models={snapshot.models} now={now} />
+
+              {/* Analisi di lungo periodo: cicli di finestra, medie, giorni della settimana (I26) */}
+              <LongTermAnalysis history={history} />
 
               {/* Altri modelli */}
               {otherModels.length > 0 ? (

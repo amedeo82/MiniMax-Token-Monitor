@@ -69,6 +69,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/usage-events.ts` | Motore di monitoraggio: registro eventi (`mm-dash-events-v1`, max 200: `loadEvents/appendEvents/clearEvents/makeEvent`), `deriveBanner()` (banner quota bassa stateless), `evaluateTransitions()` (soglie warn/crit + reset tra due snapshot), `canNotify()/notifyBrowser()` (Notification API), `AlertConfig` |
 | `src/lib/export.ts` | Esportazione locale: `historyToCsv()/eventsToCsv()` (CSV «;» + BOM UTF-8, Excel it-IT), `exportHistoryCsv/Json()`, `exportEventsCsv()`, `downloadTextFile()` |
 | `src/lib/server-history.ts` | I16 sync client↔server: `pushPointToServer()` (fire-and-forget, con callback `onTotal`), `fetchServerHistory()`, `mergeHistories()` (dedup per timestamp, vince il punto locale), `serverPointsToHistory()`, `clearServerHistory()` |
+| `src/lib/cycles.ts` | I26 analisi di lungo periodo: `detectCycles()` (segmenta lo storico nei cicli di finestra: reset = salto ≥+15 punti che riporta a ≥85 — `RESET_JUMP`/`RESET_TARGET` — robusto contro sorgenti miste), `summarizeCycles()` (medie sui cicli completati), `weekdayConsumption()` (consumo per giorno Europe/Rome sul calo del minimo progressivo), `movingAverage()` (SMA) |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
 | `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
 | `prisma/schema.prisma` | Modello `UsagePoint` (t unique, interval, weekly, source, region) — storico server-side, nessun dato sensibile |
@@ -76,8 +77,9 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/app/api/history/route.ts` | I16 persistenza storico (SQLite/Prisma): POST (upsert per `t`, validazione input, pruning FIFO a 10.000 punti + cutoff 90 giorni), GET (`?limit=&since=`, ordinato per `t`), DELETE (svuota). La chiave API non transita mai qui |
 | `src/components/quota-cards.tsx` | `ModelCard` (card per modello: due finestre con barre, countdown, badge stato), `MainWindows` (riepilogo finestre general), `CountsRow` (residuo/totale/consumato + nota su percentuali), `windowKindLabel()` (5h vs 24h dinamica) |
 | `src/components/quota-ring.tsx` | `QuotaRing`: anello SVG percentuale |
-| `src/components/history-chart.tsx` | `HistoryChart` (Recharts, switch finestra interval/weekly, dropdown Esporta: storico locale CSV/JSON + storico completo dal server), `computeTrend()`, `StatsPanel` (+ verdetto `ProjectionVerdict`: esaurimento stimato vs orario di reset; contatore punti server), `TrendBadge` |
+| `src/components/history-chart.tsx` | `HistoryChart` (Recharts ComposedChart, switch finestra interval/weekly, toggle «Media mobile» = SMA-10 tratteggiata, dropdown Esporta: storico locale CSV/JSON + storico completo dal server), `computeTrend()`, `StatsPanel` (+ verdetto `ProjectionVerdict`: esaurimento stimato vs orario di reset; contatore punti server), `TrendBadge` |
 | `src/components/model-table.tsx` | `PanoramicTable`: tabella comparativa di tutte le finestre del piano (modello × finestra: residuo con mini-barra, stato, countdown reset) |
+| `src/components/analysis-panel.tsx` | I26 `LongTermAnalysis`: pannello «Analisi di lungo periodo» con 3 tab (Cicli 5 ore / Cicli settimanali / Per giorno) — KPI (cicli, durata media, consumo medio, ritmo %/h), tabella ultimi 8 cicli con ciclo in corso evidenziato, grafico a barre consumo medio per giorno della settimana (5h + settimanale); scarica automaticamente fino a 10.000 punti dal server al mount e li fonde con lo storico locale |
 | `src/components/event-log.tsx` | `EventLog`: timeline del registro eventi raggruppata per giorno (Europe/Rome), badge per tipo, export CSV, svuotamento |
 | `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
 | `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode, alertsEnabled, alertThresholdWarn, alertThresholdCrit, notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
@@ -284,18 +286,20 @@ con i calcoli manuali, pannello endpoint, console pulita.
 ## 11. Estensioni future (roadmap candidate)
 
 > Aggiornata al 2026-10-02: rimossi il contatore token reale (ADR-8) e la correlazione
-> token↔quota che ne dipendeva; implementate le estensioni F6b di analisi/monitoraggio
-> e la persistenza storica server-side (I16, punto 1 della vecchia roadmap).
+> token↔quota che ne dipendeva; implementate le estensioni F6b di analisi/monitoraggio,
+> la persistenza storica server-side (I16, punto 1 della vecchia roadmap) e l'analisi di
+> lungo periodo (I26: punti 1 e 5 di questa roadmap).
 
-1. **Confronto tra finestre consecutive**: con lo storico server ora disponibile
-   (I16), confrontare weekly corrente vs precedente, consumo per ciclo 5h, medie
-   mobili sui dati persistenti.
+1. ~~**Confronto tra finestre consecutive**~~ — **implementato (I26)**: cicli di finestra
+   5h e settimanali rilevati dai salti di reset nello storico, con durata/consumo/ritmo
+   medi e tabella comparativa (`lib/cycles.ts` + `analysis-panel.tsx`).
 2. **Fallback automatico** su `coding_plan/remains` se `token_plan/remains` fallisse (V4 in `docs/04`).
 3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
 4. **PWA/offline**: installazione e ultima snapshot cache; notifiche soglia anche a tab
    chiuso via Service Worker (oggi: banner + toast + Notification API solo a tab aperto).
-5. **Statistiche aggregate di lungo periodo**: consumo medio per giorno della settimana,
-   medie mobili e calendario dell'uso sui punti già persistiti (I16 fornisce i dati).
+5. ~~**Statistiche aggregate di lungo periodo**~~ — **implementato (I26)**: consumo medio
+   per giorno della settimana (Europe/Rome, drawdown del minimo progressivo) e media
+   mobile (SMA-10) attivabile sul grafico principale.
 6. **Soglie personalizzate per finestra**: oggi le soglie sono globali (warn/crit);
    potrebbe avere senso differenziarle tra finestra 5h e settimanale.
 7. **Storico eventi oltre 200**: oggi il registro è un diario di sessione; con il

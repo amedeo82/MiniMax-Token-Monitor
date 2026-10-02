@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -16,6 +17,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { formatCountdown, formatDateTimeRome, formatShortRome, formatTimeRome } from "@/lib/time";
+import { movingAverage } from "@/lib/cycles";
 import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
 import { fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import {
@@ -27,13 +29,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info } from "lucide-react";
+import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline } from "lucide-react";
 
 export interface HistoryPoint {
   t: number;
   interval: number;
   weekly: number;
 }
+
+/** Ampiezza della media mobile (SMA) sovrapponibile al grafico. */
+const SMA_K = 10;
 
 interface HistoryChartProps {
   history: HistoryPoint[];
@@ -64,6 +69,8 @@ async function exportFullFromServer(format: "csv" | "json"): Promise<void> {
 
 /** Grafico dell'andamento della quota rimanente nel tempo. */
 export function HistoryChart({ history, window: win, onWindowChange, serverCount = null }: HistoryChartProps) {
+  const [showSma, setShowSma] = React.useState(false);
+
   const data: ChartDatum[] = React.useMemo(
     () =>
       history
@@ -75,6 +82,16 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
         .slice(-120),
     [history, win],
   );
+
+  /** Con media mobile attiva aggiunge il campo `sma` ai punti visibili. */
+  const chartData: (ChartDatum & { sma: number | null })[] = React.useMemo(() => {
+    if (!showSma) return data.map((d) => ({ ...d, sma: null }));
+    const sma = movingAverage(
+      data.map((d) => d.value),
+      SMA_K,
+    );
+    return data.map((d, i) => ({ ...d, sma: sma[i] }));
+  }, [data, showSma]);
 
   const domain = React.useMemo<[number, number]>(() => {
     if (data.length === 0) return [0, 100];
@@ -101,6 +118,22 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={showSma}
+            aria-label="Mostra o nascondi la media mobile"
+            onClick={() => setShowSma((v) => !v)}
+            title={`Media mobile semplice su ${SMA_K} rilevamenti`}
+            className={`h-8 gap-1.5 border-white/10 text-xs ${
+              showSma
+                ? "bg-rose-500/15 text-rose-200 hover:bg-rose-500/20"
+                : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]"
+            }`}
+          >
+            <Spline className="size-3.5" />
+            Media mobile
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -176,7 +209,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
         ) : (
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+              <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
                 <defs>
                   <linearGradient id="gradInterval" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#34d399" stopOpacity={0.45} />
@@ -209,13 +242,18 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
-                    const p = payload[0].payload as ChartDatum;
+                    const p = payload[0].payload as ChartDatum & { sma: number | null };
                     return (
                       <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
                         <p className="font-medium text-zinc-200">{p.label}</p>
                         <p className="mt-1 font-mono tabular-nums text-emerald-400">
                           Rimasto: {p.value.toFixed(1)}%
                         </p>
+                        {p.sma !== null ? (
+                          <p className="font-mono tabular-nums text-rose-300">
+                            Media mobile: {p.sma.toFixed(1)}%
+                          </p>
+                        ) : null}
                       </div>
                     );
                   }}
@@ -231,7 +269,19 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                   dot={false}
                   activeDot={{ r: 3.5, fill: win === "interval" ? "#34d399" : "#fbbf24" }}
                 />
-              </AreaChart>
+                {showSma ? (
+                  <Line
+                    type="monotone"
+                    dataKey="sma"
+                    stroke="#f472b6"
+                    strokeWidth={1.8}
+                    strokeDasharray="6 3"
+                    dot={false}
+                    isAnimationActive={false}
+                    connectNulls
+                  />
+                ) : null}
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         )}
