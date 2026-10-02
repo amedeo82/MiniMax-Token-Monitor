@@ -15,8 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, KeyRound, ExternalLink, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, KeyRound, ExternalLink, ShieldCheck, ClipboardPaste } from "lucide-react";
 import { REGION_LABELS, Region } from "@/lib/minimax";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface DashboardSettings {
   apiKey: string;
@@ -45,14 +46,18 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   settings: DashboardSettings;
   onSave: (s: DashboardSettings) => void;
+  /** Importa una risposta JSON incollata manualmente dall'utente. */
+  onImportJson: (raw: unknown) => void;
 }
 
-export function SettingsDialog({ open, onOpenChange, settings, onSave }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJson }: SettingsDialogProps) {
   const [apiKey, setApiKey] = React.useState(settings.apiKey);
   const [region, setRegion] = React.useState<Region>(settings.region);
   const [refreshSeconds, setRefreshSeconds] = React.useState(settings.refreshSeconds);
   const [demoMode, setDemoMode] = React.useState(settings.demoMode);
   const [showKey, setShowKey] = React.useState(false);
+  const [jsonText, setJsonText] = React.useState("");
+  const [jsonError, setJsonError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -61,8 +66,25 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave }: Setting
       setRefreshSeconds(settings.refreshSeconds);
       setDemoMode(settings.demoMode);
       setShowKey(false);
+      setJsonText("");
+      setJsonError(null);
     }
   }, [open, settings]);
+
+  const handleImport = () => {
+    setJsonError(null);
+    try {
+      const parsed = JSON.parse(jsonText);
+      onImportJson(parsed);
+      onOpenChange(false);
+    } catch (e) {
+      setJsonError(
+        e instanceof Error
+          ? `JSON non valido: ${e.message}`
+          : "JSON non valido: controlla che la risposta sia completa.",
+      );
+    }
+  };
 
   const handleSave = () => {
     onSave({
@@ -165,6 +187,39 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave }: Setting
               </Select>
               <p className="text-[11px] text-zinc-500">Troppe richieste possono innescare limiti di frequenza</p>
             </div>
+          </div>
+
+          <Separator className="bg-white/[0.06]" />
+
+          <div className="space-y-2">
+            <Label htmlFor="json-paste" className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+              <ClipboardPaste className="size-3.5 text-zinc-400" />
+              Incolla una risposta JSON dell&apos;API
+            </Label>
+            <p className="text-[11px] leading-relaxed text-zinc-500">
+              Se hai già interrogato <span className="font-mono text-zinc-400">/v1/token_plan/remains</span> (ad esempio con
+              curl), incolla qui la risposta per vederla analizzata nella dashboard senza configurare la chiave.
+            </p>
+            <Textarea
+              id="json-paste"
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+              placeholder='{ "base_resp": { "status_code": 0, … }, "model_remains": [ … ] }'
+              rows={5}
+              className="border-white/10 bg-white/[0.05] font-mono text-[11px] text-zinc-100 placeholder:text-zinc-600"
+              spellCheck={false}
+            />
+            {jsonError ? <p className="text-[11px] font-medium text-rose-400">{jsonError}</p> : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImport}
+              disabled={!jsonText.trim()}
+              className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+            >
+              <ClipboardPaste className="size-3.5" />
+              Analizza il JSON incollato
+            </Button>
           </div>
 
           <Separator className="bg-white/[0.06]" />

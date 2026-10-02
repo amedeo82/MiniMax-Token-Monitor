@@ -4,7 +4,7 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuotaRing, MiniBar, RingColor, RING_TEXT_CLASS } from "@/components/quota-ring";
-import { ModelQuota, quotaLevel, WINDOW_LABELS } from "@/lib/minimax";
+import { ModelQuota, QuotaWindow, quotaLevel, statusLabel, WINDOW_LABELS } from "@/lib/minimax";
 import {
   formatCountdown,
   formatDateTimeRome,
@@ -17,6 +17,49 @@ import { Timer, CalendarClock, RotateCcw, Info } from "lucide-react";
 
 function colorFor(remaining: number | null): RingColor {
   return quotaLevel(remaining).color;
+}
+
+const STATUS_TONE_CLASS: Record<string, string> = {
+  ok: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
+  idle: "border-white/10 bg-white/[0.05] text-zinc-400",
+  warn: "border-amber-400/30 bg-amber-400/10 text-amber-300",
+  crit: "border-rose-400/30 bg-rose-400/10 text-rose-300",
+};
+
+/** Badge dello stato della finestra (codici numerici 1/3 o stringhe testuali). */
+function StatusBadge({ window: w }: { window: QuotaWindow }) {
+  const sl = statusLabel(w.status);
+  if (!sl) return null;
+  return (
+    <span title={`${sl.hint} (status = ${w.status})`}>
+      <Badge variant="outline" className={`shrink-0 border-current/20 text-[10px] ${STATUS_TONE_CLASS[sl.tone]}`}>
+        {sl.label}
+      </Badge>
+    </span>
+  );
+}
+
+/**
+ * Riga dei conteggi dichiarati dall'API.
+ * NB: i campi *_usage_count contengono la quota RESIDUA (non consumata!):
+ * consumato = totale − residuo. Quando il totale è 0 il piano traccia in percentuale.
+ */
+function CountsRow({ window: w }: { window: QuotaWindow }) {
+  if (w.totalCount === null || w.totalCount <= 0) {
+    return (
+      <p className="text-[11px] leading-relaxed text-zinc-500">
+        Conteggi non dichiarati (0): la quota di questo piano è tracciata tramite <span className="font-medium text-zinc-400">percentuali residue</span>.
+      </p>
+    );
+  }
+  const consumed = (w.totalCount ?? 0) - (w.remainingCount ?? 0);
+  return (
+    <p className="text-[11px] leading-relaxed text-zinc-500">
+      Richieste: residue <span className="font-mono font-semibold text-emerald-300">{w.remainingCount ?? "?"}</span>
+      {" "}/ totale <span className="font-mono text-zinc-300">{w.totalCount}</span> · consumate{" "}
+      <span className="font-mono font-semibold text-rose-300">{consumed}</span>
+    </p>
+  );
 }
 
 interface WindowDetailsProps {
@@ -72,6 +115,21 @@ function WindowDetails({ title, desc, start, end, now }: WindowDetailsProps) {
   );
 }
 
+/**
+ * Etichetta della finestra in base alla durata reale (start → end):
+ * la finestra "interval" è di 5 ore per i modelli testo/immagine/audio,
+ * ma di 24 ore (giornaliera) per il video.
+ */
+function windowKindLabel(w: QuotaWindow): string {
+  if (w.start !== null && w.end !== null) {
+    const dur = w.end - w.start;
+    if (dur >= 23 * 3600_000 && dur <= 25 * 3600_000) return "Finestra giornaliera (24h)";
+    if (dur >= 4 * 3600_000 && dur <= 6 * 3600_000) return "Finestra di 5 ore";
+    if (dur > 0) return `Finestra (${formatDuration(dur)})`;
+  }
+  return WINDOW_LABELS.interval.long;
+}
+
 interface ModelCardProps {
   model: ModelQuota;
   now: number;
@@ -104,8 +162,12 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
       <CardContent className="space-y-3">
         {interval ? (
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
-            <div className="mb-2 flex items-baseline justify-between">
-              <span className="text-xs font-medium text-zinc-300">Finestra 5 ore</span>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-zinc-300">{windowKindLabel(interval)}</span>
+              <StatusBadge window={interval} />
+            </div>
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-[11px] text-zinc-500">Quota rimanente</span>
               <span className={`font-mono text-lg font-bold tabular-nums ${RING_TEXT_CLASS[colorFor(interval.remainingPercent)]}`}>
                 {interval.remainingPercent !== null ? `${interval.remainingPercent.toFixed(1)}%` : "N/D"}
               </span>
@@ -115,6 +177,9 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
               Reset previsto: {interval.end ? formatTimeRome(interval.end) : "—"} ·{" "}
               <span className="font-mono tabular-nums">tra {formatCountdown(msUntil(interval.end, now))}</span>
             </p>
+            <div className="mt-1.5">
+              <CountsRow window={interval} />
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-2 rounded-xl border border-dashed border-white/[0.08] p-3 text-[11px] text-zinc-500">
@@ -125,8 +190,12 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
 
         {weekly ? (
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
-            <div className="mb-2 flex items-baseline justify-between">
+            <div className="mb-2 flex items-center justify-between gap-2">
               <span className="text-xs font-medium text-zinc-300">Finestra settimanale</span>
+              <StatusBadge window={weekly} />
+            </div>
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-[11px] text-zinc-500">Quota rimanente</span>
               <span className={`font-mono text-lg font-bold tabular-nums ${RING_TEXT_CLASS[colorFor(weekly.remainingPercent)]}`}>
                 {weekly.remainingPercent !== null ? `${weekly.remainingPercent.toFixed(1)}%` : "N/D"}
               </span>
@@ -136,12 +205,15 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
               Reset previsto: {weekly.end ? formatDateTimeRome(weekly.end) : "—"} ·{" "}
               <span className="font-mono tabular-nums">tra {formatCountdown(msUntil(weekly.end, now))}</span>
             </p>
+            <div className="mt-1.5">
+              <CountsRow window={weekly} />
+            </div>
           </div>
         ) : null}
 
         {interval && interval.end ? (
           <WindowDetails
-            title={WINDOW_LABELS.interval.long}
+            title={windowKindLabel(interval)}
             desc={WINDOW_LABELS.interval.desc}
             start={interval.start}
             end={interval.end}

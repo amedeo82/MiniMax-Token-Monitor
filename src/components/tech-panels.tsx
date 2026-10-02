@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatFullRome, romeZoneInfo } from "@/lib/time";
-import { REGION_ENDPOINTS, Region, REGION_LABELS } from "@/lib/minimax";
+import { REGION_ENDPOINTS, Region, REGION_LABELS, EXTRA_ENDPOINTS } from "@/lib/minimax";
 import {
   Braces,
   ChevronDown,
@@ -18,6 +18,8 @@ import {
   ShieldCheck,
   CircleCheck,
   CircleX,
+  Plug,
+  TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -125,15 +127,19 @@ interface TechInfoProps {
   demoMode: boolean;
   lastFetch: number | null;
   refreshSeconds: number;
+  /** Ora del server dedotta da end_time − remains_time (epoch ms). */
+  serverTime: number | null;
+  /** Descrizione della sorgente dati (endpoint reale, demo o JSON importato). */
+  sourceLabel?: string;
 }
 
 /** Scheda con i dettagli tecnici della connessione. */
-export function TechInfo({ region, demoMode, lastFetch, refreshSeconds }: TechInfoProps) {
+export function TechInfo({ region, demoMode, lastFetch, refreshSeconds, serverTime, sourceLabel }: TechInfoProps) {
   const rows: { icon: React.ReactNode; label: string; value: React.ReactNode }[] = [
     {
       icon: <Globe className="size-3.5 text-zinc-400" />,
-      label: "Endpoint interrogato",
-      value: demoMode ? "Modalità demo (nessuna chiamata reale)" : REGION_ENDPOINTS[region],
+      label: "Sorgente dati",
+      value: sourceLabel ?? (demoMode ? "Modalità demo (nessuna chiamata reale)" : REGION_ENDPOINTS[region]),
     },
     {
       icon: <Server className="size-3.5 text-zinc-400" />,
@@ -144,6 +150,11 @@ export function TechInfo({ region, demoMode, lastFetch, refreshSeconds }: TechIn
       icon: <Clock className="size-3.5 text-zinc-400" />,
       label: "Ultima sincronizzazione",
       value: lastFetch ? formatFullRome(lastFetch) : "Mai",
+    },
+    {
+      icon: <Clock className="size-3.5 text-amber-400" />,
+      label: "Ora del server dedotta",
+      value: serverTime ? formatFullRome(serverTime) : "N/D",
     },
     {
       icon: <Clock className="size-3.5 text-zinc-400" />,
@@ -178,7 +189,42 @@ export function TechInfo({ region, demoMode, lastFetch, refreshSeconds }: TechIn
         <div className="mt-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 text-[11px] leading-relaxed text-zinc-500">
           Tutti gli orari mostrati sono calcolati nel fuso orario{" "}
           <span className="font-semibold text-zinc-300">Europe/Rome ({romeZoneInfo()})</span> con formattazione in
-          italiano. I timestamp dell&apos;API (epoch) vengono convertiti localmente.
+          italiano. I timestamp dell&apos;API (epoch) vengono convertiti localmente. L&apos;ora del server è dedotta
+          come <span className="font-mono text-zinc-400">end_time − remains_time</span> e serve a sincronizzare i
+          countdown senza fidarsi dell&apos;orologio locale.
+        </div>
+
+        {/* Riferimenti endpoint aggiuntivi */}
+        <div className="mt-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+            <Plug className="size-3.5" />
+            Altri endpoint utili (dalla documentazione)
+          </p>
+          <ul className="space-y-2">
+            {EXTRA_ENDPOINTS.map((e) => (
+              <li key={e.url} className="text-[11px] leading-relaxed">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[10px] font-bold text-zinc-300">
+                    {e.method}
+                  </span>
+                  <span className="truncate font-mono text-zinc-400" title={e.url}>
+                    {e.url.replace("https://", "")}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-zinc-500">{e.desc}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-2.5 text-[11px] leading-relaxed text-amber-200/80">
+          <p className="mb-1 flex items-center gap-1.5 font-semibold text-amber-300">
+            <TriangleAlert className="size-3.5" />
+            Semantica dei campi count
+          </p>
+          I campi <span className="font-mono">*_usage_count</span> contengono la quota <span className="font-semibold">residua</span>,
+          non consumata (issue MiniMax-M2 #99): consumato = totale − residuo. Quando i conteggi sono 0, la quota è
+          tracciata tramite le percentuali residue, che sono la metrica affidabile.
         </div>
       </CardContent>
     </Card>
