@@ -257,3 +257,30 @@ Stage Summary:
 - Migrazione trasparente: chi aveva soglie globali le ritrova applicate a tutte le finestre senza riconfigurazione (ADR-12); i valori fuori lista restano visibili e selezionabili
 - Bugfix mobile pre-esistente incluso: la dashboard 390px non ha più scroll orizzontale (grafico, RawJson, TechInfo)
 - Prossimi ingressi naturali (invariati): I18 (fallback coding_plan/remains) e verifiche empiriche V1–V6 — richiedono una Subscription Key reale e osservazione del consumo; roadmap residua autonoma: multi-regione (punto 3), PWA (punto 4)
+
+---
+Task ID: 12
+Agent: Super Z (main)
+Task: I29 — Toolkit verifiche empiriche V1–V6 + runbook (richiesta utente: «Le verifiche v1-v6»)
+
+Work Log:
+- Punto di partenza: worklog Task ID 11 (I28) chiudeva con «verifiche V1–V6 bloccate sull'utente»; l'utente ha richiesto le verifiche V1–V6. Nessuna chiave reale disponibile nel progetto (.env contiene solo DATABASE_URL) → le V1–V5 richiedono chiave valida/consumo reale/osservazione di reset, quindi il risultato autonomo possibile è: toolkit riproducibile + evidenze parziali + runbook per l'utente
+- scripts/verifiche/verifica.mjs (nuovo, Node ≥18, ZERO dipendenze): comandi v1 (stati finestra durante consumo, verdetto automatico su stato 2 vs residuo 0%), v2 (rolling: confronto nuovo start_time col primo calo % dopo reset, tolleranza intervallo+120s), v3 (reset SENZA uso: classifica «start INVARIATO» / «start = vecchio end» / inatteso), v4 (doppia chiamata token_plan vs coding_plan + diff strutturale per modelli/finestre/campi, verdetto IDENTICI/EQUIVALENTI/ASIMMETRICI), v5 (usage/total vs pct: classifica residuo/consumo/unclear con tolleranza 1pp), v6 (rate limit: polling start-to-start, istogrammi HTTP/status_code, latenze min/med/p95/max, verdetto su 429/1004) + prova-parser (autotest offline) + aiuto
+- Meccanica: parser tollerante (wrapper `data`, epoch s→ms), normalizzazione {statusCode, statusMsg, piano, finestre{modello{interval,weekly}}}, transizioni (reset-finestra/calo/stato) su campioni consecutivi, SIGINT grazioso, esiti JSON+MD in scripts/verifiche/esiti/ (OUT_DIR accanto allo script → copia autonoma riusabile), chiave SOLO mascherata nei log (env MM_SUBSCRIPTION_KEY consigliata a --chiave)
+- BUG corretti durante i test: (1) rigaStato stampava riga vuota su envelope errore (finestre {} truthy) → check Object.keys().length; (2) sleep di polling limitato a 5s accorciava l'intervallo start-to-start (critico per un test di rate limit) → attesa a scatti di 1s finché non è ora del prossimo campione; (3) campione sintetico prova-parser con timestamp 2025 e triangolazione end−remains non coincidente → riallineato al JSON reale del 02/10/2026 (12:00→17:00 Roma, video 24h mezzanotte UTC, weekly lun 28/09→lun 05/10, server dedotto 13:17:59 CEST COINCIDENTE)
+- LIMITO AMBIENTALE: i processi detached (nohup/setsid) vengono uccisi tra le tool call → V6 eseguita in FOREGROUND ridotta a 9 min (54 richieste @10s) per stare nel timeout della sessione; specifica originale 10 min segnalata nel runbook per l'utente
+- EVIDENZE PARZIALI RACCOLTE (chiave fittizia «VERIFICA-NON-VALIDA-TOOLKIT-V1V6», mai loggata in chiaro):
+  · V4 → ENTRAMBI gli endpoint HTTP 200 + base_resp.status_code 1004 ma con MESSAGGI DIVERSI: token_plan «login fail: Please carry the API secret key…», coding_plan «cookie is missing, log in again» → auth gestita da servizi distinti; compatibilità dati ancora da confermare con chiave reale (esito esiti/v4-2026-10-02T17-57-24.json)
+  · V6 → 54 richieste in 9 min @10s: tutte HTTP 200 + 1004, ZERO 429, zero errori di trasporto, latenza 503/588/1076/1202 ms (min/med/p95/max) → nessuna limitazione HTTP osservabile senza chiave valida (esiti/v6-2026-10-02T18-12-43.json)
+  · V1 --once e V5 → percorsi errore validati (esiti v1-2026-10-02T17-58-16, v5-2026-10-02T17-57-31)
+- docs/05-verifiche-empiriche.md (NUOVO runbook, 10 sezioni): prerequisiti e sicurezza sulla chiave, autotest, per ogni V domanda+comandi+procedura+verdetti+impatto sul progetto, piano di esecuzione in una giornata (ordine: V4/V5 subito → V6 10 min → V3 al reset senza uso → V2 al reset successivo con uso → V1 durante esaurimento; V1+V2 unibili in una sessione), registro delle esecuzioni (§10) con le evidenze parziali
+- Documentazione incrociata: docs/01 §4 (evidenza parziale V4 + puntatori toolkit), docs/01 §8.2 (procedura V1 → toolkit), docs/03 §11 punto 2 (I18: toolkit pronto, esito V4 con chiave reale decide), docs/04 (I29 ✅ in §3, §4 stati V1–V6 da ❓ a 🔄 con evidenze, §8 changelog)
+- package.json: script «verifiche» → bun run verifiche v4
+- download/verifiche-v1-v6/ (NUOVO, consegnabile): verifica.mjs (copia autonoma) + README.md di avvio rapido
+- Pulizia: rimossi esiti provvisori (v6 smoke test 12s, log del run background ucciso); lint `eslint .` OK; src/ non toccato (nessun cambiamento UI/behaviour della dashboard)
+
+Stage Summary:
+- I29 completata: ogni verifica V1–V6 è ora RIPRODUCIBILE con un comando dedicato, con verdetto automatico e esiti archiviati; il blocco «richiede chiave reale» resta solo per l'osservazione, non più per la procedura
+- Evidenze parziali senza chiave già utili: V4 mostra auth distinte sui due endpoint (indizio, non prova di incompatibilità dati); V6 mostra zero 429 su 54 richieste @10s con chiave invalida
+- RESTA SULL'UTENTE: eseguire le verifiche definitive con la Subscription Key reale seguendo docs/05 §9 (la chiave NON va incollata in chat); l'esito di V4 sblocca I18
+- Prossimi ingressi naturali: I18 (dopo V4), multi-regione (punto 3), PWA (punto 4), valutare backoff nel proxy se V6 con chiave reale mostrasse throttle
