@@ -1,9 +1,12 @@
 // Schema Prisma — MiniMax Usage Monitor
 //
 // I16: persistenza server-side dello storico delle rilevazioni.
-// Il browser resta la fonte primaria (localStorage, max 600 punti), ma ogni
-// punto rilevato viene replicato (fire-and-forget) sul server per:
-// - conservare uno storico più lungo (fino a SERVER_HISTORY_MAX punti)
+// I27: persistenza server-side del registro eventi (archivio oltre i 200
+//      eventi conservati nel browser, per export completo e consultazione
+//      di lungo periodo).
+// Il browser resta la fonte primaria (localStorage), ma ogni punto/evento
+// viene replicato (fire-and-forget) sul server per:
+// - conservare uno storico più lungo (fino a 10.000 punti / 5.000 eventi)
 // - consentire l'esportazione completa CSV/JSON oltre il buffer locale
 // - abilitare future analisi di confronto tra finestre consecutive
 //
@@ -38,4 +41,31 @@ model UsagePoint {
   createdAt DateTime @default(now())
 
   @@index([t])
+}
+
+/**
+ * Un evento del registro della dashboard (reset rilevato, soglia superata,
+ * errore di rilevamento, nota informativa): replica server-side del registro
+ * del browser (I27), che resta limitato a 200 voci in localStorage. Il server
+ * conserva l'archivio completo per l'export e la consultazione di lungo periodo.
+ */
+model UsageEventRecord {
+  /** Id dell'evento generato dal client (timestamp + contatore): dedup via upsert. */
+  id        String   @id
+  /** Momento dell'evento (epoch ms). */
+  t         DateTime
+  /** Tipo: "reset" | "warn" | "crit" | "error" | "info". */
+  kind      String
+  /** Modello coinvolto (es. "general") o null per eventi generici. */
+  model     String?
+  /** Finestra coinvolta ("interval" | "weekly") o null. */
+  win       String?
+  /** Descrizione in italiano mostrata nella timeline. */
+  message   String
+  /** % residua al momento dell'evento, se rilevante. */
+  value     Float?
+  createdAt DateTime @default(now())
+
+  @@index([t])
+  @@index([kind])
 }

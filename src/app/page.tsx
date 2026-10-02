@@ -18,6 +18,7 @@ import {
   appendEvents,
   loadEvents,
   clearEvents,
+  replaceEvents,
   makeEvent,
   notifyBrowser,
   type UsageEvent,
@@ -31,6 +32,13 @@ import {
   mergeHistories,
   serverPointsToHistory,
 } from "@/lib/server-history";
+import {
+  pushEventsToServer,
+  fetchServerEvents,
+  mergeEvents,
+  serverEventsToEvents,
+  clearServerEvents,
+} from "@/lib/server-events";
 import { formatCountdown, formatDateRome, formatTimeRome, nowRomeTime, romeZoneInfo, msUntil } from "@/lib/time";
 import { toast } from "sonner";
 import {
@@ -92,6 +100,8 @@ export default function DashboardPage() {
   const [now, setNow] = React.useState<number>(() => Date.now());
   /** I16: punti conservati sul server; null = server non ancora raggiunto. */
   const [serverCount, setServerCount] = React.useState<number | null>(null);
+  /** I27: eventi conservati nell'archivio server; null = server non ancora raggiunto. */
+  const [serverEventsCount, setServerEventsCount] = React.useState<number | null>(null);
   /** Mirror sincrono dello storico per costruire i punti senza race. */
   const historyRef = React.useRef<HistoryPoint[]>([]);
 
@@ -129,6 +139,21 @@ export default function DashboardPage() {
       } catch {
         /* quota piena: ignora */
       }
+    })();
+
+    /* I27: scarica l'archivio eventi conservato sul server e fondilo con il
+       registro locale (dedup per id): il diario resta limitato a 200 voci,
+       il server conserva l'archivio completo per l'export di lungo periodo. */
+    void (async () => {
+      const server = await fetchServerEvents(5000);
+      if (!server) {
+        setServerEventsCount(null);
+        return;
+      }
+      setServerEventsCount(server.total);
+      if (server.events.length === 0) return;
+      const remote = serverEventsToEvents(server.events);
+      setEvents(replaceEvents(mergeEvents(loadEvents(), remote)));
     })();
   }, []);
 
@@ -171,14 +196,25 @@ export default function DashboardPage() {
 
   const winShortLabel = (win: "interval" | "weekly") => (win === "interval" ? "finestra di 5 ore" : "finestra settimanale");
 
-  /** Registra lo stato "errore" (con evento solo sulla transizione ok → errore). */
-  const markError = React.useCallback((message: string) => {
-    setLastOk(false);
-    if (prevOkRef.current !== false) {
-      prevOkRef.current = false;
-      setEvents((prev) => appendEvents(makeEvent("error", `Rilevamento fallito: ${message}`)));
-    }
+  /** I27: registra gli eventi nel registro locale e li replica sull'archivio server (fire-and-forget). */
+  const addEvents = React.useCallback((evs: UsageEvent | UsageEvent[]) => {
+    const list = Array.isArray(evs) ? evs : [evs];
+    if (list.length === 0) return;
+    setEvents(appendEvents(list));
+    pushEventsToServer(list, { onTotal: (total) => setServerEventsCount(total) });
   }, []);
+
+  /** Registra lo stato "errore" (con evento solo sulla transizione ok → errore). */
+  const markError = React.useCallback(
+    (message: string) => {
+      setLastOk(false);
+      if (prevOkRef.current !== false) {
+        prevOkRef.current = false;
+        addEvents(makeEvent("error", `Rilevamento fallito: ${message}`));
+      }
+    },
+    [addEvents],
+  );
 
   /** Registra lo stato "connesso". */
   const markOk = React.useCallback(() => {
@@ -330,7 +366,7 @@ export default function DashboardPage() {
     prevSnapRef.current = snapshot;
     if (result.resets.length === 0 && result.alerts.length === 0) return;
 
-    if (result.events.length > 0) setEvents((prev) => appendEvents(result.events));
+    if (result.events.length > 0) addEvents(result.events);
 
     for (const r of result.resets) {
       toast.success("Finestra resettata", {
@@ -347,7 +383,7 @@ export default function DashboardPage() {
       else toast.warning(title, { description: desc });
       if (settings.browserNotifications) notifyBrowser(`MiniMax · ${title}`, desc);
     }
-  }, [snapshot, settings]);
+  }, [snapshot, settings, addEvents]);
 
   const handleSaveSettings = (s: DashboardSettings) => {
     setSettings(s);
@@ -390,7 +426,12 @@ export default function DashboardPage() {
   const handleClearEvents = () => {
     clearEvents();
     setEvents([]);
-    toast.success("Registro eventi svuotato");
+    // I27: svuota anche l'archivio server (altrimenti al prossimo avvio il merge
+    // ripristinerebbe gli eventi cancellati dal dispositivo).
+    void clearServerEvents().then((deleted) => {
+      if (deleted !== null) setServerEventsCount(0);
+    });
+    toast.success("Registro eventi svuotato (anche la copia sul server)");
   };
 
   /* ---------------------------- derived ---------------------------- */
@@ -684,8 +725,8 @@ export default function DashboardPage() {
                 />
               </div>
 
-              {/* Registro eventi: reset, soglie, errori */}
-              <EventLog events={events} onClear={handleClearEvents} />
+              {/* Registro eventi: reset, soglie, errori (archivio server I27) */}
+              <EventLog events={events} onClear={handleClearEvents} serverCount={serverEventsCount} />
             </>
           ) : loading ? (
             <div className="flex h-64 items-center justify-center text-sm text-zinc-500">

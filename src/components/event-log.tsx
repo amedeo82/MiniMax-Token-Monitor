@@ -3,7 +3,8 @@
 /**
  * Registro eventi della dashboard: timeline cronologica di reset rilevati,
  * soglie superate, errori di rilevamento e note informative.
- * Persistito in localStorage ("mm-dash-events-v1", max 200 — vedi lib/usage-events.ts).
+ * Persistito in localStorage ("mm-dash-events-v1", max 200 — vedi lib/usage-events.ts)
+ * e replicato sull'archivio server (I27, fino a 5.000 eventi — vedi lib/server-events.ts).
  */
 
 import * as React from "react";
@@ -11,6 +12,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   RotateCcw,
   AlertTriangle,
@@ -20,10 +29,13 @@ import {
   ScrollText,
   Trash2,
   Download,
+  Database,
 } from "lucide-react";
 import { formatDateTimeRome } from "@/lib/time";
 import type { UsageEvent, UsageEventKind } from "@/lib/usage-events";
-import { exportEventsCsv } from "@/lib/export";
+import { exportEventsCsv, exportEventsJson } from "@/lib/export";
+import { fetchServerEvents, serverEventsToEvents } from "@/lib/server-events";
+import { toast } from "sonner";
 
 const KIND_META: Record<UsageEventKind, { label: string; icon: React.ReactNode; className: string }> = {
   reset: { label: "Reset", icon: <RotateCcw className="size-3.5" />, className: "text-emerald-400 border-emerald-400/30 bg-emerald-400/10" },
@@ -36,10 +48,12 @@ const KIND_META: Record<UsageEventKind, { label: string; icon: React.ReactNode; 
 interface EventLogProps {
   events: UsageEvent[];
   onClear: () => void;
+  /** I27: eventi nell'archivio server; null = server non ancora raggiunto. */
+  serverCount?: number | null;
 }
 
 /** Timeline del registro eventi, dal più recente al più vecchio. */
-export function EventLog({ events, onClear }: EventLogProps) {
+export function EventLog({ events, onClear, serverCount = null }: EventLogProps) {
   const sorted = React.useMemo(() => [...events].sort((a, b) => b.t - a.t), [events]);
   // Raggruppa per giorno (Europe/Rome) per una lettura tipo diario
   const groups = React.useMemo(() => {
@@ -59,6 +73,19 @@ export function EventLog({ events, onClear }: EventLogProps) {
     return [...map.entries()];
   }, [sorted]);
 
+  /** I27: esporta l'archivio COMPLETO conservato sul server (CSV o JSON). */
+  const exportFullFromServer = React.useCallback(async (fmt: "csv" | "json") => {
+    const server = await fetchServerEvents(5000);
+    if (!server || server.events.length === 0) {
+      toast.error("Archivio eventi del server non disponibile o vuoto");
+      return;
+    }
+    const rows = serverEventsToEvents(server.events);
+    if (fmt === "csv") exportEventsCsv(rows);
+    else exportEventsJson(rows);
+    toast.success(`Esportati ${rows.length.toLocaleString("it-IT")} eventi dall'archivio server`);
+  }, []);
+
   return (
     <Card className="border-white/[0.07] bg-white/[0.04] backdrop-blur">
       <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
@@ -68,24 +95,75 @@ export function EventLog({ events, onClear }: EventLogProps) {
             Registro eventi
           </CardTitle>
           <CardDescription className="text-xs text-zinc-500">
-            Reset rilevati, soglie superate ed errori · salvati sul dispositivo (max 200)
+            Reset rilevati, soglie superate ed errori · max 200 sul dispositivo
+            {serverCount !== null
+              ? ` · ${serverCount.toLocaleString("it-IT")} in archivio sul server`
+              : ""}
           </CardDescription>
         </div>
         <div className="flex items-center gap-1.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Esporta il registro eventi"
+                disabled={events.length === 0 && (serverCount ?? 0) === 0}
+                className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+              >
+                <Download className="size-3.5" />
+                Esporta
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="border-white/10! bg-zinc-950! text-zinc-100!">
+              <DropdownMenuLabel className="text-[11px]! text-zinc-500!">Registro locale</DropdownMenuLabel>
+              <DropdownMenuItem
+                disabled={events.length === 0}
+                onClick={() => exportEventsCsv(events)}
+                className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+              >
+                <Download className="size-3.5" />
+                CSV · {events.length} eventi in memoria
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={events.length === 0}
+                onClick={() => exportEventsJson(events)}
+                className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+              >
+                <Download className="size-3.5" />
+                JSON · {events.length} eventi in memoria
+              </DropdownMenuItem>
+              {serverCount !== null ? (
+                <>
+                  <DropdownMenuSeparator className="bg-white/[0.06]!" />
+                  <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px]! text-zinc-500!">
+                    <Database className="size-3" />
+                    Archivio server (fino a 5.000 eventi)
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    disabled={serverCount === 0}
+                    onClick={() => void exportFullFromServer("csv")}
+                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+                  >
+                    <Download className="size-3.5" />
+                    CSV completo · {serverCount.toLocaleString("it-IT")} eventi
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={serverCount === 0}
+                    onClick={() => void exportFullFromServer("json")}
+                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+                  >
+                    <Download className="size-3.5" />
+                    JSON completo · {serverCount.toLocaleString("it-IT")} eventi
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="outline"
             size="sm"
-            disabled={events.length === 0}
-            onClick={() => exportEventsCsv(events)}
-            className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
-          >
-            <Download className="size-3.5" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={events.length === 0}
+            disabled={events.length === 0 && (serverCount ?? 0) === 0}
             onClick={onClear}
             className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs text-zinc-400 hover:bg-white/[0.08] hover:text-rose-300"
           >
