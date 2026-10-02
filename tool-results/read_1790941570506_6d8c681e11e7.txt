@@ -1,0 +1,1535 @@
+     1→> ## Documentation Index
+     2→> Fetch the complete documentation index at: https://platform.minimax.io/docs/llms.txt
+     3→> Use this file to discover all available pages before exploring further.
+     4→
+     5→# Chat Completions API
+     6→
+     7→> Use the OpenAI API compatible Chat Completions format to call MiniMax models.
+     8→
+     9→<Note>
+    10→  ✨ **New model — `MiniMax-M3.1-Flash-Preview`**
+    11→
+    12→  **Core capabilities**: **1M long context**, **multimodal**, **tunable thinking depth**.
+    13→
+    14→  Available only through M Plan and MiniMax Code for now.
+    15→</Note>
+    16→
+    17→<Tip>
+    18→  **What's new in `MiniMax-M3.1-Flash-Preview`:**
+    19→
+    20→  1. Image and video understanding — see the example code on the right
+    21→  2. Tune thinking depth via `reasoning_effort`, which accepts `low`, `medium`, `high`, `xhigh`, and `max`; the default is `max`
+    22→  3. Thinking is on by default with no configuration needed; thinking content is returned separately on the `reasoning_content` field
+    23→</Tip>
+    24→
+    25→
+    26→## OpenAPI
+    27→
+    28→````yaml api-reference/text/api/openapi-chat-openai.json POST /v1/chat/completions
+    29→openapi: 3.1.0
+    30→info:
+    31→  title: MiniMax Text API OpenAI
+    32→  description: >
+    33→    MiniMax text generation API with support for chat completion and streaming
+    34→    output.
+    35→
+    36→
+    37→    > ⚡ **`MiniMax-M3.1-Flash-Preview` highlights** — **1M long context**,
+    38→    **multimodal**, and **tunable thinking depth**.
+    39→  license:
+    40→    name: MIT
+    41→  version: 1.0.0
+    42→servers:
+    43→  - url: https://api.minimax.io
+    44→security:
+    45→  - bearerAuth: []
+    46→paths:
+    47→  /v1/chat/completions:
+    48→    post:
+    49→      tags:
+    50→        - Text Generation
+    51→      summary: Text Generation OpenAI
+    52→      operationId: chatCompletionOpenAI
+    53→      parameters:
+    54→        - name: Content-Type
+    55→          in: header
+    56→          required: true
+    57→          description: >-
+    58→            Media type of the request body, should be set to `application/json`
+    59→            to ensure JSON format
+    60→          schema:
+    61→            type: string
+    62→            enum:
+    63→              - application/json
+    64→            default: application/json
+    65→      requestBody:
+    66→        content:
+    67→          application/json:
+    68→            schema:
+    69→              $ref: '#/components/schemas/ChatCompletionReq'
+    70→            examples:
+    71→              Deep Thinking:
+    72→                value:
+    73→                  model: MiniMax-M3.1-Flash-Preview
+    74→                  thinking:
+    75→                    type: adaptive
+    76→                  messages:
+    77→                    - role: user
+    78→                      content: Which is bigger, 9.11 or 9.9?
+    79→                  max_completion_tokens: 500
+    80→                  reasoning_effort: max
+    81→              Image Understanding:
+    82→                value:
+    83→                  model: MiniMax-M3.1-Flash-Preview
+    84→                  thinking:
+    85→                    type: adaptive
+    86→                  messages:
+    87→                    - role: user
+    88→                      content:
+    89→                        - type: text
+    90→                          text: What does this image show?
+    91→                        - type: image_url
+    92→                          image_url:
+    93→                            url: >-
+    94→                              https://filecdn.minimax.chat/public/fe9d04da-f60e-444d-a2e0-18ae743add33.jpeg
+    95→                  max_completion_tokens: 500
+    96→                  reasoning_effort: max
+    97→              Video Understanding:
+    98→                value:
+    99→                  model: MiniMax-M3.1-Flash-Preview
+   100→                  thinking:
+   101→                    type: adaptive
+   102→                  messages:
+   103→                    - role: user
+   104→                      content:
+   105→                        - type: text
+   106→                          text: What is happening in this video?
+   107→                        - type: video_url
+   108→                          video_url:
+   109→                            url: >-
+   110→                              https://filecdn.minimax.chat/public/ee8c1648-21f1-41b7-8397-65022d22ffe5.mp4
+   111→                  max_completion_tokens: 500
+   112→                  reasoning_effort: max
+   113→              Stream:
+   114→                value:
+   115→                  model: MiniMax-M3.1-Flash-Preview
+   116→                  thinking:
+   117→                    type: adaptive
+   118→                  messages:
+   119→                    - role: user
+   120→                      content:
+   121→                        - type: text
+   122→                          text: What does this image show?
+   123→                        - type: image_url
+   124→                          image_url:
+   125→                            url: >-
+   126→                              https://filecdn.minimax.chat/public/fe9d04da-f60e-444d-a2e0-18ae743add33.jpeg
+   127→                  stream: true
+   128→                  max_completion_tokens: 500
+   129→                  reasoning_effort: max
+   130→              Tool Use:
+   131→                value:
+   132→                  model: MiniMax-M3.1-Flash-Preview
+   133→                  messages:
+   134→                    - role: user
+   135→                      content: How's the weather in San Francisco?
+   136→                  tools:
+   137→                    - type: function
+   138→                      function:
+   139→                        name: get_weather
+   140→                        description: Get the current weather for a given location.
+   141→                        parameters:
+   142→                          type: object
+   143→                          properties:
+   144→                            location:
+   145→                              type: string
+   146→                              description: >-
+   147→                                The city and state/country, e.g. San Francisco,
+   148→                                US
+   149→                          required:
+   150→                            - location
+   151→                  reasoning_effort: max
+   152→        required: true
+   153→      responses:
+   154→        '200':
+   155→          description: ''
+   156→          content:
+   157→            application/json:
+   158→              schema:
+   159→                $ref: '#/components/schemas/ChatCompletionResp'
+   160→              examples:
+   161→                Deep Thinking:
+   162→                  value:
+   163→                    id: 066b366b8e8beeafd3b8b49f89e00648
+   164→                    choices:
+   165→                      - finish_reason: stop
+   166→                        index: 0
+   167→                        message:
+   168→                          content: >-
+   169→                            **9.9 is bigger than 9.11.**
+   170→
+   171→
+   172→                            It can be tempting to think 9.11 > 9.9 because "11"
+   173→                            looks larger than "9," but decimals don't work that
+   174→                            way. Here's why:
+   175→
+   176→
+   177→                            - **9.11** = 9 + **0.11** (eleven hundredths)
+   178→
+   179→                            - **9.9** = 9 + **0.90** (ninety hundredths)
+   180→
+   181→
+   182→                            Since 0.90 > 0.11, **9.9 is greater**. ✅
+   183→
+   184→
+   185→                            **Tip:** When comparing decimals, compare them to
+   186→                            the same number of decimal places. Write 9.9 as 9.90
+   187→                            — now it's easy to see that 9.90 > 9.11.
+   188→                          reasoning_content: >-
+   189→                            The user is asking which is bigger, 9.11 or 9.9.
+   190→                            This is a comparison of two decimal numbers.
+   191→
+   192→
+   193→                            9.11 vs 9.9
+   194→
+   195→
+   196→                            Let me think carefully:
+   197→
+   198→                            - 9.11 = 9 + 0.11
+   199→
+   200→                            - 9.9 = 9 + 0.90
+   201→
+   202→
+   203→                            0.90 > 0.11, so 9.9 > 9.11.
+   204→
+   205→
+   206→                            Alternatively, I can compare them as if they were
+   207→                            both decimals to the same place:
+   208→
+   209→                            - 9.11
+   210→
+   211→                            - 9.90
+   212→
+   213→
+   214→                            Comparing the tenths place: 1 vs 9. Since 9 > 1, 9.9
+   215→                            is bigger.
+   216→
+   217→
+   218→                            So 9.9 is bigger than 9.11.
+   219→                          role: assistant
+   220→                          name: MiniMax AI
+   221→                          audio_content: ''
+   222→                    created: 1780220779
+   223→                    model: MiniMax-M3.1-Flash-Preview
+   224→                    object: chat.completion
+   225→                    usage:
+   226→                      total_tokens: 484
+   227→                      total_characters: 0
+   228→                      prompt_tokens: 172
+   229→                      completion_tokens: 312
+   230→                      prompt_tokens_details:
+   231→                        cached_tokens: 159
+   232→                    input_sensitive: false
+   233→                    output_sensitive: false
+   234→                    input_sensitive_type: 0
+   235→                    output_sensitive_type: 0
+   236→                    output_sensitive_int: 0
+   237→                    base_resp:
+   238→                      status_code: 0
+   239→                      status_msg: ''
+   240→                Image Understanding:
+   241→                  value:
+   242→                    id: 066a33a7d290378f8a9e57a055812afa
+   243→                    choices:
+   244→                      - finish_reason: stop
+   245→                        index: 0
+   246→                        message:
+   247→                          content: >-
+   248→                            This image is a warm, softly-lit portrait photograph
+   249→                            of a young girl, likely a child around 4-6 years
+   250→                            old. Key features include:
+   251→
+   252→
+   253→                            - **Hair**: Wavy/curly brown hair with bangs, with
+   254→                            some strands pulled back or styled on top
+   255→
+   256→                            - **Eyes**: Large, expressive amber/brown eyes
+   257→                            looking directly at the camera
+   258→
+   259→                            - **Expression**: A gentle, sweet smile
+   260→
+   261→                            - **Clothing**: A cream or off-white dress with
+   262→                            delicate lace trim and ruffled cap sleeves
+   263→
+   264→                            - **Lighting**: Soft, warm, golden lighting that
+   265→                            gives the image a dreamy, classic portrait quality
+   266→
+   267→                            - **Background**: A neutral, muted grayish-brown
+   268→                            backdrop, blurred to keep focus on the subject
+   269→
+   270→
+   271→                            The overall aesthetic resembles a professional
+   272→                            studio portrait or a finely-tuned AI-generated
+   273→                            image, with attention to detail in features like the
+   274→                            catchlights in her eyes, the texture of her hair,
+   275→                            and the soft focus on the background. It has a
+   276→                            timeless, painterly quality.
+   277→                          reasoning_content: >-
+   278→                            The user is asking me to describe an image. Let me
+   279→                            look at it carefully and provide a description.
+   280→
+   281→
+   282→                            The image shows a young girl, likely a child, with
+   283→                            curly/wavy brown hair that has bangs. She has large
+   284→                            brown/amber eyes and is smiling gently. She's
+   285→                            wearing what appears to be a cream or off-white
+   286→                            dress with lace/ruffled details. The lighting is
+   287→                            soft and warm, suggesting this is a portrait-style
+   288→                            photograph with a blurred neutral background.
+   289→                          role: assistant
+   290→                          name: MiniMax AI
+   291→                          audio_content: ''
+   292→                    created: 1780154535
+   293→                    model: MiniMax-M3.1-Flash-Preview
+   294→                    object: chat.completion
+   295→                    usage:
+   296→                      total_tokens: 1659
+   297→                      total_characters: 0
+   298→                      prompt_tokens: 1366
+   299→                      completion_tokens: 293
+   300→                      prompt_tokens_details:
+   301→                        cached_tokens: 114
+   302→                    input_sensitive: false
+   303→                    output_sensitive: false
+   304→                    input_sensitive_type: 0
+   305→                    output_sensitive_type: 0
+   306→                    output_sensitive_int: 0
+   307→                    base_resp:
+   308→                      status_code: 0
+   309→                      status_msg: ''
+   310→                Video Understanding:
+   311→                  value:
+   312→                    id: 066b4564af67dda4130e1db289c2ba25
+   313→                    choices:
+   314→                      - finish_reason: stop
+   315→                        index: 0
+   316→                        message:
+   317→                          content: >-
+   318→                            A cat is seen walking on a diving board and then
+   319→                            jumping into a pool of water.
+   320→                          reasoning_content: >-
+   321→                            The user wants me to describe the action in the
+   322→                            video.
+   323→
+   324→
+   325→                            1.  **Analyze the video:**
+   326→                                *   The video shows an AI-generated scene (indicated by the "MINIMAX" and "Hailuo AI" watermarks).
+   327→                                *   The setting is a large indoor arena, likely an Olympic pool venue, given the Olympic rings logo and the "Lausanne 2020" text (which is anachronistic, but it's a generated video).
+   328→                                *   The main subject is a domestic cat, specifically a spotted breed like a Bengal or Savannah, but it looks a bit distorted in the generated style.
+   329→                                *   The cat is walking on a diving board. It starts on the left side and walks towards the right.
+   330→                                *   Around 0.2 seconds, the cat reaches the end of the diving board and leaps off.
+   331→                                *   The cat is airborne for a brief moment, performing what looks like a basic jump, not a complex dive.
+   332→                                *   It falls towards the water below.
+   333→                                *   It hits the water and splashes.
+   334→                                *   The camera follows the cat's trajectory.
+   335→                                *   The background shows a crowd of spectators sitting in the stands, watching the event.
+   336→                                *   A person is standing on the pool deck, observing.
+   337→
+   338→                            2.  **Synthesize the description:**
+   339→                                *   Start with the main subject and action: A cat is walking on a diving board.
+   340→                                *   Describe the progression: It walks to the end.
+   341→                                *   Describe the climax: It jumps off the board.
+   342→                                *   Describe the conclusion: It falls into the water below.
+   343→                                *   Keep it concise and objective.
+   344→
+   345→                            3.  **Draft the final sentence:** "A cat is seen
+   346→                            walking on a diving board and then jumping into a
+   347→                            pool of water." This accurately and concisely
+   348→                            captures the entire sequence of events in the video.
+   349→                            It covers the initial state (walking), the action
+   350→                            (jumping), and the final state (in the pool).
+   351→                          role: assistant
+   352→                          name: MiniMax AI
+   353→                          audio_content: ''
+   354→                    created: 1780224612
+   355→                    model: MiniMax-M3.1-Flash-Preview
+   356→                    object: chat.completion
+   357→                    usage:
+   358→                      total_tokens: 2672
+   359→                      total_characters: 0
+   360→                      prompt_tokens: 2245
+   361→                      completion_tokens: 427
+   362→                      prompt_tokens_details:
+   363→                        cached_tokens: 114
+   364→                    input_sensitive: false
+   365→                    output_sensitive: false
+   366→                    input_sensitive_type: 0
+   367→                    output_sensitive_type: 0
+   368→                    output_sensitive_int: 0
+   369→                    base_resp:
+   370→                      status_code: 0
+   371→                      status_msg: ''
+   372→                Stream:
+   373→                  value:
+   374→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   375→                      choices:
+   376→                        - index: 0
+   377→                          delta:
+   378→                            reasoning_content: The user
+   379→                            role: assistant
+   380→                            name: MiniMax AI
+   381→                            audio_content: ''
+   382→                      created: 1780154823
+   383→                      model: MiniMax-M3.1-Flash-Preview
+   384→                      object: chat.completion.chunk
+   385→                      usage: null
+   386→                      input_sensitive: false
+   387→                      output_sensitive: false
+   388→                      input_sensitive_type: 0
+   389→                      output_sensitive_type: 0
+   390→                      output_sensitive_int: 0
+   391→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   392→                      choices:
+   393→                        - index: 0
+   394→                          delta:
+   395→                            content: This image is
+   396→                            reasoning_content: ' is asking what the image shows. I should describe the image in detail.'
+   397→                            role: assistant
+   398→                            name: MiniMax AI
+   399→                            audio_content: ''
+   400→                      created: 1780154823
+   401→                      model: MiniMax-M3.1-Flash-Preview
+   402→                      object: chat.completion.chunk
+   403→                      usage: null
+   404→                      input_sensitive: false
+   405→                      output_sensitive: false
+   406→                      input_sensitive_type: 0
+   407→                      output_sensitive_type: 0
+   408→                      output_sensitive_int: 0
+   409→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   410→                      choices:
+   411→                        - index: 0
+   412→                          delta:
+   413→                            content: |2+
+   414→                               a close-up portrait of a young girl, likely a toddler or preschool-aged child. Key details include:
+   415→
+   416→                            role: assistant
+   417→                            name: MiniMax AI
+   418→                            audio_content: ''
+   419→                      created: 1780154823
+   420→                      model: MiniMax-M3.1-Flash-Preview
+   421→                      object: chat.completion.chunk
+   422→                      usage: null
+   423→                      input_sensitive: false
+   424→                      output_sensitive: false
+   425→                      input_sensitive_type: 0
+   426→                      output_sensitive_type: 0
+   427→                      output_sensitive_int: 0
+   428→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   429→                      choices:
+   430→                        - index: 0
+   431→                          delta:
+   432→                            content: >-
+   433→                              - **Facial expression**: She has a sweet, subtle
+   434→                              smile and is looking directly at the camera
+   435→                            role: assistant
+   436→                            name: MiniMax AI
+   437→                            audio_content: ''
+   438→                      created: 1780154823
+   439→                      model: MiniMax-M3.1-Flash-Preview
+   440→                      object: chat.completion.chunk
+   441→                      usage: null
+   442→                      input_sensitive: false
+   443→                      output_sensitive: false
+   444→                      input_sensitive_type: 0
+   445→                      output_sensitive_type: 0
+   446→                      output_sensitive_int: 0
+   447→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   448→                      choices:
+   449→                        - index: 0
+   450→                          delta:
+   451→                            content: |2-
+   452→                               with large, expressive hazel/light brown eyes.
+   453→                              - **Hair**: She has tousled, wavy
+   454→                            role: assistant
+   455→                            name: MiniMax AI
+   456→                            audio_content: ''
+   457→                      created: 1780154823
+   458→                      model: MiniMax-M3.1-Flash-Preview
+   459→                      object: chat.completion.chunk
+   460→                      usage: null
+   461→                      input_sensitive: false
+   462→                      output_sensitive: false
+   463→                      input_sensitive_type: 0
+   464→                      output_sensitive_type: 0
+   465→                      output_sensitive_int: 0
+   466→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   467→                      choices:
+   468→                        - index: 0
+   469→                          delta:
+   470→                            content: ' light brown/auburn hair with wispy bangs that frame her face, appearing somewhat wild and'
+   471→                            role: assistant
+   472→                            name: MiniMax AI
+   473→                            audio_content: ''
+   474→                      created: 1780154823
+   475→                      model: MiniMax-M3.1-Flash-Preview
+   476→                      object: chat.completion.chunk
+   477→                      usage: null
+   478→                      input_sensitive: false
+   479→                      output_sensitive: false
+   480→                      input_sensitive_type: 0
+   481→                      output_sensitive_type: 0
+   482→                      output_sensitive_int: 0
+   483→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   484→                      choices:
+   485→                        - index: 0
+   486→                          delta:
+   487→                            content: >2-
+   488→                               natural.
+   489→                              - **Clothing**: She's wearing a cream or off-white
+   490→                              top with delicate lace or ruff
+   491→                            role: assistant
+   492→                            name: MiniMax AI
+   493→                            audio_content: ''
+   494→                      created: 1780154823
+   495→                      model: MiniMax-M3.1-Flash-Preview
+   496→                      object: chat.completion.chunk
+   497→                      usage: null
+   498→                      input_sensitive: false
+   499→                      output_sensitive: false
+   500→                      input_sensitive_type: 0
+   501→                      output_sensitive_type: 0
+   502→                      output_sensitive_int: 0
+   503→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   504→                      choices:
+   505→                        - index: 0
+   506→                          delta:
+   507→                            content: >-
+   508→                              led detailing around the neckline, giving it a
+   509→                              vintage or romantic feel.
+   510→
+   511→                              - **Lighting and mood
+   512→                            role: assistant
+   513→                            name: MiniMax AI
+   514→                            audio_content: ''
+   515→                      created: 1780154823
+   516→                      model: MiniMax-M3.1-Flash-Preview
+   517→                      object: chat.completion.chunk
+   518→                      usage: null
+   519→                      input_sensitive: false
+   520→                      output_sensitive: false
+   521→                      input_sensitive_type: 0
+   522→                      output_sensitive_type: 0
+   523→                      output_sensitive_int: 0
+   524→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   525→                      choices:
+   526→                        - index: 0
+   527→                          delta:
+   528→                            content: >-
+   529→                              **: The photo uses soft, warm lighting that
+   530→                              highlights her features and creates a gentle,
+   531→                              painter
+   532→                            role: assistant
+   533→                            name: MiniMax AI
+   534→                            audio_content: ''
+   535→                      created: 1780154823
+   536→                      model: MiniMax-M3.1-Flash-Preview
+   537→                      object: chat.completion.chunk
+   538→                      usage: null
+   539→                      input_sensitive: false
+   540→                      output_sensitive: false
+   541→                      input_sensitive_type: 0
+   542→                      output_sensitive_type: 0
+   543→                      output_sensitive_int: 0
+   544→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   545→                      choices:
+   546→                        - index: 0
+   547→                          delta:
+   548→                            content: >-
+   549→                              ly quality. The background is a neutral, muted
+   550→                              olive-gray tone, which keeps the focus
+   551→                            role: assistant
+   552→                            name: MiniMax AI
+   553→                            audio_content: ''
+   554→                      created: 1780154823
+   555→                      model: MiniMax-M3.1-Flash-Preview
+   556→                      object: chat.completion.chunk
+   557→                      usage: null
+   558→                      input_sensitive: false
+   559→                      output_sensitive: false
+   560→                      input_sensitive_type: 0
+   561→                      output_sensitive_type: 0
+   562→                      output_sensitive_int: 0
+   563→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   564→                      choices:
+   565→                        - index: 0
+   566→                          delta:
+   567→                            content: >2-
+   568→                               on her face.
+   569→                              - **Style**: The overall aesthetic has an
+   570→                              artistic, portrait-ph
+   571→                            role: assistant
+   572→                            name: MiniMax AI
+   573→                            audio_content: ''
+   574→                      created: 1780154823
+   575→                      model: MiniMax-M3.1-Flash-Preview
+   576→                      object: chat.completion.chunk
+   577→                      usage: null
+   578→                      input_sensitive: false
+   579→                      output_sensitive: false
+   580→                      input_sensitive_type: 0
+   581→                      output_sensitive_type: 0
+   582→                      output_sensitive_int: 0
+   583→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   584→                      choices:
+   585→                        - index: 0
+   586→                          delta:
+   587→                            content: >-
+   588→                              otography quality, reminiscent of fine art
+   589→                              children's portraiture, with shallow depth of
+   590→                              field that softly
+   591→                            role: assistant
+   592→                            name: MiniMax AI
+   593→                            audio_content: ''
+   594→                      created: 1780154823
+   595→                      model: MiniMax-M3.1-Flash-Preview
+   596→                      object: chat.completion.chunk
+   597→                      usage: null
+   598→                      input_sensitive: false
+   599→                      output_sensitive: false
+   600→                      input_sensitive_type: 0
+   601→                      output_sensitive_type: 0
+   602→                      output_sensitive_int: 0
+   603→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   604→                      choices:
+   605→                        - finish_reason: stop
+   606→                          index: 0
+   607→                          delta:
+   608→                            content: >2-
+   609→                               blurs the background.
+   610→
+   611→                              The image evokes a sense of innocence, warmth, and
+   612→                              charm.
+   613→                            role: assistant
+   614→                            name: MiniMax AI
+   615→                            audio_content: ''
+   616→                      created: 1780154823
+   617→                      model: MiniMax-M3.1-Flash-Preview
+   618→                      object: chat.completion.chunk
+   619→                      usage: null
+   620→                      input_sensitive: false
+   621→                      output_sensitive: false
+   622→                      input_sensitive_type: 0
+   623→                      output_sensitive_type: 0
+   624→                      output_sensitive_int: 0
+   625→                Tool Use:
+   626→                  value:
+   627→                    id: 066b13237d4accbb697b81f696876915
+   628→                    choices:
+   629→                      - finish_reason: tool_calls
+   630→                        index: 0
+   631→                        message:
+   632→                          content: ''
+   633→                          reasoning_content: >-
+   634→                            The user is asking about the weather in San
+   635→                            Francisco. I'll use the get_weather tool to retrieve
+   636→                            this information.
+   637→                          role: assistant
+   638→                          name: MiniMax AI
+   639→                          tool_calls:
+   640→                            - id: call_function_a1nrtksph4pi_1
+   641→                              type: function
+   642→                              function:
+   643→                                name: get_weather
+   644→                                arguments: '{"location": "San Francisco, US"}'
+   645→                              index: 0
+   646→                          audio_content: ''
+   647→                    created: 1780211747
+   648→                    model: MiniMax-M3.1-Flash-Preview
+   649→                    object: chat.completion
+   650→                    usage:
+   651→                      total_tokens: 473
+   652→                      total_characters: 0
+   653→                      prompt_tokens: 418
+   654→                      completion_tokens: 55
+   655→                      prompt_tokens_details:
+   656→                        cached_tokens: 114
+   657→                    input_sensitive: false
+   658→                    output_sensitive: false
+   659→                    input_sensitive_type: 0
+   660→                    output_sensitive_type: 0
+   661→                    output_sensitive_int: 0
+   662→                    base_resp:
+   663→                      status_code: 0
+   664→                      status_msg: ''
+   665→            text/event-stream:
+   666→              schema:
+   667→                $ref: '#/components/schemas/ChatCompletionChunk'
+   668→              examples:
+   669→                Stream:
+   670→                  value:
+   671→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   672→                      choices:
+   673→                        - index: 0
+   674→                          delta:
+   675→                            reasoning_content: The user
+   676→                            role: assistant
+   677→                            name: MiniMax AI
+   678→                            audio_content: ''
+   679→                      created: 1780154823
+   680→                      model: MiniMax-M3.1-Flash-Preview
+   681→                      object: chat.completion.chunk
+   682→                      usage: null
+   683→                      input_sensitive: false
+   684→                      output_sensitive: false
+   685→                      input_sensitive_type: 0
+   686→                      output_sensitive_type: 0
+   687→                      output_sensitive_int: 0
+   688→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   689→                      choices:
+   690→                        - index: 0
+   691→                          delta:
+   692→                            content: This image is
+   693→                            reasoning_content: ' is asking what the image shows. I should describe the image in detail.'
+   694→                            role: assistant
+   695→                            name: MiniMax AI
+   696→                            audio_content: ''
+   697→                      created: 1780154823
+   698→                      model: MiniMax-M3.1-Flash-Preview
+   699→                      object: chat.completion.chunk
+   700→                      usage: null
+   701→                      input_sensitive: false
+   702→                      output_sensitive: false
+   703→                      input_sensitive_type: 0
+   704→                      output_sensitive_type: 0
+   705→                      output_sensitive_int: 0
+   706→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   707→                      choices:
+   708→                        - index: 0
+   709→                          delta:
+   710→                            content: |2+
+   711→                               a close-up portrait of a young girl, likely a toddler or preschool-aged child. Key details include:
+   712→
+   713→                            role: assistant
+   714→                            name: MiniMax AI
+   715→                            audio_content: ''
+   716→                      created: 1780154823
+   717→                      model: MiniMax-M3.1-Flash-Preview
+   718→                      object: chat.completion.chunk
+   719→                      usage: null
+   720→                      input_sensitive: false
+   721→                      output_sensitive: false
+   722→                      input_sensitive_type: 0
+   723→                      output_sensitive_type: 0
+   724→                      output_sensitive_int: 0
+   725→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   726→                      choices:
+   727→                        - index: 0
+   728→                          delta:
+   729→                            content: >-
+   730→                              - **Facial expression**: She has a sweet, subtle
+   731→                              smile and is looking directly at the camera
+   732→                            role: assistant
+   733→                            name: MiniMax AI
+   734→                            audio_content: ''
+   735→                      created: 1780154823
+   736→                      model: MiniMax-M3.1-Flash-Preview
+   737→                      object: chat.completion.chunk
+   738→                      usage: null
+   739→                      input_sensitive: false
+   740→                      output_sensitive: false
+   741→                      input_sensitive_type: 0
+   742→                      output_sensitive_type: 0
+   743→                      output_sensitive_int: 0
+   744→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   745→                      choices:
+   746→                        - index: 0
+   747→                          delta:
+   748→                            content: |2-
+   749→                               with large, expressive hazel/light brown eyes.
+   750→                              - **Hair**: She has tousled, wavy
+   751→                            role: assistant
+   752→                            name: MiniMax AI
+   753→                            audio_content: ''
+   754→                      created: 1780154823
+   755→                      model: MiniMax-M3.1-Flash-Preview
+   756→                      object: chat.completion.chunk
+   757→                      usage: null
+   758→                      input_sensitive: false
+   759→                      output_sensitive: false
+   760→                      input_sensitive_type: 0
+   761→                      output_sensitive_type: 0
+   762→                      output_sensitive_int: 0
+   763→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   764→                      choices:
+   765→                        - index: 0
+   766→                          delta:
+   767→                            content: ' light brown/auburn hair with wispy bangs that frame her face, appearing somewhat wild and'
+   768→                            role: assistant
+   769→                            name: MiniMax AI
+   770→                            audio_content: ''
+   771→                      created: 1780154823
+   772→                      model: MiniMax-M3.1-Flash-Preview
+   773→                      object: chat.completion.chunk
+   774→                      usage: null
+   775→                      input_sensitive: false
+   776→                      output_sensitive: false
+   777→                      input_sensitive_type: 0
+   778→                      output_sensitive_type: 0
+   779→                      output_sensitive_int: 0
+   780→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   781→                      choices:
+   782→                        - index: 0
+   783→                          delta:
+   784→                            content: >2-
+   785→                               natural.
+   786→                              - **Clothing**: She's wearing a cream or off-white
+   787→                              top with delicate lace or ruff
+   788→                            role: assistant
+   789→                            name: MiniMax AI
+   790→                            audio_content: ''
+   791→                      created: 1780154823
+   792→                      model: MiniMax-M3.1-Flash-Preview
+   793→                      object: chat.completion.chunk
+   794→                      usage: null
+   795→                      input_sensitive: false
+   796→                      output_sensitive: false
+   797→                      input_sensitive_type: 0
+   798→                      output_sensitive_type: 0
+   799→                      output_sensitive_int: 0
+   800→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   801→                      choices:
+   802→                        - index: 0
+   803→                          delta:
+   804→                            content: >-
+   805→                              led detailing around the neckline, giving it a
+   806→                              vintage or romantic feel.
+   807→
+   808→                              - **Lighting and mood
+   809→                            role: assistant
+   810→                            name: MiniMax AI
+   811→                            audio_content: ''
+   812→                      created: 1780154823
+   813→                      model: MiniMax-M3.1-Flash-Preview
+   814→                      object: chat.completion.chunk
+   815→                      usage: null
+   816→                      input_sensitive: false
+   817→                      output_sensitive: false
+   818→                      input_sensitive_type: 0
+   819→                      output_sensitive_type: 0
+   820→                      output_sensitive_int: 0
+   821→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   822→                      choices:
+   823→                        - index: 0
+   824→                          delta:
+   825→                            content: >-
+   826→                              **: The photo uses soft, warm lighting that
+   827→                              highlights her features and creates a gentle,
+   828→                              painter
+   829→                            role: assistant
+   830→                            name: MiniMax AI
+   831→                            audio_content: ''
+   832→                      created: 1780154823
+   833→                      model: MiniMax-M3.1-Flash-Preview
+   834→                      object: chat.completion.chunk
+   835→                      usage: null
+   836→                      input_sensitive: false
+   837→                      output_sensitive: false
+   838→                      input_sensitive_type: 0
+   839→                      output_sensitive_type: 0
+   840→                      output_sensitive_int: 0
+   841→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   842→                      choices:
+   843→                        - index: 0
+   844→                          delta:
+   845→                            content: >-
+   846→                              ly quality. The background is a neutral, muted
+   847→                              olive-gray tone, which keeps the focus
+   848→                            role: assistant
+   849→                            name: MiniMax AI
+   850→                            audio_content: ''
+   851→                      created: 1780154823
+   852→                      model: MiniMax-M3.1-Flash-Preview
+   853→                      object: chat.completion.chunk
+   854→                      usage: null
+   855→                      input_sensitive: false
+   856→                      output_sensitive: false
+   857→                      input_sensitive_type: 0
+   858→                      output_sensitive_type: 0
+   859→                      output_sensitive_int: 0
+   860→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   861→                      choices:
+   862→                        - index: 0
+   863→                          delta:
+   864→                            content: >2-
+   865→                               on her face.
+   866→                              - **Style**: The overall aesthetic has an
+   867→                              artistic, portrait-ph
+   868→                            role: assistant
+   869→                            name: MiniMax AI
+   870→                            audio_content: ''
+   871→                      created: 1780154823
+   872→                      model: MiniMax-M3.1-Flash-Preview
+   873→                      object: chat.completion.chunk
+   874→                      usage: null
+   875→                      input_sensitive: false
+   876→                      output_sensitive: false
+   877→                      input_sensitive_type: 0
+   878→                      output_sensitive_type: 0
+   879→                      output_sensitive_int: 0
+   880→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   881→                      choices:
+   882→                        - index: 0
+   883→                          delta:
+   884→                            content: >-
+   885→                              otography quality, reminiscent of fine art
+   886→                              children's portraiture, with shallow depth of
+   887→                              field that softly
+   888→                            role: assistant
+   889→                            name: MiniMax AI
+   890→                            audio_content: ''
+   891→                      created: 1780154823
+   892→                      model: MiniMax-M3.1-Flash-Preview
+   893→                      object: chat.completion.chunk
+   894→                      usage: null
+   895→                      input_sensitive: false
+   896→                      output_sensitive: false
+   897→                      input_sensitive_type: 0
+   898→                      output_sensitive_type: 0
+   899→                      output_sensitive_int: 0
+   900→                    - id: 066a34c738d29f6687fbf54ab6c98c34
+   901→                      choices:
+   902→                        - finish_reason: stop
+   903→                          index: 0
+   904→                          delta:
+   905→                            content: >2-
+   906→                               blurs the background.
+   907→
+   908→                              The image evokes a sense of innocence, warmth, and
+   909→                              charm.
+   910→                            role: assistant
+   911→                            name: MiniMax AI
+   912→                            audio_content: ''
+   913→                      created: 1780154823
+   914→                      model: MiniMax-M3.1-Flash-Preview
+   915→                      object: chat.completion.chunk
+   916→                      usage: null
+   917→                      input_sensitive: false
+   918→                      output_sensitive: false
+   919→                      input_sensitive_type: 0
+   920→                      output_sensitive_type: 0
+   921→                      output_sensitive_int: 0
+   922→components:
+   923→  schemas:
+   924→    ChatCompletionReq:
+   925→      type: object
+   926→      required:
+   927→        - model
+   928→        - messages
+   929→      properties:
+   930→        model:
+   931→          type: string
+   932→          description: Model ID
+   933→          enum:
+   934→            - MiniMax-M3.1-Flash-Preview
+   935→            - MiniMax-M3
+   936→            - MiniMax-M2.7
+   937→            - MiniMax-M2.7-highspeed
+   938→            - MiniMax-M2.5
+   939→            - MiniMax-M2.5-highspeed
+   940→            - MiniMax-M2.1
+   941→            - MiniMax-M2.1-highspeed
+   942→            - MiniMax-M2
+   943→        service_tier:
+   944→          type: string
+   945→          description: >-
+   946→            Service tier for request admission. Supported values are `standard`
+   947→            and `priority`. If omitted, the request uses the `standard` tier.
+   948→            The `priority`
+   949→            [price](https://platform.minimax.io/docs/pricing/overview) is 1.5
+   950→            times the `standard` price and ensures priority admission so the
+   951→            request is processed ahead of other requests, leading to faster
+   952→            responses and fewer failures.
+   953→          enum:
+   954→            - standard
+   955→            - priority
+   956→          default: standard
+   957→        messages:
+   958→          type: array
+   959→          description: >-
+   960→            A list of messages containing the conversation history. Supports
+   961→            text, image, video, and tool call content.
+   962→          items:
+   963→            $ref: '#/components/schemas/Message'
+   964→        thinking:
+   965→          type: object
+   966→          description: >-
+   967→            Controls thinking behavior. The `adaptive` default applies to every
+   968→            model here; only the effect of `disabled` differs.
+   969→
+   970→            - `MiniMax-M3.1-Flash-Preview`: always thinks. `disabled` returns
+   971→            HTTP 400. Use `reasoning_effort` to tune thinking depth.
+   972→
+   973→            - `MiniMax-M3`: adaptive thinking is on by default; `disabled` skips
+   974→            thinking and answers directly.
+   975→
+   976→            - M2.x models: thinking cannot be disabled; `disabled` is accepted
+   977→            but ignored.
+   978→          properties:
+   979→            type:
+   980→              type: string
+   981→              enum:
+   982→                - disabled
+   983→                - adaptive
+   984→              default: adaptive
+   985→              description: >-
+   986→                Thinking control type.
+   987→
+   988→                - `disabled`: Skip thinking for `MiniMax-M3` and answer
+   989→                directly. Not supported by `MiniMax-M3.1-Flash-Preview`, which
+   990→                returns HTTP 400. For M2.x models, thinking remains on.
+   991→
+   992→                - `adaptive`: Enable adaptive thinking. This is the default when
+   993→                `thinking` is omitted, and the only accepted value for
+   994→                `MiniMax-M3.1-Flash-Preview`.
+   995→          required: []
+   996→        reasoning_effort:
+   997→          type: string
+   998→          description: >-
+   999→            Tunes thinking depth. Only `MiniMax-M3.1-Flash-Preview` supports
+  1000→            real thinking-depth tuning; other models ignore this field. When
+  1001→            omitted, its default thinking depth is `max`. `none` is not accepted
+  1002→            and returns HTTP 400 because `MiniMax-M3.1-Flash-Preview` always
+  1003→            thinks.
+  1004→          enum:
+  1005→            - low
+  1006→            - medium
+  1007→            - high
+  1008→            - xhigh
+  1009→            - max
+  1010→        reasoning_split:
+  1011→          type: boolean
+  1012→          description: >-
+  1013→            Output-format switch. When `true`, thinking content is separated
+  1014→            into the `reasoning_content` field; when `false`, thinking is kept
+  1015→            inside `content` wrapped in `<think>` tags.
+  1016→            `MiniMax-M3.1-Flash-Preview` does not currently support setting this
+  1017→            parameter to `false`. This parameter does not enable or disable
+  1018→            thinking.
+  1019→        stream:
+  1020→          type: boolean
+  1021→          description: >-
+  1022→            Whether to use streaming output, defaults to `false`. When set to
+  1023→            `true`, the response will be returned in chunks.
+  1024→          default: false
+  1025→        stream_options:
+  1026→          type: object
+  1027→          description: Streaming response options.
+  1028→          properties:
+  1029→            include_usage:
+  1030→              type: boolean
+  1031→              default: false
+  1032→              description: Whether to include token usage in the streaming response.
+  1033→        max_completion_tokens:
+  1034→          type: integer
+  1035→          format: int64
+  1036→          description: >-
+  1037→            Specifies the upper limit for generated content length, in tokens.
+  1038→            For MiniMax-M3.1-Flash-Preview and MiniMax-M3 the recommended value
+  1039→            is 131072 (128K) and the maximum is 524288 (512K); for other models
+  1040→            the recommended value is 65536 (64K) and the maximum is 204800
+  1041→            (200K). If generation stops due to `length`, try increasing this
+  1042→            value.
+  1043→          minimum: 1
+  1044→        temperature:
+  1045→          type: number
+  1046→          format: double
+  1047→          description: >-
+  1048→            Temperature coefficient, affects output randomness. Range [0, 2],
+  1049→            default 1. Higher values produce more random output; lower values
+  1050→            produce more deterministic output.
+  1051→          minimum: 0
+  1052→          maximum: 2
+  1053→          default: 1
+  1054→        top_p:
+  1055→          type: number
+  1056→          format: double
+  1057→          description: >-
+  1058→            Nucleus sampling parameter. Range [0, 1]. Default is 0.95 for
+  1059→            MiniMax-M3.1-Flash-Preview and MiniMax-M3, and 0.9 for M2.x models.
+  1060→          minimum: 0
+  1061→          maximum: 1
+  1062→          default: 0.95
+  1063→        tools:
+  1064→          type: array
+  1065→          description: Tool definition list. Function tools are supported.
+  1066→          items:
+  1067→            type: object
+  1068→            properties:
+  1069→              type:
+  1070→                type: string
+  1071→                enum:
+  1072→                  - function
+  1073→                description: Tool type, always function.
+  1074→              function:
+  1075→                type: object
+  1076→                properties:
+  1077→                  name:
+  1078→                    type: string
+  1079→                    description: Function name.
+  1080→                  description:
+  1081→                    type: string
+  1082→                    description: Function description.
+  1083→                  parameters:
+  1084→                    type: object
+  1085→                    description: Function parameters JSON Schema.
+  1086→                required:
+  1087→                  - name
+  1088→                  - parameters
+  1089→            required:
+  1090→              - type
+  1091→              - function
+  1092→        max_tokens:
+  1093→          type: integer
+  1094→          format: int64
+  1095→          deprecated: true
+  1096→          description: >-
+  1097→            Legacy generation length limit parameter. Deprecated; use
+  1098→            `max_completion_tokens` instead.
+  1099→          minimum: 1
+  1100→    ChatCompletionResp:
+  1101→      type: object
+  1102→      properties:
+  1103→        id:
+  1104→          type: string
+  1105→          description: Unique ID of this response
+  1106→        choices:
+  1107→          type: array
+  1108→          description: List of response choices
+  1109→          items:
+  1110→            type: object
+  1111→            properties:
+  1112→              finish_reason:
+  1113→                type: string
+  1114→                description: >-
+  1115→                  Reason for stopping generation: `stop`, `length`,
+  1116→                  `content_filter`, or `tool_calls`.
+  1117→                enum:
+  1118→                  - stop
+  1119→                  - length
+  1120→                  - content_filter
+  1121→                  - tool_calls
+  1122→              index:
+  1123→                type: integer
+  1124→                description: Index of the choice, starting from 0
+  1125→              message:
+  1126→                type: object
+  1127→                description: Complete reply generated by the model
+  1128→                required:
+  1129→                  - content
+  1130→                  - role
+  1131→                properties:
+  1132→                  content:
+  1133→                    type: string
+  1134→                    description: Text reply content
+  1135→                  reasoning_content:
+  1136→                    type: string
+  1137→                    description: >-
+  1138→                      Thinking content. Thinking is adaptive, so on a simple
+  1139→                      turn the model may not think and the field is then absent
+  1140→                      from the response - check for it before reading it.
+  1141→                  role:
+  1142→                    type: string
+  1143→                    description: Role, fixed as `assistant`
+  1144→                    enum:
+  1145→                      - assistant
+  1146→                  tool_calls:
+  1147→                    type: array
+  1148→                    description: >-
+  1149→                      Tool calls generated by the model. Returned only when
+  1150→                      `finish_reason` is `tool_calls`. Echo each entry back as
+  1151→                      part of the next-turn assistant message and pair it with a
+  1152→                      `role: tool` message whose `tool_call_id` equals the
+  1153→                      entry's `id`.
+  1154→                    items:
+  1155→                      $ref: '#/components/schemas/ToolCall'
+  1156→        created:
+  1157→          type: integer
+  1158→          format: int64
+  1159→          description: Unix timestamp (seconds) when the response was created
+  1160→        model:
+  1161→          type: string
+  1162→          description: Model ID used for this request
+  1163→        object:
+  1164→          type: string
+  1165→          description: >-
+  1166→            Object type. `chat.completion` for non-streaming,
+  1167→            `chat.completion.chunk` for streaming
+  1168→          enum:
+  1169→            - chat.completion
+  1170→            - chat.completion.chunk
+  1171→        usage:
+  1172→          $ref: '#/components/schemas/Usage'
+  1173→        input_sensitive:
+  1174→          type: boolean
+  1175→          description: >-
+  1176→            Whether the input content triggered sensitive word detection. If the
+  1177→            input content is severely inappropriate, the API will return a
+  1178→            content violation error message with empty reply content
+  1179→        input_sensitive_type:
+  1180→          type: integer
+  1181→          format: int64
+  1182→          description: >-
+  1183→            Type of sensitive word triggered by input, returned when
+  1184→            input_sensitive is true. Values: 1 Severe violation; 2 Pornography;
+  1185→            3 Advertising; 4 Prohibited; 5 Abuse; 6 Violence/Terrorism; 7 Other
+  1186→        output_sensitive:
+  1187→          type: boolean
+  1188→          description: >-
+  1189→            Whether the output content triggered sensitive word detection. If
+  1190→            the output content is severely inappropriate, the API will return a
+  1191→            content violation error message with empty reply content
+  1192→        output_sensitive_type:
+  1193→          type: integer
+  1194→          format: int64
+  1195→          description: Type of sensitive word triggered by output
+  1196→        base_resp:
+  1197→          type: object
+  1198→          description: Error status code and details
+  1199→          properties:
+  1200→            status_code:
+  1201→              type: integer
+  1202→              format: int64
+  1203→              description: >-
+  1204→                Status code
+  1205→
+  1206→
+  1207→                - `1000`: Unknown error
+  1208→
+  1209→                - `1001`: Request timeout
+  1210→
+  1211→                - `1002`: Rate limit triggered
+  1212→
+  1213→                - `1004`: Authentication failed
+  1214→
+  1215→                - `1008`: Insufficient balance
+  1216→
+  1217→                - `1013`: Internal server error
+  1218→
+  1219→                - `1027`: Output content error
+  1220→
+  1221→                - `1039`: Token limit exceeded
+  1222→
+  1223→                - `2013`: Parameter error
+  1224→
+  1225→
+  1226→                For more details, see [Error Code
+  1227→                Reference](/api-reference/errorcode)
+  1228→            status_msg:
+  1229→              type: string
+  1230→              description: Error details
+  1231→    ChatCompletionChunk:
+  1232→      type: object
+  1233→      description: ''
+  1234→      properties:
+  1235→        id:
+  1236→          type: string
+  1237→          description: Unique ID of this response
+  1238→        choices:
+  1239→          type: array
+  1240→          description: List of streaming response choices
+  1241→          items:
+  1242→            type: object
+  1243→            properties:
+  1244→              index:
+  1245→                type: integer
+  1246→                description: Index of the choice, starting from 0
+  1247→              delta:
+  1248→                type: object
+  1249→                description: Incremental content
+  1250→                properties:
+  1251→                  role:
+  1252→                    type: string
+  1253→                    description: Role, fixed as `assistant`
+  1254→                    enum:
+  1255→                      - assistant
+  1256→                  content:
+  1257→                    type: string
+  1258→                    description: Incremental text content
+  1259→                  reasoning_content:
+  1260→                    type: string
+  1261→                    description: >-
+  1262→                      Incremental thinking content; omitted when no thinking is
+  1263→                      generated.
+  1264→              finish_reason:
+  1265→                type: string
+  1266→                nullable: true
+  1267→                description: >-
+  1268→                  Reason for stopping generation, null when not finished: `stop`
+  1269→                  (natural ending), `length` (reached `max_completion_tokens`
+  1270→                  limit)
+  1271→                enum:
+  1272→                  - stop
+  1273→                  - length
+  1274→        created:
+  1275→          type: integer
+  1276→          format: int64
+  1277→          description: Unix timestamp (seconds) when the response was created
+  1278→        model:
+  1279→          type: string
+  1280→          description: Model ID used for this request
+  1281→        object:
+  1282→          type: string
+  1283→          description: Object type, fixed as `chat.completion.chunk`
+  1284→          enum:
+  1285→            - chat.completion.chunk
+  1286→        usage:
+  1287→          $ref: '#/components/schemas/Usage'
+  1288→          description: Token usage (only returned in the last chunk)
+  1289→        input_sensitive_type:
+  1290→          type: integer
+  1291→          format: int64
+  1292→          description: Type of sensitive word triggered by input
+  1293→        output_sensitive:
+  1294→          type: boolean
+  1295→          description: Whether the output content triggered sensitive word detection
+  1296→        output_sensitive_type:
+  1297→          type: integer
+  1298→          format: int64
+  1299→          description: Type of sensitive word triggered by output
+  1300→    Message:
+  1301→      type: object
+  1302→      required:
+  1303→        - role
+  1304→      properties:
+  1305→        role:
+  1306→          type: string
+  1307→          enum:
+  1308→            - system
+  1309→            - user
+  1310→            - assistant
+  1311→            - tool
+  1312→          description: Role of the message sender.
+  1313→        name:
+  1314→          type: string
+  1315→          description: >-
+  1316→            Name of the sender. If there are multiple roles of the same type, a
+  1317→            specific name must be provided to distinguish them
+  1318→        content:
+  1319→          oneOf:
+  1320→            - type: string
+  1321→              description: Text message content
+  1322→            - type: array
+  1323→              description: >-
+  1324→                Multimodal message content parts. `MiniMax-M3.1-Flash-Preview`
+  1325→                and `MiniMax-M3` support text, image, and video input.
+  1326→
+  1327→
+  1328→                **File size and request limits**
+  1329→
+  1330→                - URL or Base64 input: video file ≤ 50 MB, image file ≤ 10 MB,
+  1331→                request body ≤ 64 MB.
+  1332→
+  1333→                - Files API upload: referenced in `content` as
+  1334→                `mm_file://{file_id}`, with a single video up to 512 MB.
+  1335→              items:
+  1336→                $ref: '#/components/schemas/MessageContentPart'
+  1337→          description: >-
+  1338→            Message content. `MiniMax-M3.1-Flash-Preview` and `MiniMax-M3`
+  1339→            support text, image, and video content parts.
+  1340→        tool_calls:
+  1341→          type: array
+  1342→          description: Tool call list in an assistant message.
+  1343→          items:
+  1344→            $ref: '#/components/schemas/ToolCall'
+  1345→        tool_call_id:
+  1346→          type: string
+  1347→          description: >-
+  1348→            Tool call ID. Required when `role` is `tool`. Set this to the `id`
+  1349→            of the corresponding entry in the assistant message's `tool_calls`
+  1350→            so the model can match the tool result with the originating call.
+  1351→            Ignored for other roles.
+  1352→    ToolCall:
+  1353→      type: object
+  1354→      required:
+  1355→        - id
+  1356→        - type
+  1357→        - function
+  1358→      description: Tool call generated by the model in an assistant message.
+  1359→      properties:
+  1360→        id:
+  1361→          type: string
+  1362→          description: Tool call ID, generated by the model.
+  1363→        type:
+  1364→          type: string
+  1365→          enum:
+  1366→            - function
+  1367→          description: Tool call type. Currently only `function` is supported.
+  1368→        function:
+  1369→          type: object
+  1370→          required:
+  1371→            - name
+  1372→            - arguments
+  1373→          properties:
+  1374→            name:
+  1375→              type: string
+  1376→              description: Name of the function to call.
+  1377→            arguments:
+  1378→              type: string
+  1379→              description: Function arguments as a JSON-formatted string.
+  1380→    Usage:
+  1381→      type: object
+  1382→      description: Token usage statistics for this request
+  1383→      properties:
+  1384→        total_tokens:
+  1385→          type: integer
+  1386→          description: Total number of tokens consumed
+  1387→    MessageContentPart:
+  1388→      type: object
+  1389→      required:
+  1390→        - type
+  1391→      description: >-
+  1392→        Multimodal message content part. Each part declares its kind via `type`,
+  1393→        and only the field matching that type should be populated.
+  1394→      properties:
+  1395→        type:
+  1396→          type: string
+  1397→          enum:
+  1398→            - text
+  1399→            - image_url
+  1400→            - video_url
+  1401→          description: |-
+  1402→            Content part type:
+  1403→            - `text`: Text part
+  1404→            - `image_url`: Image input
+  1405→            - `video_url`: Video input
+  1406→        text:
+  1407→          type: string
+  1408→          description: Text content (when `type` is `text`).
+  1409→        image_url:
+  1410→          type: object
+  1411→          description: >-
+  1412→            Image input (when `type` is `image_url`). Each image can be up to 10
+  1413→            MB.
+  1414→
+  1415→
+  1416→            **Supported image formats**
+  1417→
+  1418→
+  1419→            | Format | Common extensions | MIME Type |
+  1420→
+  1421→            | :-- | :-- | :-- |
+  1422→
+  1423→            | JPEG | .jpg, .jpeg | image/jpeg |
+  1424→
+  1425→            | PNG | .png | image/png |
+  1426→
+  1427→            | GIF | .gif | image/gif |
+  1428→
+  1429→            | WEBP | .webp | image/webp |
+  1430→          required:
+  1431→            - url
+  1432→          properties:
+  1433→            url:
+  1434→              type: string
+  1435→              description: Image URL or Base64 data URL.
+  1436→            detail:
+  1437→              type: string
+  1438→              enum:
+  1439→                - low
+  1440→                - default
+  1441→                - high
+  1442→              default: default
+  1443→              description: >-
+  1444→                Controls image resolution. Defaults to default.
+  1445→
+  1446→
+  1447→                Rough single-image token usage heuristic:
+  1448→
+  1449→
+  1450→                | detail | Rough token usage |
+  1451→
+  1452→                | :-- | :-- |
+  1453→
+  1454→                | low | Usually a few hundred tokens, up to ~600 |
+  1455→
+  1456→                | default | Often ~1k-3k tokens, up to ~5k |
+  1457→
+  1458→                | high | Often several thousand tokens, up to ~15k+ |
+  1459→
+  1460→
+  1461→                Actual usage depends on image size and content; check response
+  1462→                usage or token counting where available.
+  1463→            max_long_side_pixel:
+  1464→              type: integer
+  1465→              minimum: 1
+  1466→              description: Longest-side pixel limit for the image.
+  1467→        video_url:
+  1468→          type: object
+  1469→          description: >-
+  1470→            Video input (when `type` is `video_url`).
+  1471→
+  1472→
+  1473→            **Supported video formats**
+  1474→
+  1475→
+  1476→            | Format | Common extensions | MIME Type |
+  1477→
+  1478→            | :-- | :-- | :-- |
+  1479→
+  1480→            | MP4 | .mp4 | video/mp4 |
+  1481→
+  1482→            | AVI | .avi | video/avi or video/x-msvideo |
+  1483→
+  1484→            | MOV | .mov | URL input: set the object storage Content-Type to
+  1485→            video/quicktime; base64 input: use video/mov, i.e.
+  1486→            data:video/mov;base64,<BASE64_ENCODING> |
+  1487→
+  1488→            | MKV | .mkv | video/x-matroska |
+  1489→          required:
+  1490→            - url
+  1491→          properties:
+  1492→            url:
+  1493→              type: string
+  1494→              description: >-
+  1495→                Video URL, Base64 data URL, or Files API reference in the form
+  1496→                `mm_file://{file_id}`. To obtain a `file_id`, first upload the
+  1497→                video via the [Upload
+  1498→                File](/api-reference/file-management-upload) API. URL or Base64
+  1499→                videos can be up to 50 MB; Files API videos can be up to 512 MB.
+  1500→            detail:
+  1501→              type: string
+  1502→              enum:
+  1503→                - low
+  1504→                - default
+  1505→                - high
+  1506→              default: default
+  1507→              description: Controls per-frame video resolution. Defaults to default.
+  1508→            fps:
+  1509→              type: number
+  1510→              minimum: 0.2
+  1511→              maximum: 5
+  1512→              default: 1
+  1513→              description: >-
+  1514→                Video frame sampling rate. Defaults to 1. Range [0.2, 5].
+  1515→
+  1516→                - Higher values: more sensitive to scene changes, but higher
+  1517→                token cost and slower response.
+  1518→
+  1519→                - Lower values: lower token cost and faster response, but less
+  1520→                sensitive to scene changes.
+  1521→            max_long_side_pixel:
+  1522→              type: integer
+  1523→              minimum: 1
+  1524→              description: Longest-side pixel limit for video frames.
+  1525→  securitySchemes:
+  1526→    bearerAuth:
+  1527→      type: http
+  1528→      scheme: bearer
+  1529→      bearerFormat: JWT
+  1530→      description: |-
+  1531→        `HTTP: Bearer Auth`
+  1532→         - Security Scheme Type: http
+  1533→         - HTTP Authorization Scheme: Bearer API_key, used for account verification, can be viewed in [Account Management > API Keys](https://platform.minimax.io/user-center/basic-information/interface-key)
+  1534→
+  1535→````
