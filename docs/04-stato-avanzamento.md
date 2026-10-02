@@ -77,6 +77,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I22 | Export storico ed eventi in CSV/JSON | F6b | ✅ | `lib/export.ts` (CSV «;» + BOM per Excel it-IT); pulsanti su grafico e registro — 2026-10-02 |
 | I23 | Verdetto «esaurimento stimato vs orario di reset» | F6b | ✅ | `ProjectionVerdict` in `StatsPanel` (amber se si esaurisce prima del reset, verde altrimenti) — 2026-10-02 |
 | I24 | Vista panoramica modelli (tutte le finestre a confronto) | F6b | ✅ | `PanoramicTable` (modello × finestra: residuo, stato, countdown reset) — 2026-10-02 |
+| I25 | Riprogettazione UI finestra impostazioni | UX | ✅ | `settings-dialog.tsx` su 3 tab (Connessione/Avvisi/Dati), `max-h-[85svh]` con contenuto scrollabile, header/footer fissi — 2026-10-02 |
 
 ---
 
@@ -117,6 +118,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | Data | Problema | Risoluzione |
 |------|----------|-------------|
 | 2026-10-02 | `videoDayStart` non definito in `demo.ts` (crash runtime demo) | Corretto: finestra giornaliera video calcolata su mezzanotte UTC (`Math.floor(now / DAY_MS) * DAY_MS`) |
+| 2026-10-02 | Finestra impostazioni fuori schermo: dopo l'aggiunta della sezione avvisi la dialog (layout grid, senza vincolo d'altezza) superava il viewport e il pulsante «Salva» diventava irraggiungibile | Riprogettata (I25): layout a colonna con `max-h-[85svh]`, contenuti distribuiti su 3 tab, area centrale scrollabile, header/tablist/footer fissi; verificata a 1366×768, 1280×500 (scroll interno attivo, footer visibile) e 390×844 |
 | 2026-10-02 | Rischio interpretazione errata dei `*_usage_count` | Badge/nota esplicativa nella UI (`CountsRow`) + pannello TechInfo con l'avviso semantico |
 
 ## 7. Aperture di progettazione
@@ -142,3 +144,4 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | 2026-10-02 | `docs/01` §5.2/§6, `docs/03` (mappa, §5.5→§5.5/5.6, layout, fasi, roadmap), questo file | **Rimozione F6a (ADR-8)**: eliminati `api/minimax/chat/route.ts`, `lib/token-log.ts`, `token-tracker.tsx`; il dashboard è read-only; I15/I19/I20 archiviate come 🚫 |
 | 2026-10-02 | `docs/03` §3/§4/§5.5/§5.6/§7/§10/§11, questo file | **F6b implementata**: I17 avvisi soglia (banner + toast + notifiche browser, soglie configurabili), I21 registro eventi + `EventLog`, I22 export CSV/JSON (`lib/export.ts`), I23 verdetto esaurimento vs reset (`ProjectionVerdict`), I24 `PanoramicTable`; nuove chiavi localStorage `mm-dash-events-v1` e campi settings (ADR-9) |
 | 2026-10-02 | Verifica F6b | agent-browser: banner attenzione con soglia 50% (37,2% < 50), transizione import→demo genera toast + evento in registro, `mm-dash-events-v1` corretto, verdetto «Quota sufficiente fino al reset» su dati demo, export CSV/JSON senza errori, svuotamento registro, desktop+mobile OK, zero errori console, lint pulito |
+| 2026-10-02 | `settings-dialog.tsx`, questo file (I25, §6) | **I25 — finestra impostazioni fuori schermo**: riprogettata su 3 tab con `max-h-[85svh]`, area scrollabile e footer fisso (bugfix §6); verificata con agent-browser a 1366×768, 1280×500 e 390×844 |
