@@ -434,7 +434,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                   size="sm"
                   onClick={handleImport}
                   disabled={!jsonText.trim()}
-                  className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+                  className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
                 >
                   <ClipboardPaste className="size-3.5" />
                   Analizza il JSON incollato
@@ -464,7 +464,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
               variant="ghost"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="text-zinc-400 hover:text-zinc-200"
+              className="text-zinc-400 hover:bg-white/5! hover:text-zinc-200!"
             >
               Annulla
             </Button>

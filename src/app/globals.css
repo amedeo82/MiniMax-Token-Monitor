@@ -120,3 +120,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Hover espliciti per superfici scure custom ──────────────────────────────
+   Regole fuori @layer: una dichiarazione normale non-layered batte sempre le
+   utilities Tailwind layered (CSS Cascade 5), così l'intent hover dei bottoni
+   (bg-white/[0.08], ecc.) si applica senza ambiguità di ordine di cascade.   */
+.dark .hover\:bg-white\/\[0\.08\]\!:hover,
+.dark .hover\:bg-white\/\[0\.08\]:hover {
+  background-color: rgb(255 255 255 / 0.08);
+}
+.dark .hover\:bg-white\/5\!:hover,
+.dark .hover\:bg-white\/5:hover {
+  background-color: rgb(255 255 255 / 0.05);
+}
+.dark .hover\:bg-white\/\[0\.02\]\!:hover {
+  background-color: rgb(255 255 255 / 0.02);
+}
+.dark .hover\:bg-rose-500\/20\!:hover {
+  background-color: rgb(244 63 94 / 0.2);
+}
+.dark .hover\:text-rose-300\!:hover {
+  color: rgb(253 164 175);
+}
+.dark [data-slot="tabs-trigger"][data-state="inactive"]:hover {
+  color: rgb(228 228 231);
+  background-color: rgb(255 255 255 / 0.05);
+}

@@ -109,7 +109,7 @@ export function EventLog({ events, onClear, serverCount = null }: EventLogProps)
                 size="sm"
                 aria-label="Esporta il registro eventi"
                 disabled={events.length === 0 && (serverCount ?? 0) === 0}
-                className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+                className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
               >
                 <Download className="size-3.5" />
                 Esporta
@@ -165,7 +165,7 @@ export function EventLog({ events, onClear, serverCount = null }: EventLogProps)
             size="sm"
             disabled={events.length === 0 && (serverCount ?? 0) === 0}
             onClick={onClear}
-            className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs text-zinc-400 hover:bg-white/[0.08] hover:text-rose-300"
+            className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs text-zinc-400 hover:bg-white/[0.08]! hover:text-rose-300!"
           >
             <Trash2 className="size-3.5" />
             Svuota

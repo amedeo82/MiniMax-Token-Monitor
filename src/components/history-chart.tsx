@@ -127,8 +127,8 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
             title={`Media mobile semplice su ${SMA_K} rilevamenti`}
             className={`h-8 gap-1.5 border-white/10 text-xs ${
               showSma
-                ? "bg-rose-500/15 text-rose-200 hover:bg-rose-500/20"
-                : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]"
+                ? "bg-rose-500/15 text-rose-200 hover:bg-rose-500/20!"
+                : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"
             }`}
           >
             <Spline className="size-3.5" />
@@ -141,7 +141,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                 size="sm"
                 aria-label="Esporta lo storico"
                 disabled={history.length === 0 && (serverCount === null || serverCount === 0)}
-                className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+                className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
               >
                 <Download className="size-3.5 text-zinc-400" />
                 Esporta
@@ -194,8 +194,8 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
           </DropdownMenu>
           <Tabs value={win} onValueChange={(v) => onWindowChange(v as "interval" | "weekly")}>
             <TabsList className="bg-white/[0.06]">
-              <TabsTrigger value="interval" className="text-xs data-[state=active]:text-zinc-900">5 ore</TabsTrigger>
-              <TabsTrigger value="weekly" className="text-xs data-[state=active]:text-zinc-900">Settimanale</TabsTrigger>
+              <TabsTrigger value="interval" className="h-7 text-xs text-zinc-400 hover:text-zinc-200 data-[state=inactive]:hover:bg-white/[0.05] data-[state=active]:text-zinc-100">5 ore</TabsTrigger>
+              <TabsTrigger value="weekly" className="h-7 text-xs text-zinc-400 hover:text-zinc-200 data-[state=inactive]:hover:bg-white/[0.05] data-[state=active]:text-zinc-100">Settimanale</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
