@@ -11,7 +11,7 @@
  *   passaggio ok → errore), così non si spammano ad ogni polling.
  */
 
-import type { UsageSnapshot, ModelQuota } from "./minimax";
+import type { UsageSnapshot, QuotaWindow } from "./minimax";
 
 /* ------------------------------------------------------------------ */
 /* Registro eventi (localStorage)                                      */
@@ -122,23 +122,112 @@ export function makeEvent(
 export interface AlertConfig {
   /** Motore avvisi attivo (banner + toast + notifiche). */
   alertsEnabled: boolean;
-  /** Soglia "attenzione" in % residua (0 = disattivata). */
-  alertThresholdWarn: number;
-  /** Soglia "critica" in % residua (0 = disattivata). */
-  alertThresholdCrit: number;
+  /** Soglie personalizzate per tipo di finestra (I28). */
+  thresholds: AlertThresholds;
   /** Notifica quando una finestra si resetta (salto verso il 100%). */
   notifyReset: boolean;
   /** Usa anche le Notification API del browser (serve permesso). */
   browserNotifications: boolean;
 }
 
+/** Soglie (warn/crit) di una singola finestra, in % residua (0 = disattivata). */
+export interface WindowThresholds {
+  warn: number;
+  crit: number;
+}
+
+/**
+ * Chiave del tipo di finestra per le soglie personalizzate (I28):
+ * - "h5"     → finestra di 5 ore (modelli testo/immagine/audio);
+ * - "h24"    → finestra giornaliera a 24 ore (modello video);
+ * - "weekly" → finestra settimanale (7 giorni, tutti i modelli).
+ */
+export type WindowThresholdKey = "h5" | "h24" | "weekly";
+
+export interface AlertThresholds {
+  h5: WindowThresholds;
+  h24: WindowThresholds;
+  weekly: WindowThresholds;
+}
+
 export const ALERT_DEFAULTS: AlertConfig = {
   alertsEnabled: true,
-  alertThresholdWarn: 25,
-  alertThresholdCrit: 10,
+  thresholds: {
+    h5: { warn: 25, crit: 10 },
+    h24: { warn: 25, crit: 10 },
+    weekly: { warn: 25, crit: 10 },
+  },
   notifyReset: true,
   browserNotifications: false,
 };
+
+/** Etichetta italiana del tipo di finestra (per messaggi, toast e banner). */
+export const WIN_THRESHOLD_LABELS: Record<WindowThresholdKey, string> = {
+  h5: "finestra di 5 ore",
+  h24: "finestra giornaliera (24 ore)",
+  weekly: "finestra settimanale",
+};
+
+const HOUR_MS = 3_600_000;
+
+/**
+ * Risolve la chiave soglia per una coppia (modello, finestra): la finestra
+ * "interval" è di 5 ore per i modelli testo ma di 24 ore per il video — la
+ * durata reale (start → end) prevale sul nome del modello (robusto se MiniMax
+ * aggiungesse altri tipi); in assenza di durata usa il nome (fallback demo).
+ */
+export function windowThresholdKey(
+  modelName: string,
+  win: "interval" | "weekly",
+  w: QuotaWindow | null,
+): WindowThresholdKey {
+  if (win === "weekly") return "weekly";
+  if (w && w.start !== null && w.end !== null) {
+    const dur = w.end - w.start;
+    if (dur >= 23 * HOUR_MS && dur <= 25 * HOUR_MS) return "h24";
+    if (dur >= 4 * HOUR_MS && dur <= 6 * HOUR_MS) return "h5";
+  }
+  return modelName.toLowerCase() === "video" ? "h24" : "h5";
+}
+
+/**
+ * I28 — Migrazione dalle vecchie soglie globali (`alertThresholdWarn/Crit`)
+ * alle soglie per finestra: i valori legacy si applicano a TUTTE le finestre,
+ * così il comportamento dell'utente resta identico dopo l'aggiornamento.
+ * Accetta un oggetto qualunque (es. JSON dal localStorage) e restituisce le
+ * soglie coerenti, oppure null se non c'è nulla di valido da migrare.
+ */
+export function migrateLegacyThresholds(raw: unknown): AlertThresholds | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+
+  // Forma nuova: thresholds { h5, h24, weekly } — valida e completa i pezzi mancanti.
+  const t = r.thresholds;
+  if (typeof t === "object" && t !== null) {
+    const tt = t as Record<string, unknown>;
+    const pick = (v: unknown, def: WindowThresholds): WindowThresholds => {
+      if (typeof v !== "object" || v === null) return def;
+      const o = v as Record<string, unknown>;
+      return {
+        warn: typeof o.warn === "number" && isFinite(o.warn) && o.warn >= 0 ? o.warn : def.warn,
+        crit: typeof o.crit === "number" && isFinite(o.crit) && o.crit >= 0 ? o.crit : def.crit,
+      };
+    };
+    return {
+      h5: pick(tt.h5, ALERT_DEFAULTS.thresholds.h5),
+      h24: pick(tt.h24, ALERT_DEFAULTS.thresholds.h24),
+      weekly: pick(tt.weekly, ALERT_DEFAULTS.thresholds.weekly),
+    };
+  }
+
+  // Forma legacy: due numeri globali.
+  const warn = typeof r.alertThresholdWarn === "number" && isFinite(r.alertThresholdWarn) && r.alertThresholdWarn >= 0 ? r.alertThresholdWarn : null;
+  const crit = typeof r.alertThresholdCrit === "number" && isFinite(r.alertThresholdCrit) && r.alertThresholdCrit >= 0 ? r.alertThresholdCrit : null;
+  if (warn === null && crit === null) return null;
+  const w = warn ?? ALERT_DEFAULTS.thresholds.h5.warn;
+  const c = crit ?? ALERT_DEFAULTS.thresholds.h5.crit;
+  return { h5: { warn: w, crit: c }, h24: { warn: w, crit: c }, weekly: { warn: w, crit: c } };
+}
 
 /* ------------------------------------------------------------------ */
 /* Banner di quota bassa (stateless, dallo snapshot corrente)           */
@@ -146,46 +235,58 @@ export const ALERT_DEFAULTS: AlertConfig = {
 
 export interface BannerInfo {
   level: "warn" | "crit";
-  /** Voci del banner: una per finestra sotto soglia. */
-  items: { model: string; modelLabel: string; win: "interval" | "weekly"; remaining: number; threshold: number }[];
-}
-
-/** Etichetta italiana della finestra (breve). */
-function winShortLabel(win: "interval" | "weekly"): string {
-  return win === "interval" ? "finestra di 5 ore" : "finestra settimanale";
+  /** Voci del banner: una per (modello, finestra) sotto soglia. */
+  items: {
+    model: string;
+    modelLabel: string;
+    win: "interval" | "weekly";
+    /** Tipo di finestra risolto (I28) — determina soglie ed etichetta. */
+    winKey: WindowThresholdKey;
+    winLabel: string;
+    remaining: number;
+    threshold: number;
+  }[];
 }
 
 /**
  * Livello del banner di quota bassa in base allo snapshot CORRENTE.
- * Considera solo il modello "general" (le due finestre che governano i modelli testuali).
+ * I28: considera TUTTI i modelli e applica a ciascuna finestra le soglie
+ * del proprio tipo (5 ore / 24 ore / settimanale).
  */
 export function deriveBanner(snapshot: UsageSnapshot | null, cfg: AlertConfig): BannerInfo | null {
   if (!cfg.alertsEnabled || !snapshot) return null;
-  const general = snapshot.models.find((m) => m.modelName.toLowerCase() === "general");
-  if (!general) return null;
 
-  const items: BannerInfo["items"] = [];
-  const check = (win: "interval" | "weekly", w: ModelQuota["interval"], thr: number) => {
-    if (thr <= 0 || !w || w.remainingPercent === null) return;
-    if (w.remainingPercent < thr) {
-      items.push({
-        model: general.modelName,
-        modelLabel: general.label,
-        win,
-        remaining: w.remainingPercent,
-        threshold: thr,
-      });
+  const collect = (level: "warn" | "crit"): BannerInfo["items"] => {
+    const items: BannerInfo["items"] = [];
+    for (const model of snapshot.models) {
+      for (const win of ["interval", "weekly"] as const) {
+        const w = model[win];
+        if (!w || w.remainingPercent === null) continue;
+        const winKey = windowThresholdKey(model.modelName, win, w);
+        const thr = level === "crit" ? cfg.thresholds[winKey].crit : cfg.thresholds[winKey].warn;
+        if (thr <= 0) continue;
+        if (w.remainingPercent < thr) {
+          items.push({
+            model: model.modelName,
+            modelLabel: model.label,
+            win,
+            winKey,
+            winLabel: WIN_THRESHOLD_LABELS[winKey],
+            remaining: w.remainingPercent,
+            threshold: thr,
+          });
+        }
+      }
     }
+    return items;
   };
 
-  // Soglia critica prevale: se una finestra è sotto la critica, quella voce è "crit"
-  check("interval", general.interval, cfg.alertThresholdCrit);
-  check("weekly", general.weekly, cfg.alertThresholdCrit);
-  if (items.some((i) => i.threshold === cfg.alertThresholdCrit)) return { level: "crit", items };
+  // Soglia critica prevale: se una finestra è sotto la sua critica, il banner è "crit"
+  const critItems = collect("crit");
+  if (critItems.length > 0) return { level: "crit", items: critItems };
 
-  check("interval", general.interval, cfg.alertThresholdWarn);
-  check("weekly", general.weekly, cfg.alertThresholdWarn);
-  return items.length > 0 ? { level: "warn", items } : null;
+  const warnItems = collect("warn");
+  return warnItems.length > 0 ? { level: "warn", items: warnItems } : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -196,6 +297,9 @@ export interface ThresholdAlert {
   model: string;
   modelLabel: string;
   win: "interval" | "weekly";
+  /** Tipo di finestra risolto (I28). */
+  winKey: WindowThresholdKey;
+  winLabel: string;
   level: "warn" | "crit";
   /** Percentuale precedente → attuale. */
   from: number;
@@ -207,6 +311,9 @@ export interface ResetAlert {
   model: string;
   modelLabel: string;
   win: "interval" | "weekly";
+  /** Tipo di finestra risolto (I28). */
+  winKey: WindowThresholdKey;
+  winLabel: string;
   from: number;
   to: number;
 }
@@ -247,12 +354,19 @@ export function evaluateTransitions(
 
       const from = pw.remainingPercent;
       const to = nw.remainingPercent;
+      // I28: ogni (modello, finestra) usa le soglie del proprio tipo di finestra
+      const winKey2 = windowThresholdKey(nextModel.modelName, win, nw);
+      const winLabel = WIN_THRESHOLD_LABELS[winKey2];
+      const thrCrit = cfg.thresholds[winKey2].crit;
+      const thrWarn = cfg.thresholds[winKey2].warn;
 
       // Reset: salto verso l'alto di ≥ 25 punti, arrivando almeno al 90%
       if (cfg.notifyReset && to >= 90 && from <= to - 25) {
-        result.resets.push({ model: nextModel.modelName, modelLabel: nextModel.label, win, from, to });
+        result.resets.push({
+          model: nextModel.modelName, modelLabel: nextModel.label, win, winKey: winKey2, winLabel, from, to,
+        });
         result.events.push(
-          makeEvent("reset", `Reset rilevato: ${winShortLabel(win)} di «${nextModel.modelName}» tornata al ${to.toFixed(1)}% (prima: ${from.toFixed(1)}%)`, {
+          makeEvent("reset", `Reset rilevato: ${winLabel} di «${nextModel.modelName}» tornata al ${to.toFixed(1)}% (prima: ${from.toFixed(1)}%)`, {
             model: nextModel.modelName,
             win,
             value: to,
@@ -262,13 +376,13 @@ export function evaluateTransitions(
       }
 
       // Attraversamento soglia critica (dal sopra della soglia al sotto)
-      if (cfg.alertThresholdCrit > 0 && from >= cfg.alertThresholdCrit && to < cfg.alertThresholdCrit) {
+      if (thrCrit > 0 && from >= thrCrit && to < thrCrit) {
         result.alerts.push({
-          model: nextModel.modelName, modelLabel: nextModel.label, win, level: "crit", from, to,
-          threshold: cfg.alertThresholdCrit,
+          model: nextModel.modelName, modelLabel: nextModel.label, win, winKey: winKey2, winLabel,
+          level: "crit", from, to, threshold: thrCrit,
         });
         result.events.push(
-          makeEvent("crit", `Soglia CRITICA superata: ${winShortLabel(win)} di «${nextModel.modelName}» al ${to.toFixed(1)}% (sotto il ${cfg.alertThresholdCrit}%)`, {
+          makeEvent("crit", `Soglia CRITICA superata: ${winLabel} di «${nextModel.modelName}» al ${to.toFixed(1)}% (sotto il ${thrCrit}%)`, {
             model: nextModel.modelName,
             win,
             value: to,
@@ -278,18 +392,13 @@ export function evaluateTransitions(
       }
 
       // Attraversamento soglia di attenzione
-      if (
-        cfg.alertThresholdWarn > 0 &&
-        from >= cfg.alertThresholdWarn &&
-        to < cfg.alertThresholdWarn &&
-        to >= Math.max(cfg.alertThresholdCrit, 0)
-      ) {
+      if (thrWarn > 0 && from >= thrWarn && to < thrWarn && to >= Math.max(thrCrit, 0)) {
         result.alerts.push({
-          model: nextModel.modelName, modelLabel: nextModel.label, win, level: "warn", from, to,
-          threshold: cfg.alertThresholdWarn,
+          model: nextModel.modelName, modelLabel: nextModel.label, win, winKey: winKey2, winLabel,
+          level: "warn", from, to, threshold: thrWarn,
         });
         result.events.push(
-          makeEvent("warn", `Soglia di attenzione superata: ${winShortLabel(win)} di «${nextModel.modelName}» al ${to.toFixed(1)}% (sotto il ${cfg.alertThresholdWarn}%)`, {
+          makeEvent("warn", `Soglia di attenzione superata: ${winLabel} di «${nextModel.modelName}» al ${to.toFixed(1)}% (sotto il ${thrWarn}%)`, {
             model: nextModel.modelName,
             win,
             value: to,

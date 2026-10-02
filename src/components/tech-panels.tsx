@@ -52,20 +52,20 @@ export function RawJsonPanel({ rawJson, fetchedAt, endpoint, ok }: RawJsonPanelP
   };
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.04] backdrop-blur">
+    <Collapsible open={open} onOpenChange={setOpen} className="min-w-0 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.04] backdrop-blur">
       <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-white/[0.03]">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-white/[0.06]">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
             <Braces className="size-4 text-zinc-300" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-zinc-100">Risposta JSON dell&apos;API</p>
-            <p className="text-[11px] text-zinc-500">
+            <p className="truncate text-[11px] text-zinc-500">
               {fetchedAt ? `Ultima risposta ricevuta il ${formatFullRome(fetchedAt)}` : "Nessuna risposta ricevuta"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {ok !== null ? (
             ok ? (
               <Badge className="gap-1 border-transparent bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15">
@@ -169,7 +169,7 @@ export function TechInfo({ region, demoMode, lastFetch, refreshSeconds, serverTi
   ];
 
   return (
-    <Card className="border-white/[0.07] bg-white/[0.04] backdrop-blur">
+    <Card className="min-w-0 border-white/[0.07] bg-white/[0.04] backdrop-blur">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold text-zinc-100">Dettagli tecnici</CardTitle>
         <CardDescription className="text-xs text-zinc-500">
@@ -183,7 +183,7 @@ export function TechInfo({ region, demoMode, lastFetch, refreshSeconds, serverTi
               {r.icon}
               {r.label}
             </span>
-            <span className="text-right font-medium leading-relaxed text-zinc-300">{r.value}</span>
+            <span className="min-w-0 text-right font-medium leading-relaxed text-zinc-300">{r.value}</span>
           </div>
         ))}
         <div className="mt-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 text-[11px] leading-relaxed text-zinc-500">

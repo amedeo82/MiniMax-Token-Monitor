@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { REGION_LABELS, Region } from "@/lib/minimax";
+import type { AlertThresholds, WindowThresholdKey } from "@/lib/usage-events";
 import { Textarea } from "@/components/ui/textarea";
 
 export interface DashboardSettings {
@@ -38,10 +39,8 @@ export interface DashboardSettings {
   demoMode: boolean;
   /** Motore avvisi attivo (banner + toast). */
   alertsEnabled: boolean;
-  /** Soglia "attenzione" in % residua; 0 = disattivata. */
-  alertThresholdWarn: number;
-  /** Soglia "critica" in % residua; 0 = disattivata. */
-  alertThresholdCrit: number;
+  /** Soglie di avviso per tipo di finestra (I28): 5h / 24h / settimanale. */
+  thresholds: AlertThresholds;
   /** Notifica quando una finestra si resetta. */
   notifyReset: boolean;
   /** Usa anche le notifiche del browser (Notification API). */
@@ -54,8 +53,11 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   refreshSeconds: 60,
   demoMode: true,
   alertsEnabled: true,
-  alertThresholdWarn: 25,
-  alertThresholdCrit: 10,
+  thresholds: {
+    h5: { warn: 25, crit: 10 },
+    h24: { warn: 25, crit: 10 },
+    weekly: { warn: 25, crit: 10 },
+  },
   notifyReset: true,
   browserNotifications: false,
 };
@@ -75,6 +77,23 @@ const THRESHOLD_OPTIONS = [
   { value: 50, label: "50% residuo" },
 ];
 
+/** I28 — righe della matrice soglie per finestra (tab Avvisi). */
+const THRESHOLD_ROWS: { key: WindowThresholdKey; label: string; hint: string }[] = [
+  { key: "h5", label: "5 ore", hint: "Modelli testo" },
+  { key: "h24", label: "24 ore", hint: "Video" },
+  { key: "weekly", label: "7 giorni", hint: "Tutti i modelli" },
+];
+
+/**
+ * Opzioni della select con la soglia corrente sempre rappresentata: un valore
+ * legacy migrato non allineato alle opzioni fisse (es. 40%) resterebbe altrimenti
+ * invisibile nella select (Radix non trova l'item corrispondente).
+ */
+function thresholdOptionsFor(value: number): { value: number; label: string }[] {
+  if (THRESHOLD_OPTIONS.some((o) => o.value === value)) return THRESHOLD_OPTIONS;
+  return [...THRESHOLD_OPTIONS, { value, label: `${value}% residuo` }].sort((a, b) => a.value - b.value);
+}
+
 type SettingsTab = "connection" | "alerts" | "data";
 
 interface SettingsDialogProps {
@@ -92,8 +111,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   const [refreshSeconds, setRefreshSeconds] = React.useState(settings.refreshSeconds);
   const [demoMode, setDemoMode] = React.useState(settings.demoMode);
   const [alertsEnabled, setAlertsEnabled] = React.useState(settings.alertsEnabled);
-  const [alertThresholdWarn, setAlertThresholdWarn] = React.useState(settings.alertThresholdWarn);
-  const [alertThresholdCrit, setAlertThresholdCrit] = React.useState(settings.alertThresholdCrit);
+  const [thresholds, setThresholds] = React.useState<AlertThresholds>(settings.thresholds);
   const [notifyReset, setNotifyReset] = React.useState(settings.notifyReset);
   const [browserNotifications, setBrowserNotifications] = React.useState(settings.browserNotifications);
   const [showKey, setShowKey] = React.useState(false);
@@ -108,8 +126,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       setRefreshSeconds(settings.refreshSeconds);
       setDemoMode(settings.demoMode);
       setAlertsEnabled(settings.alertsEnabled);
-      setAlertThresholdWarn(settings.alertThresholdWarn);
-      setAlertThresholdCrit(settings.alertThresholdCrit);
+      setThresholds(settings.thresholds);
       setNotifyReset(settings.notifyReset);
       setBrowserNotifications(settings.browserNotifications);
       setShowKey(false);
@@ -156,6 +173,11 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
     }
   };
 
+  /** I28 — aggiorna una soglia della matrice per finestra. */
+  const setWindowThreshold = (key: WindowThresholdKey, part: "warn" | "crit", value: number) => {
+    setThresholds((prev) => ({ ...prev, [key]: { ...prev[key], [part]: value } }));
+  };
+
   const handleSave = () => {
     onSave({
       apiKey: apiKey.trim(),
@@ -163,8 +185,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       refreshSeconds,
       demoMode: demoMode || !apiKey.trim(),
       alertsEnabled,
-      alertThresholdWarn,
-      alertThresholdCrit,
+      thresholds,
       notifyReset,
       browserNotifications,
     });
@@ -331,44 +352,43 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
               </div>
 
               <div className={cn("space-y-3", !alertsEnabled && "pointer-events-none opacity-50")}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-zinc-400">Soglia di attenzione</Label>
-                    <Select
-                      value={String(alertThresholdWarn)}
-                      onValueChange={(v) => setAlertThresholdWarn(Number(v))}
-                      disabled={!alertsEnabled}
-                    >
-                      <SelectTrigger className={selectTriggerClass}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
-                        {THRESHOLD_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={String(o.value)} className="text-xs">
-                            {o.label}
-                          </SelectItem>
+                {/* I28 — matrice soglie per tipo di finestra */}
+                <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                  <p className="text-xs font-medium text-zinc-300">Soglie per finestra</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+                    Percentuale residua al di sotto della quale scatta l&apos;avviso; 0 = disattivata.
+                  </p>
+                  <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Finestra</span>
+                    <span className="text-center text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Attenzione</span>
+                    <span className="text-center text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Critica</span>
+                    {THRESHOLD_ROWS.map((row) => (
+                      <React.Fragment key={row.key}>
+                        <div className="min-w-0 pr-1">
+                          <p className="text-xs text-zinc-300">{row.label}</p>
+                          <p className="text-[10px] leading-tight text-zinc-600">{row.hint}</p>
+                        </div>
+                        {(["warn", "crit"] as const).map((part) => (
+                          <Select
+                            key={part}
+                            value={String(thresholds[row.key][part])}
+                            onValueChange={(v) => setWindowThreshold(row.key, part, Number(v))}
+                            disabled={!alertsEnabled}
+                          >
+                            <SelectTrigger className={cn(selectTriggerClass, "h-8 w-28 justify-between")}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                              {thresholdOptionsFor(thresholds[row.key][part]).map((o) => (
+                                <SelectItem key={o.value} value={String(o.value)} className="text-xs">
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-zinc-400">Soglia critica</Label>
-                    <Select
-                      value={String(alertThresholdCrit)}
-                      onValueChange={(v) => setAlertThresholdCrit(Number(v))}
-                      disabled={!alertsEnabled}
-                    >
-                      <SelectTrigger className={selectTriggerClass}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
-                        {THRESHOLD_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={String(o.value)} className="text-xs">
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      </React.Fragment>
+                    ))}
                   </div>
                 </div>
 
