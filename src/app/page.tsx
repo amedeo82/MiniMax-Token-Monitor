@@ -24,6 +24,12 @@ import {
 } from "@/lib/usage-events";
 import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
 import { makeDemoSnapshot, makeDemoHistory } from "@/lib/demo";
+import {
+  pushPointToServer,
+  fetchServerHistory,
+  mergeHistories,
+  serverPointsToHistory,
+} from "@/lib/server-history";
 import { formatCountdown, formatDateRome, formatTimeRome, nowRomeTime, romeZoneInfo, msUntil } from "@/lib/time";
 import { toast } from "sonner";
 import {
@@ -83,6 +89,10 @@ export default function DashboardPage() {
   const [chartWindow, setChartWindow] = React.useState<"interval" | "weekly">("interval");
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [now, setNow] = React.useState<number>(() => Date.now());
+  /** I16: punti conservati sul server; null = server non ancora raggiunto. */
+  const [serverCount, setServerCount] = React.useState<number | null>(null);
+  /** Mirror sincrono dello storico per costruire i punti senza race. */
+  const historyRef = React.useRef<HistoryPoint[]>([]);
 
   /* Riferimenti per il confronto tra rilevamenti consecutivi (transizioni) */
   const prevSnapRef = React.useRef<UsageSnapshot | null>(null);
@@ -92,10 +102,33 @@ export default function DashboardPage() {
   React.useEffect(() => {
     const s = loadSettings();
     setSettings(s);
-    setHistory(loadHistory());
+    const local = loadHistory();
+    historyRef.current = local;
+    setHistory(local);
     setEvents(loadEvents());
     setMounted(true);
     setNow(Date.now());
+
+    /* I16: scarica lo storico conservato sul server e fondilo con quello locale,
+       così la cronologia sopravvive a cache svuotate e resta disponibile a lungo. */
+    void (async () => {
+      const server = await fetchServerHistory(2000);
+      if (!server) {
+        setServerCount(null);
+        return;
+      }
+      setServerCount(server.total);
+      if (server.points.length === 0) return;
+      const remote = serverPointsToHistory(server.points);
+      const merged = mergeHistories(historyRef.current, remote).slice(-HISTORY_MAX);
+      historyRef.current = merged;
+      setHistory(merged);
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+      } catch {
+        /* quota piena: ignora */
+      }
+    })();
   }, []);
 
   /* Orologio vivo: tick ogni secondo */
@@ -110,22 +143,28 @@ export default function DashboardPage() {
     const interval = general?.interval?.remainingPercent;
     const weekly = general?.weekly?.remainingPercent;
     if (interval === null && weekly === null && general === undefined) return;
-    setHistory((prev) => {
-      const point: HistoryPoint = {
-        t: snap.fetchedAt,
-        interval: interval ?? prev[prev.length - 1]?.interval ?? 100,
-        weekly: weekly ?? prev[prev.length - 1]?.weekly ?? 100,
-      };
-      // Deduplica: se l'ultimo punto è più vecchio di 20s accoda, altrimenti sostituisci
-      const last = prev[prev.length - 1];
-      const next = last && point.t - last.t < 20_000 ? [...prev.slice(0, -1), point] : [...prev, point];
-      const trimmed = next.slice(-HISTORY_MAX);
-      try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
-      } catch {
-        /* quota piena: ignora */
-      }
-      return trimmed;
+    const prev = historyRef.current;
+    const point: HistoryPoint = {
+      t: snap.fetchedAt,
+      interval: interval ?? prev[prev.length - 1]?.interval ?? 100,
+      weekly: weekly ?? prev[prev.length - 1]?.weekly ?? 100,
+    };
+    // Deduplica: se l'ultimo punto è più vecchio di 20s accoda, altrimenti sostituisci
+    const last = prev[prev.length - 1];
+    const next = last && point.t - last.t < 20_000 ? [...prev.slice(0, -1), point] : [...prev, point];
+    const trimmed = next.slice(-HISTORY_MAX);
+    historyRef.current = trimmed;
+    setHistory(trimmed);
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+    } catch {
+      /* quota piena: ignora */
+    }
+    // I16: replica il punto sul server (fire-and-forget, silenzioso in caso di errore)
+    pushPointToServer(point, {
+      source: snap.source,
+      region: snap.region,
+      onTotal: (total) => setServerCount(total),
     });
   }, []);
 
@@ -188,17 +227,21 @@ export default function DashboardPage() {
           setLastEndpoint("demo://token_plan/remains");
           markOk();
           setLastFetch(snap.fetchedAt);
-          // Popola la storia demo se vuota
-          setHistory((prev) => {
-            if (prev.length >= 10) return prev;
+          // Popola la storia demo se vuota, fondendo il backfill con l'eventuale
+          // storico appena scaricato dal server (non deve sovrascriverlo)
+          if (historyRef.current.length < 10) {
             const demoHist = makeDemoHistory();
+            const merged = mergeHistories(historyRef.current, demoHist).slice(-HISTORY_MAX);
+            historyRef.current = merged;
+            setHistory(merged);
             try {
-              localStorage.setItem(HISTORY_KEY, JSON.stringify(demoHist));
+              localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
             } catch {
               /* noop */
             }
-            return demoHist;
-          });
+          }
+          // Registra anche i rilevamenti demo nello storico (locale + replica server, source "demo")
+          pushHistory(snap);
           if (!silent) setLoading(false);
           return;
         }
@@ -589,12 +632,18 @@ export default function DashboardPage() {
               </p>
 
               {/* Grafico + statistiche */}
-              <HistoryChart history={history} window={chartWindow} onWindowChange={setChartWindow} />
+              <HistoryChart
+                history={history}
+                window={chartWindow}
+                onWindowChange={setChartWindow}
+                serverCount={serverCount}
+              />
               <StatsPanel
                 trend={trend}
                 win={chartWindow}
                 resetAt={selectedWindowEnd}
                 remaining={selectedWindowRemaining}
+                serverCount={serverCount}
               />
 
               {/* Vista panoramica: tutte le finestre del piano a confronto */}

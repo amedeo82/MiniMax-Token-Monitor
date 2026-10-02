@@ -138,3 +138,23 @@ Work Log:
 Stage Summary:
 - La finestra impostazioni non fuoriesce più dallo schermo su nessun viewport: header/tablist/footer fissi, contenuto scrollabile solo quando serve
 - UI più snella e organizzata: 3 tab al posto di un unico form lungo; nessuna modifica a contratti/props o ad altri componenti
+
+---
+Task ID: 7
+Agent: Super Z (main)
+Task: I16 — Persistenza storica server-side (Prisma/SQLite)
+
+Work Log:
+- Schema Prisma riscritto: modello UsagePoint (t unique, interval, weekly, source, region, @@index t); rimossi i modelli demo User/Post (non usati); bun run db:push OK
+- Nuova API src/app/api/history/route.ts: POST (validazione input, upsert per t unique, max 500 punti/richiesta, pruning dopo ogni write: cutoff 90 giorni + FIFO oltre 10.000), GET (?limit= def 2000 max 10000, ?since=, ordinato per t), DELETE (svuota); la Subscription Key non transita mai su questo endpoint (solo timestamp + percentuali)
+- Nuovo src/lib/server-history.ts: pushPointToServer (fire-and-forget, keepalive, callback onTotal per il contatore), fetchServerHistory, mergeHistories (dedup per timestamp, vince il punto locale), serverPointsToHistory, clearServerHistory
+- page.tsx: pushHistory riscritto con historyRef (mirror sincrono) → replica server di ogni punto (source api/demo/import); all'avvio GET server → merge con localStorage → trim 600; stato serverCount; il ramo demo ora registra i punti demo nello storico (prima il grafico demo restava statico) e il backfill demo si FONDE con i punti server anziché sovrascriverli (bugfix race)
+- history-chart.tsx: dropdown "Esporta" (Storico locale CSV/JSON con conteggio punti in memoria + sezione "Storico server (fino a 10.000 punti)" con CSV/JSON completo); descrizione grafico con "N punti salvati sul server"; StatsPanel mostra il totale server; classi tema scuro forzate su dropdown (il tema shadcn è light: --popover bianco)
+- Verifiche curl: DELETE reset; POST 3 punti (1 duplicato) → stored 3, total 2 (upsert aggiorna il duplicato); GET ordinato; GET since; POST punto invalido → stored 0 senza crash; punti con epoch di un anno fa correttamente eliminati dal pruning a 90 giorni
+- Verifiche agent-browser: demo → Aggiorna → POST e badge "N punti salvati sul server" (grafico + statistiche); storage svuotato + reload → storico ripristinato dal server (merge: 41 punti = 38 backfill + 3 server); menu export completo con conteggi corretti; pixel PNG confermati (menu scuro #09090b); lint e tsc --noEmit puliti su src/
+- Documentazione: docs/03 (mappa codice con i 3 nuovi file, §4 modello UsagePoint, §5.7 sync server-side, F7 ✅, roadmap aggiornata: punto 1 implementato), docs/04 (I16 ✅, ADR-10, apertura I23 aggiornata, changelog)
+
+Stage Summary:
+- I16 completata: lo storico quota ora è durevole sul server (SQLite fino a 10.000 punti / 90 giorni) e sopravvive a cache svuotate e cambio dispositivo (merge offline-first, ADR-10)
+- Nuovi dati disponibili per analisi future: confronto finestre consecutive, medie mobili, statistiche di lungo periodo (roadmap aggiornata)
+- Dashboard comunque perfettamente funzionante senza server (errori di replica silenziosi)

@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-02 (F6a rimossa, F6b avvisi/eventi/export/panoramica).
+> Ultimo aggiornamento: 2026-10-02 (I16 persistenza storico server-side: API /api/history, sync offline-first, export completo).
 
 ---
 
@@ -68,12 +68,15 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/time.ts` | `TZ_ROME`, `LOCALE_IT`, `toDate()` (accetta epoch s/ms, ISO, Date), `formatFullRome/DateTimeRome/TimeRome/DateRome/ShortRome`, `romeZoneInfo()`, `formatCountdown()`, `formatDuration()`, `msUntil()`, `windowProgress()` |
 | `src/lib/usage-events.ts` | Motore di monitoraggio: registro eventi (`mm-dash-events-v1`, max 200: `loadEvents/appendEvents/clearEvents/makeEvent`), `deriveBanner()` (banner quota bassa stateless), `evaluateTransitions()` (soglie warn/crit + reset tra due snapshot), `canNotify()/notifyBrowser()` (Notification API), `AlertConfig` |
 | `src/lib/export.ts` | Esportazione locale: `historyToCsv()/eventsToCsv()` (CSV «;» + BOM UTF-8, Excel it-IT), `exportHistoryCsv/Json()`, `exportEventsCsv()`, `downloadTextFile()` |
+| `src/lib/server-history.ts` | I16 sync client↔server: `pushPointToServer()` (fire-and-forget, con callback `onTotal`), `fetchServerHistory()`, `mergeHistories()` (dedup per timestamp, vince il punto locale), `serverPointsToHistory()`, `clearServerHistory()` |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
-| `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
+| `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
+| `prisma/schema.prisma` | Modello `UsagePoint` (t unique, interval, weekly, source, region) — storico server-side, nessun dato sensibile |
 | `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano |
+| `src/app/api/history/route.ts` | I16 persistenza storico (SQLite/Prisma): POST (upsert per `t`, validazione input, pruning FIFO a 10.000 punti + cutoff 90 giorni), GET (`?limit=&since=`, ordinato per `t`), DELETE (svuota). La chiave API non transita mai qui |
 | `src/components/quota-cards.tsx` | `ModelCard` (card per modello: due finestre con barre, countdown, badge stato), `MainWindows` (riepilogo finestre general), `CountsRow` (residuo/totale/consumato + nota su percentuali), `windowKindLabel()` (5h vs 24h dinamica) |
 | `src/components/quota-ring.tsx` | `QuotaRing`: anello SVG percentuale |
-| `src/components/history-chart.tsx` | `HistoryChart` (Recharts, switch finestra interval/weekly, pulsanti export CSV/JSON), `computeTrend()`, `StatsPanel` (+ verdetto `ProjectionVerdict`: esaurimento stimato vs orario di reset), `TrendBadge` |
+| `src/components/history-chart.tsx` | `HistoryChart` (Recharts, switch finestra interval/weekly, dropdown Esporta: storico locale CSV/JSON + storico completo dal server), `computeTrend()`, `StatsPanel` (+ verdetto `ProjectionVerdict`: esaurimento stimato vs orario di reset; contatore punti server), `TrendBadge` |
 | `src/components/model-table.tsx` | `PanoramicTable`: tabella comparativa di tutte le finestre del piano (modello × finestra: residuo con mini-barra, stato, countdown reset) |
 | `src/components/event-log.tsx` | `EventLog`: timeline del registro eventi raggruppata per giorno (Europe/Rome), badge per tipo, export CSV, svuotamento |
 | `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
@@ -115,6 +118,18 @@ type UsageEventKind = "reset" | "warn" | "crit" | "error" | "info";
 interface UsageEvent { id; t: number; kind: UsageEventKind; model: string | null; win: "interval" | "weekly" | null; message: string; value: number | null; }
 // src/components/history-chart.tsx
 interface HistoryPoint { t: number; interval: number; weekly: number; }  // epoch ms + percentuali general
+
+// prisma/schema.prisma (I16 — SQLite)
+model UsagePoint {
+  id        Int      @id @default(autoincrement())
+  t         DateTime @unique   // momento del rilevamento (dedup upsert)
+  interval  Float?             // % residua finestra 5h (general)
+  weekly    Float?             // % residua settimanale (general)
+  source    String   @default("api")  // api | demo | import
+  region    String   @default("eu")   // eu | cn
+  createdAt DateTime @default(now())
+  @@index([t])
+}
 ```
 
 **Regole di parsing** (`parseUsageResponse`): risposta piatta o annidata sotto `data`;
@@ -163,6 +178,25 @@ extra, zero consumo quota):
 GIÀ presenti nel browser: storico quota (dal pannello grafico) e registro eventi
 (dal pannello Registro eventi). Nessun dato lascia il dispositivo se non col download
 esplicito richiesto dall'utente.
+
+### 5.7 Sincronizzazione storico server-side (I16)
+Strategia **offline-first**: il localStorage resta la fonte primaria per la UI; il server
+(SQLite via Prisma) è la copia durevole.
+- **Replica**: ogni punto registrato da `pushHistory()` viene inviato a `POST /api/history`
+  in fire-and-forget (`keepalive`); errori silenziosi (offline → la UI continua uguale);
+  la risposta aggiorna il contatore «punti salvati sul server» (grafico + statistiche);
+- **Merge all'avvio**: `GET /api/history?limit=2000` → `mergeHistories()` (dedup per
+  timestamp, vince il punto locale) → il risultato (trim 600) sostituisce lo storico:
+  la cronologia sopravvive a cache svuotate e cambio dispositivo; in demo il backfill
+  simulato si FONDE con i punti server (non li sovrascrive);
+- **Dedup server**: upsert su `t` unique (il client dedup < 20 s, il server conserva
+  tutta la granularità ricevuta);
+- **Pruning**: dopo ogni POST eliminati i punti più vecchi di 90 giorni e oltre
+  10.000 (FIFO);
+- **Export completo**: menu «Esporta» del grafico → CSV/JSON dell'intero storico
+  server (fino a 10.000 punti) oltre alle voci dello storico locale in memoria;
+- **Privacy**: su DB arrivano solo timestamp e percentuali residue (+ source/region);
+  la Subscription Key resta nel browser e non tocca mai `/api/history`.
 
 ---
 
@@ -239,6 +273,7 @@ etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
 | **F5** Robustezza | Import JSON, modalità demo, TechInfo/RawJson, screenshot verify desktop+mobile | Import JSON reale OK; zero errori console; lint pulito | ✅ |
 | ~~**F6a** Token reali~~ | ~~Route `/api/minimax/chat`, lib/token-log.ts, TokenTracker~~ | **RIMOSSA 2026-10-02 (ADR-8)**: ogni chiamata chat con Subscription Key consumava la quota del piano; il monitor resta read-only | 🚫 |
 | **F6b** Estensioni | Avvisi soglia + registro eventi (I17/I21), export CSV/JSON (I22), verdetto esaurimento vs reset (I23), panoramica modelli (I24) | Banner soglia verificato in demo; transizione → toast + evento; verdetto corretto su dati demo; lint pulito; mobile OK | ✅ |
+| **F7** Persistenza server (I16) | `prisma/schema.prisma` (UsagePoint), `api/history` (POST/GET/DELETE + pruning), `lib/server-history.ts`, sync in `page.tsx`, export completo, badge «punti sul server» | curl: upsert dedup (3→2 punti), GET since, DELETE, validazione; browser: replica demo → badge corretto; storage svuotato → storico ripristinato dal server (merge); demo backfill non sovrascrive il merge; lint+tsc puliti | ✅ |
 
 Verifiche effettuate con agent-browser (screenshot in `scripts/verify_*.png`,
 `preview_*.png`): render desktop/mobile, import JSON reale, coincidenza dei countdown
@@ -249,21 +284,22 @@ con i calcoli manuali, pannello endpoint, console pulita.
 ## 11. Estensioni future (roadmap candidate)
 
 > Aggiornata al 2026-10-02: rimossi il contatore token reale (ADR-8) e la correlazione
-> token↔quota che ne dipendeva; implementate le estensioni F6b di analisi/monitoraggio.
+> token↔quota che ne dipendeva; implementate le estensioni F6b di analisi/monitoraggio
+> e la persistenza storica server-side (I16, punto 1 della vecchia roadmap).
 
-1. **Persistenza storica server-side** (Prisma/SQLite già disponibile nel repo):
-   storico multiplo giorni/settimane, confronto tra finestre consecutive (es. weekly
-   corrente vs precedente), sopravvivenza al cambio browser.
+1. **Confronto tra finestre consecutive**: con lo storico server ora disponibile
+   (I16), confrontare weekly corrente vs precedente, consumo per ciclo 5h, medie
+   mobili sui dati persistenti.
 2. **Fallback automatico** su `coding_plan/remains` se `token_plan/remains` fallisse (V4 in `docs/04`).
 3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
 4. **PWA/offline**: installazione e ultima snapshot cache; notifiche soglia anche a tab
    chiuso via Service Worker (oggi: banner + toast + Notification API solo a tab aperto).
 5. **Statistiche aggregate di lungo periodo**: consumo medio per giorno della settimana,
-   consumo per ciclo 5h, medie mobili — richiede lo storico server-side (punto 1).
+   medie mobili e calendario dell'uso sui punti già persistiti (I16 fornisce i dati).
 6. **Soglie personalizzate per finestra**: oggi le soglie sono globali (warn/crit);
    potrebbe avere senso differenziarle tra finestra 5h e settimanale.
 7. **Storico eventi oltre 200**: oggi il registro è un diario di sessione; con il
-   DB server-side può diventare storico completo con filtri.
+   DB server-side può diventare storico completo con filtri (stesso schema di I16).
 
 ### Rimosse dalla roadmap
 

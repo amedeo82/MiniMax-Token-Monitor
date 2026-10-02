@@ -1,8 +1,14 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Schema Prisma — MiniMax Usage Monitor
+//
+// I16: persistenza server-side dello storico delle rilevazioni.
+// Il browser resta la fonte primaria (localStorage, max 600 punti), ma ogni
+// punto rilevato viene replicato (fire-and-forget) sul server per:
+// - conservare uno storico più lungo (fino a SERVER_HISTORY_MAX punti)
+// - consentire l'esportazione completa CSV/JSON oltre il buffer locale
+// - abilitare future analisi di confronto tra finestre consecutive
+//
+// Nessun dato sensibile: le percentuali residue sono agigate senza chiavi API
+// (la Subscription Key non viene MAI salvata sul server, resta nel browser).
 
 generator client {
   provider = "prisma-client-js"
@@ -13,20 +19,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+/**
+ * Un punto dello storico quota: percentuale residua delle due finestre
+ * del modello "general" al momento del rilevamento.
+ */
+model UsagePoint {
+  id        Int      @id @default(autoincrement())
+  /** Momento del rilevamento (epoch ms). Unico: dedup via upsert. */
+  t         DateTime @unique
+  /** % residua della finestra di 5 ore (null se non rilevata). */
+  interval  Float?
+  /** % residua della finestra settimanale (null se non rilevata). */
+  weekly    Float?
+  /** Origine del punto: "api" | "demo" | "import". */
+  source    String   @default("api")
+  /** Regione dell'endpoint interrogato: "eu" | "cn". */
+  region    String   @default("eu")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([t])
 }

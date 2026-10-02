@@ -17,7 +17,17 @@ import {
 } from "recharts";
 import { formatCountdown, formatDateTimeRome, formatShortRome, formatTimeRome } from "@/lib/time";
 import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
-import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, FileJson, ShieldCheck, AlertTriangle, Info } from "lucide-react";
+import { fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info } from "lucide-react";
 
 export interface HistoryPoint {
   t: number;
@@ -29,6 +39,8 @@ interface HistoryChartProps {
   history: HistoryPoint[];
   window: "interval" | "weekly";
   onWindowChange: (w: "interval" | "weekly") => void;
+  /** Punti attualmente conservati sul server (I16); null = server non raggiunto. */
+  serverCount?: number | null;
 }
 
 interface ChartDatum {
@@ -37,8 +49,21 @@ interface ChartDatum {
   value: number;
 }
 
+/** Scarica dal server lo storico completo e lo salva nel formato richiesto. */
+async function exportFullFromServer(format: "csv" | "json"): Promise<void> {
+  const server = await fetchServerHistory(10_000);
+  if (!server || server.points.length === 0) {
+    toast.error("Nessuno storico disponibile sul server");
+    return;
+  }
+  const points = serverPointsToHistory(server.points);
+  if (format === "csv") exportHistoryCsv(points);
+  else exportHistoryJson(points);
+  toast.success(`Esportati ${points.length} punti dallo storico server`);
+}
+
 /** Grafico dell'andamento della quota rimanente nel tempo. */
-export function HistoryChart({ history, window: win, onWindowChange }: HistoryChartProps) {
+export function HistoryChart({ history, window: win, onWindowChange, serverCount = null }: HistoryChartProps) {
   const data: ChartDatum[] = React.useMemo(
     () =>
       history
@@ -69,32 +94,71 @@ export function HistoryChart({ history, window: win, onWindowChange }: HistoryCh
             Andamento quota rimanente
           </CardTitle>
           <CardDescription className="text-xs text-zinc-500">
-            Cronologia locale degli ultimi rilevamenti (orario Europe/Rome)
+            Cronologia degli ultimi rilevamenti (orario Europe/Rome)
+            {serverCount !== null && serverCount > 0
+              ? ` · ${serverCount.toLocaleString("it-IT")} punti salvati sul server`
+              : ""}
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Esporta lo storico in CSV"
-            title="Esporta lo storico in CSV"
-            disabled={history.length === 0}
-            onClick={() => exportHistoryCsv(history)}
-            className="h-8 w-8 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
-          >
-            <Download className="size-3.5 text-zinc-400" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Esporta lo storico in JSON"
-            title="Esporta lo storico in JSON"
-            disabled={history.length === 0}
-            onClick={() => exportHistoryJson(history)}
-            className="h-8 w-8 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
-          >
-            <FileJson className="size-3.5 text-zinc-400" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Esporta lo storico"
+                disabled={history.length === 0 && (serverCount === null || serverCount === 0)}
+                className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+              >
+                <Download className="size-3.5 text-zinc-400" />
+                Esporta
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="border-white/10! bg-zinc-950! text-zinc-100!">
+              <DropdownMenuLabel className="text-[11px]! text-zinc-500!">Storico locale</DropdownMenuLabel>
+              <DropdownMenuItem
+                disabled={history.length === 0}
+                onClick={() => exportHistoryCsv(history)}
+                className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+              >
+                <Download className="size-3.5" />
+                CSV · {history.length} punti in memoria
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={history.length === 0}
+                onClick={() => exportHistoryJson(history)}
+                className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+              >
+                <Download className="size-3.5" />
+                JSON · {history.length} punti in memoria
+              </DropdownMenuItem>
+              {serverCount !== null ? (
+                <>
+                  <DropdownMenuSeparator className="bg-white/[0.06]!" />
+                  <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px]! text-zinc-500!">
+                    <Database className="size-3" />
+                    Storico server (fino a 10.000 punti)
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    disabled={serverCount === 0}
+                    onClick={() => void exportFullFromServer("csv")}
+                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+                  >
+                    <Download className="size-3.5" />
+                    CSV completo · {serverCount.toLocaleString("it-IT")} punti
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={serverCount === 0}
+                    onClick={() => void exportFullFromServer("json")}
+                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+                  >
+                    <Download className="size-3.5" />
+                    JSON completo · {serverCount.toLocaleString("it-IT")} punti
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Tabs value={win} onValueChange={(v) => onWindowChange(v as "interval" | "weekly")}>
             <TabsList className="bg-white/[0.06]">
               <TabsTrigger value="interval" className="text-xs data-[state=active]:text-zinc-900">5 ore</TabsTrigger>
@@ -217,6 +281,7 @@ export function StatsPanel({
   win,
   resetAt = null,
   remaining = null,
+  serverCount = null,
 }: {
   trend: TrendStats;
   win: "interval" | "weekly";
@@ -224,6 +289,8 @@ export function StatsPanel({
   resetAt?: number | null;
   /** Percentuale residua attuale della finestra selezionata. */
   remaining?: number | null;
+  /** Punti conservati sul server (I16); null = server non raggiunto. */
+  serverCount?: number | null;
 }) {
   const winLabel = win === "interval" ? "5 ore" : "settimanale";
   return (
@@ -273,9 +340,11 @@ export function StatsPanel({
         </div>
         <p className="mt-2 font-mono text-xl font-bold tabular-nums text-zinc-100">{trend.samples}</p>
         <p className="mt-1 text-[11px] text-zinc-500">
-          {trend.windowMs > 0
-            ? `Su un arco di ${formatCountdown(trend.windowMs)}`
-            : "La cronologia è salvata sul tuo dispositivo"}
+          {serverCount !== null && serverCount > 0
+            ? `Sul server ${serverCount.toLocaleString("it-IT")} punti totali`
+            : trend.windowMs > 0
+              ? `Su un arco di ${formatCountdown(trend.windowMs)}`
+              : "La cronologia è salvata sul tuo dispositivo"}
         </p>
       </div>
 
