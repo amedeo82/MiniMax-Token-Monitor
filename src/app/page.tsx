@@ -9,6 +9,7 @@ import { ModelCard, MainWindows } from "@/components/quota-cards";
 import { HistoryChart, StatsPanel, computeTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
 import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/components/settings-dialog";
 import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
+import { TokenTracker } from "@/components/token-tracker";
 import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
 import { makeDemoSnapshot, makeDemoHistory } from "@/lib/demo";
 import { formatCountdown, formatDateRome, formatTimeRome, nowRomeTime, romeZoneInfo, msUntil } from "@/lib/time";
@@ -501,6 +502,9 @@ export default function DashboardPage() {
 
               {/* Card dettaglio "general" se ha dati extra (es. stato, boost) */}
               {general ? null : null}
+
+              {/* Contatore token reale (chat completions + campo usage) */}
+              <TokenTracker apiKey={settings.apiKey} region={settings.region} demoMode={settings.demoMode} />
 
               {/* JSON + dettagli tecnici */}
               <div className="grid gap-4 lg:grid-cols-2">

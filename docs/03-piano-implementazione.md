@@ -65,11 +65,14 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/time.ts` | `TZ_ROME`, `LOCALE_IT`, `toDate()` (accetta epoch s/ms, ISO, Date), `formatFullRome/DateTimeRome/TimeRome/DateRome/ShortRome`, `romeZoneInfo()`, `formatCountdown()`, `formatDuration()`, `msUntil()`, `windowProgress()` |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
 | `src/app/page.tsx` | Stato globale pagina: settings/history (localStorage), fetch/polling, import JSON, demo, orologio 1s, layout |
-| `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax; timeout 12s; mappatura errori HTTP/business in italiano |
+| `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano |
+| `src/app/api/minimax/chat/route.ts` | Proxy POST → MiniMax Chat Completions (eu/cn); estrae `content`, `reasoning_content` e `usage` (prompt/completion/total tokens, caratteri, cached); timeout 90s; errori in italiano |
+| `src/lib/token-log.ts` | Registro del consumo token reale in localStorage (`mm-dash-tokenlog-v1`, max 500): record `TokenCallRecord`, load/append/clear, aggregazione totali e per modello |
 | `src/components/quota-cards.tsx` | `ModelCard` (card per modello: due finestre con barre, countdown, badge stato), `MainWindows` (riepilogo finestre general), `CountsRow` (residuo/totale/consumato + nota su percentuali), `windowKindLabel()` (5h vs 24h dinamica) |
 | `src/components/quota-ring.tsx` | `QuotaRing`: anello SVG percentuale |
 | `src/components/history-chart.tsx` | `HistoryChart` (Recharts, switch finestra interval/weekly), `computeTrend()`, `StatsPanel`, `TrendBadge` |
 | `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
+| `src/components/token-tracker.tsx` | Pannello "Consumo token reale": invio prompt (o simulazione in demo), badge usage dell'ultima chiamata, totali + ripartizione per modello, storico (max 12 visibili), svuotamento registro |
 | `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode }, import JSON con validazione |
 
 ---
@@ -125,6 +128,14 @@ Un tick `setInterval` 1s aggiorna `now`; i countdown sono `msUntil(end_time, now
 `inferServerTime()` (dal JSON: `end_time − remains_time`) è mostrata nel TechInfo come
 "ora del server dedotta" per confronto con l'ora locale.
 
+### 5.5 Consumo token reale (pannello TokenTracker)
+`page.tsx` passa `apiKey/region/demoMode` a `TokenTracker` → invio prompt →
+POST `/api/minimax/chat` → risposta con `usage` → record `TokenCallRecord` in
+localStorage (`token-log.ts`) → totali e per-modello ricalcolati con `aggregateTokenLog()`.
+In demo il flusso è identico ma il record è generato localmente (source `demo`),
+così la UI è testabile senza chiave. NB: con Subscription Key la chiamata consuma
+quota reale (avviso visibile nel pannello).
+
 ---
 
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro
@@ -152,6 +163,8 @@ Un tick `setInterval` 1s aggiorna `now`; i countdown sono `msUntil(end_time, now
 ├ ModelCard "video":   Finestra 24h (allineata mezzanotte UTC) + Finestra 7g                         │
 ├ MainWindows: riepilogo grande delle due finestre del general (QuotaRing)                           │
 ├ HistoryChart: andamento % nel tempo (switch interval/weekly) + StatsPanel + TrendBadge             │
+├ Altri modelli: ModelCard dinamica per ogni voce ≠ general                                          │
+├ TokenTracker: consumo token reale (invio/simulazione, usage, totali, per-modello, storico)         │
 ├ TechInfo: regione, modalità, endpoint usato, refresh, ora server dedotta, altri endpoint           │
 └ RawJsonPanel: JSON grezzo dell'ultima risposta                                                     ┘
 ```
@@ -198,7 +211,8 @@ etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
 | **F3** Tempo Roma | lib/time.ts, countdown vivi 1s, formati it-IT | Reset mostrati: 17:00 (5h), 03/10 02:00 (video), 05/10 02:00 (weekly); ora server dedotta 13:17:58 | ✅ |
 | **F4** Storico | pushHistory localStorage, HistoryChart, StatsPanel, trend | Grafico renderizzato; dedup <20s; cap 600 punti | ✅ |
 | **F5** Robustezza | Import JSON, modalità demo, TechInfo/RawJson, screenshot verify desktop+mobile | Import JSON reale OK; zero errori console; lint pulito | ✅ |
-| **F6** Estensioni | vedi §11 | — | ⬜ |
+| **F6a** Token reali | Route `/api/minimax/chat`, lib/token-log.ts, TokenTracker | Demo: simulazione registrata (usage + storico + svuotamento); API: validazione 400 + 401 chiave errata mappata; lint pulito; mobile OK | ✅ |
+| **F6b** Estensioni | resto della roadmap (§11) | — | ⬜ |
 
 Verifiche effettuate con agent-browser (screenshot in `scripts/verify_*.png`,
 `preview_*.png`): render desktop/mobile, import JSON reale, coincidenza dei countdown
@@ -210,8 +224,8 @@ con i calcoli manuali, pannello endpoint, console pulita.
 
 1. **Persistenza storica server-side** (Prisma/SQLite già disponibile nel repo):
    storico multiplo giorni/settimane, confronto tra finestre, sopravvivenza al cambio browser.
-2. **Contatore token reale**: mini-passerella `/api/chat` che chiama
-   `/v1/chat/completions` e registra `usage.total_tokens` per richiesta (docs/01 §6.1).
+   → includere anche la persistenza del registro token (`token-log`), oggi solo localStorage.
+2. ~~**Contatore token reale**: mini-passerella `/api/chat` che chiama `/v1/chat/completions` e registra `usage.total_tokens` per richiesta~~ → **IMPLEMENTATO** (F6a: `docs/03` §5.5).
 3. **Notifiche soglie**: browser notification quando `remaining_percent < 10/25%`
    o al reset della finestra.
 4. **Endpoint alternativo** `coding_plan/remains` come fallback automatico se
@@ -219,3 +233,4 @@ con i calcoli manuali, pannello endpoint, console pulita.
 5. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
 6. **PWA/offline**: installazione e ultima snapshot cache.
 7. **Confronto modelli**: breakdown percentuali per ogni voce `model_name` in un'unica vista settimanale.
+8. **Integrazione token ↔ quota**: correlare i token registrati dal TokenTracker con il calo percentuale rilevato dal polling di quota, per stimare "token per punto percentuale" del proprio piano.

@@ -26,7 +26,8 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | F3 | Tempo Europe/Rome + it-IT, ora server dedotta | ✅ | 2026-10-02 |
 | F4 | Storico localStorage + grafico + trend | ✅ | 2026-10-02 |
 | F5 | Robustezza: import JSON, demo, pannelli tecnici, verifiche browser | ✅ | 2026-10-02 |
-| F6 | Estensioni (roadmap in `docs/03` §11) | ⬜ | — |
+| F6a | Contatore token reale (chat completions + campo usage) | ✅ | 2026-10-02 |
+| F6b | Resto delle estensioni (roadmap in `docs/03` §11) | ⬜ | — |
 
 ---
 
@@ -66,10 +67,12 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I12 | Verifica end-to-end agent-browser (desktop+mobile, import, console) | F5 | ✅ | Screenshot in `scripts/verify_*.png` |
 | I13 | Bugfix `videoDayStart` non definito in demo.ts | F5 | ✅ | Rilevato via agent-browser |
 | I14 | Documentazione di progetto (questi 4 file + README) | — | ✅ | 2026-10-02 |
-| I15 | Contatore token reale via `/v1/chat/completions` (`usage`) | F6 | ⬜ | Design in `docs/03` §11.2 |
+| I15 | Contatore token reale via `/v1/chat/completions` (`usage`) | F6a | ✅ | Route `/api/minimax/chat` + `lib/token-log.ts` + `TokenTracker`; verificato in demo e con errori reali (400/401) — 2026-10-02 |
 | I16 | Persistenza storica server-side (Prisma/SQLite) | F6 | ⬜ | Schema già disponibile nel repo |
 | I17 | Notifiche soglie (<10/25% o reset) | F6 | ⬜ | |
-| I18 | Fallback automatico su `coding_plan/remains` | F6 | ⬜ | Dipende da V4 |
+| I18 | Fallback automatico su `coding_plan/remains` | F6b | ⬜ | Dipende da V4 |
+| I19 | Persistenza del registro token su server (Prisma/SQLite) | F6b | ⬜ | Oggi solo localStorage (`docs/03` §11.1) |
+| I20 | Correlazione token ↔ calo percentuale quota ("token per punto %") | F6b | ⬜ | Nuova idea dalla F6a (`docs/03` §11.8) |
 
 ---
 
@@ -127,3 +130,5 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | 2026-10-02 | `docs/02-analisi-json-quota.md` | Creato: schema campi, semantica percentuali/conteggi, verifiche matematiche, conversioni Roma, formule, casi limite |
 | 2026-10-02 | `docs/03-piano-implementazione.md` | Creato: architettura, mappa codice, modelli dati, flussi, errori, sicurezza, fasi F0–F6 |
 | 2026-10-02 | `docs/04-stato-avanzamento.md` | Creato: questo file (fasi, attività R/I, verifiche V, ADR, changelog) |
+| 2026-10-02 | `docs/01` §6, `docs/03` §3/§5.5/§7/§10/§11, questo file | Aggiornati per **I15 — contatore token reale**: nuova route `/api/minimax/chat`, `lib/token-log.ts`, componente `TokenTracker`, fase F6a completata, avviso consumo reale con Subscription Key |
+| 2026-10-02 | Verifica F6a | agent-browser: pannello renderizzato (desktop+mobile), simulazione demo registrata (prompt 19 + risposta 407 = 426 token), storico e svuotamento OK, `localStorage` confermato, route testata con curl (400 missing_key, 401 chiave errata mappata), zero errori console, lint pulito |

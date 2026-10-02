@@ -124,8 +124,13 @@ Nel quota endpoint compaiono come categorie d'uso: `general`, `video`.
 Strategie, in ordine di utilità:
 
 1. **`usage` nelle risposte `/v1/chat/completions`** ✅ — ogni risposta che *noi stessi*
-   invochiamo riporta i token esatti. Se il dashboard (o un tool) passa dalla nostra
-   app, possiamo sommare i token localmente e costruire una serie storica precisa.
+   invochiamo riporta i token esatti: `prompt_tokens`, `completion_tokens`,
+   `total_tokens`, `total_characters`, `prompt_tokens_details.cached_tokens`.
+   **Implementato** nel dashboard come pannello "Consumo token reale"
+   (proxy `/api/minimax/chat` + registro locale, vedi `docs/03` §5.5).
+   ⚠️ **Attenzione**: con la Subscription Key ogni chiamata chat CONSUMA davvero la
+   quota del piano (deduzione al prezzo pay-as-you-go dell'endpoint); con una API Key
+   standard consuma il saldo. I test vanno fatti con prompt brevi.
 2. **Console ufficiale** ✅ — <https://platform.minimax.io/console/usage> mostra usage bar
    e analytics ("source of truth" dichiarata dalla FAQ).
 3. **CLI ufficiale** ✅ — `mmx quota` (MiniMax CLI).
