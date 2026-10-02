@@ -1,0 +1,729 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { Button } from "@/components/ui/button";
+     5→import { Badge } from "@/components/ui/badge";
+     6→import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+     7→import { Separator } from "@/components/ui/separator";
+     8→import { ModelCard, MainWindows } from "@/components/quota-cards";
+     9→import { HistoryChart, StatsPanel, computeTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
+    10→import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/components/settings-dialog";
+    11→import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
+    12→import { EventLog } from "@/components/event-log";
+    13→import { PanoramicTable } from "@/components/model-table";
+    14→import { LongTermAnalysis } from "@/components/analysis-panel";
+    15→import {
+    16→  deriveBanner,
+    17→  evaluateTransitions,
+    18→  appendEvents,
+    19→  loadEvents,
+    20→  clearEvents,
+    21→  makeEvent,
+    22→  notifyBrowser,
+    23→  type UsageEvent,
+    24→  type BannerInfo,
+    25→} from "@/lib/usage-events";
+    26→import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
+    27→import { makeDemoSnapshot, makeDemoHistory } from "@/lib/demo";
+    28→import {
+    29→  pushPointToServer,
+    30→  fetchServerHistory,
+    31→  mergeHistories,
+    32→  serverPointsToHistory,
+    33→} from "@/lib/server-history";
+    34→import { formatCountdown, formatDateRome, formatTimeRome, nowRomeTime, romeZoneInfo, msUntil } from "@/lib/time";
+    35→import { toast } from "sonner";
+    36→import {
+    37→  RefreshCw,
+    38→  Settings2,
+    39→  Zap,
+    40→  Coins,
+    41→  FlaskConical,
+    42→  KeyRound,
+    43→  MapPin,
+    44→  CircleAlert,
+    45→  Sparkles,
+    46→  ChevronRight,
+    47→  ClipboardPaste,
+    48→  AlertTriangle,
+    49→  AlertOctagon,
+    50→} from "lucide-react";
+    51→
+    52→const SETTINGS_KEY = "mm-dash-settings-v1";
+    53→const HISTORY_KEY = "mm-dash-history-v1";
+    54→const HISTORY_MAX = 600;
+    55→
+    56→function loadSettings(): DashboardSettings {
+    57→  try {
+    58→    const raw = localStorage.getItem(SETTINGS_KEY);
+    59→    if (!raw) return DEFAULT_SETTINGS;
+    60→    const parsed = JSON.parse(raw) as Partial<DashboardSettings>;
+    61→    return { ...DEFAULT_SETTINGS, ...parsed };
+    62→  } catch {
+    63→    return DEFAULT_SETTINGS;
+    64→  }
+    65→}
+    66→
+    67→function loadHistory(): HistoryPoint[] {
+    68→  try {
+    69→    const raw = localStorage.getItem(HISTORY_KEY);
+    70→    if (!raw) return [];
+    71→    const parsed = JSON.parse(raw) as HistoryPoint[];
+    72→    return Array.isArray(parsed) ? parsed.slice(-HISTORY_MAX) : [];
+    73→  } catch {
+    74→    return [];
+    75→  }
+    76→}
+    77→
+    78→export default function DashboardPage() {
+    79→  const [mounted, setMounted] = React.useState(false);
+    80→  const [settings, setSettings] = React.useState<DashboardSettings>(DEFAULT_SETTINGS);
+    81→  const [snapshot, setSnapshot] = React.useState<UsageSnapshot | null>(null);
+    82→  const [rawJson, setRawJson] = React.useState<unknown | null>(null);
+    83→  const [lastEndpoint, setLastEndpoint] = React.useState<string>("");
+    84→  const [lastOk, setLastOk] = React.useState<boolean | null>(null);
+    85→  const [lastFetch, setLastFetch] = React.useState<number | null>(null);
+    86→  const [error, setError] = React.useState<ApiError | null>(null);
+    87→  const [loading, setLoading] = React.useState(false);
+    88→  const [history, setHistory] = React.useState<HistoryPoint[]>([]);
+    89→  const [events, setEvents] = React.useState<UsageEvent[]>([]);
+    90→  const [chartWindow, setChartWindow] = React.useState<"interval" | "weekly">("interval");
+    91→  const [settingsOpen, setSettingsOpen] = React.useState(false);
+    92→  const [now, setNow] = React.useState<number>(() => Date.now());
+    93→  /** I16: punti conservati sul server; null = server non ancora raggiunto. */
+    94→  const [serverCount, setServerCount] = React.useState<number | null>(null);
+    95→  /** Mirror sincrono dello storico per costruire i punti senza race. */
+    96→  const historyRef = React.useRef<HistoryPoint[]>([]);
+    97→
+    98→  /* Riferimenti per il confronto tra rilevamenti consecutivi (transizioni) */
+    99→  const prevSnapRef = React.useRef<UsageSnapshot | null>(null);
+   100→  const prevOkRef = React.useRef<boolean | null>(null);
+   101→
+   102→  /* ----------------------------- init ----------------------------- */
+   103→  React.useEffect(() => {
+   104→    const s = loadSettings();
+   105→    setSettings(s);
+   106→    const local = loadHistory();
+   107→    historyRef.current = local;
+   108→    setHistory(local);
+   109→    setEvents(loadEvents());
+   110→    setMounted(true);
+   111→    setNow(Date.now());
+   112→
+   113→    /* I16: scarica lo storico conservato sul server e fondilo con quello locale,
+   114→       così la cronologia sopravvive a cache svuotate e resta disponibile a lungo. */
+   115→    void (async () => {
+   116→      const server = await fetchServerHistory(2000);
+   117→      if (!server) {
+   118→        setServerCount(null);
+   119→        return;
+   120→      }
+   121→      setServerCount(server.total);
+   122→      if (server.points.length === 0) return;
+   123→      const remote = serverPointsToHistory(server.points);
+   124→      const merged = mergeHistories(historyRef.current, remote).slice(-HISTORY_MAX);
+   125→      historyRef.current = merged;
+   126→      setHistory(merged);
+   127→      try {
+   128→        localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+   129→      } catch {
+   130→        /* quota piena: ignora */
+   131→      }
+   132→    })();
+   133→  }, []);
+   134→
+   135→  /* Orologio vivo: tick ogni secondo */
+   136→  React.useEffect(() => {
+   137→    const id = setInterval(() => setNow(Date.now()), 1000);
+   138→    return () => clearInterval(id);
+   139→  }, []);
+   140→
+   141→  /* --------------------------- fetching ---------------------------- */
+   142→  const pushHistory = React.useCallback((snap: UsageSnapshot) => {
+   143→    const general = findModel(snap, "general");
+   144→    const interval = general?.interval?.remainingPercent;
+   145→    const weekly = general?.weekly?.remainingPercent;
+   146→    if (interval === null && weekly === null && general === undefined) return;
+   147→    const prev = historyRef.current;
+   148→    const point: HistoryPoint = {
+   149→      t: snap.fetchedAt,
+   150→      interval: interval ?? prev[prev.length - 1]?.interval ?? 100,
+   151→      weekly: weekly ?? prev[prev.length - 1]?.weekly ?? 100,
+   152→    };
+   153→    // Deduplica: se l'ultimo punto è più vecchio di 20s accoda, altrimenti sostituisci
+   154→    const last = prev[prev.length - 1];
+   155→    const next = last && point.t - last.t < 20_000 ? [...prev.slice(0, -1), point] : [...prev, point];
+   156→    const trimmed = next.slice(-HISTORY_MAX);
+   157→    historyRef.current = trimmed;
+   158→    setHistory(trimmed);
+   159→    try {
+   160→      localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+   161→    } catch {
+   162→      /* quota piena: ignora */
+   163→    }
+   164→    // I16: replica il punto sul server (fire-and-forget, silenzioso in caso di errore)
+   165→    pushPointToServer(point, {
+   166→      source: snap.source,
+   167→      region: snap.region,
+   168→      onTotal: (total) => setServerCount(total),
+   169→    });
+   170→  }, []);
+   171→
+   172→  const winShortLabel = (win: "interval" | "weekly") => (win === "interval" ? "finestra di 5 ore" : "finestra settimanale");
+   173→
+   174→  /** Registra lo stato "errore" (con evento solo sulla transizione ok → errore). */
+   175→  const markError = React.useCallback((message: string) => {
+   176→    setLastOk(false);
+   177→    if (prevOkRef.current !== false) {
+   178→      prevOkRef.current = false;
+   179→      setEvents((prev) => appendEvents(makeEvent("error", `Rilevamento fallito: ${message}`)));
+   180→    }
+   181→  }, []);
+   182→
+   183→  /** Registra lo stato "connesso". */
+   184→  const markOk = React.useCallback(() => {
+   185→    setLastOk(true);
+   186→    prevOkRef.current = true;
+   187→  }, []);
+   188→
+   189→  const fetchData = React.useCallback(
+   190→    async (s: DashboardSettings, silent = false) => {
+   191→      if (!s.demoMode && !s.apiKey) {
+   192→        setSettingsOpen(true);
+   193→        return;
+   194→      }
+   195→      if (!silent) setLoading(true);
+   196→      setError(null);
+   197→
+   198→      try {
+   199→        if (s.demoMode) {
+   200→          // Piccolo ritardo per realismo
+   201→          await new Promise((r) => setTimeout(r, 350));
+   202→          const snap = makeDemoSnapshot(s.region);
+   203→          setSnapshot(snap);
+   204→          setRawJson({
+   205→            base_resp: { status_code: 0, status_msg: "success (demo)" },
+   206→            current_subscribe_title: snap.planTitle,
+   207→            credits_balance: snap.credits,
+   208→            model_remains: snap.models.map((m) => ({
+   209→              model_name: m.modelName,
+   210→              ...(m.interval
+   211→                ? {
+   212→                    current_interval_remaining_percent: m.interval.remainingPercent,
+   213→                    start_time: m.interval.start,
+   214→                    end_time: m.interval.end,
+   215→                    remains_time: m.interval.remainsTimeMs,
+   216→                  }
+   217→                : {}),
+   218→              ...(m.weekly
+   219→                ? {
+   220→                    current_weekly_remaining_percent: m.weekly.remainingPercent,
+   221→                    weekly_start_time: m.weekly.start,
+   222→                    weekly_end_time: m.weekly.end,
+   223→                    weekly_remains_time: m.weekly.remainsTimeMs,
+   224→                  }
+   225→                : {}),
+   226→            })),
+   227→          });
+   228→          setLastEndpoint("demo://token_plan/remains");
+   229→          markOk();
+   230→          setLastFetch(snap.fetchedAt);
+   231→          // Popola la storia demo se vuota, fondendo il backfill con l'eventuale
+   232→          // storico appena scaricato dal server (non deve sovrascriverlo)
+   233→          if (historyRef.current.length < 10) {
+   234→            const demoHist = makeDemoHistory();
+   235→            const merged = mergeHistories(historyRef.current, demoHist).slice(-HISTORY_MAX);
+   236→            historyRef.current = merged;
+   237→            setHistory(merged);
+   238→            try {
+   239→              localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+   240→            } catch {
+   241→              /* noop */
+   242→            }
+   243→          }
+   244→          // Registra anche i rilevamenti demo nello storico (locale + replica server, source "demo")
+   245→          pushHistory(snap);
+   246→          if (!silent) setLoading(false);
+   247→          return;
+   248→        }
+   249→
+   250→        const res = await fetch("/api/minimax/usage", {
+   251→          method: "POST",
+   252→          headers: { "Content-Type": "application/json" },
+   253→          body: JSON.stringify({ apiKey: s.apiKey, region: s.region }),
+   254→        });
+   255→        const json = (await res.json()) as {
+   256→          ok: boolean;
+   257→          status?: number;
+   258→          data?: unknown;
+   259→          error?: ApiError;
+   260→          fetchedAt?: number;
+   261→          endpoint?: string;
+   262→        };
+   263→
+   264→        setLastEndpoint(json.endpoint ?? "");
+   265→        setLastFetch(json.fetchedAt ?? Date.now());
+   266→
+   267→        if (json.ok && json.data) {
+   268→          try {
+   269→            const snap = parseUsageResponse(json.data, {
+   270→              source: "api",
+   271→              region: s.region,
+   272→              fetchedAt: json.fetchedAt,
+   273→            });
+   274→            setSnapshot(snap);
+   275→            setRawJson(json.data);
+   276→            markOk();
+   277→            pushHistory(snap);
+   278→          } catch (e) {
+   279→            // Errore di business dell'API (es. status_code 1004) o parsing
+   280→            setRawJson(json.data);
+   281→            const err = e as Error & { statusCode?: number };
+   282→            markError(err.message);
+   283→            setError({
+   284→              code: err.statusCode ? `api_${err.statusCode}` : "parse",
+   285→              message: err.message,
+   286→            });
+   287→          }
+   288→        } else {
+   289→          const message = json.error?.message ?? "Errore sconosciuto durante la sincronizzazione.";
+   290→          markError(message);
+   291→          setRawJson(json.data ?? null);
+   292→          setError(
+   293→            json.error ?? {
+   294→              code: "unknown",
+   295→              message,
+   296→            },
+   297→          );
+   298→        }
+   299→      } catch (e) {
+   300→        const message = e instanceof Error ? e.message : "Errore imprevisto lato client.";
+   301→        markError(message);
+   302→        setError({
+   303→          code: "client",
+   304→          message,
+   305→        });
+   306→      } finally {
+   307→        setLoading(false);
+   308→      }
+   309→    },
+   310→    [pushHistory, markError, markOk],
+   311→  );
+   312→
+   313→  /* Prima sincronizzazione al mount */
+   314→  React.useEffect(() => {
+   315→    if (!mounted) return;
+   316→    if (settings.demoMode || settings.apiKey) void fetchData(settings);
+   317→  }, [mounted, settings.demoMode, settings.apiKey, settings.region, fetchData, settings]);
+   318→
+   319→  /* Aggiornamento automatico */
+   320→  React.useEffect(() => {
+   321→    if (!mounted || settings.refreshSeconds === 0) return;
+   322→    const id = setInterval(() => void fetchData(settings, true), settings.refreshSeconds * 1000);
+   323→    return () => clearInterval(id);
+   324→  }, [mounted, settings, fetchData]);
+   325→
+   326→  /* Transizioni tra snapshot: toast + notifiche browser + eventi nel registro */
+   327→  React.useEffect(() => {
+   328→    if (!snapshot) return;
+   329→    const result = evaluateTransitions(prevSnapRef.current, snapshot, settings);
+   330→    prevSnapRef.current = snapshot;
+   331→    if (result.resets.length === 0 && result.alerts.length === 0) return;
+   332→
+   333→    if (result.events.length > 0) setEvents((prev) => appendEvents(result.events));
+   334→
+   335→    for (const r of result.resets) {
+   336→      toast.success("Finestra resettata", {
+   337→        description: `${r.modelLabel} — ${winShortLabel(r.win)} tornata al ${r.to.toFixed(1)}%`,
+   338→      });
+   339→      if (settings.browserNotifications) {
+   340→        notifyBrowser("MiniMax · Finestra resettata", `${r.modelLabel}: quota tornata al ${r.to.toFixed(1)}%`);
+   341→      }
+   342→    }
+   343→    for (const a of result.alerts) {
+   344→      const title = a.level === "crit" ? "Quota quasi esaurita" : "Soglia di attenzione superata";
+   345→      const desc = `${a.modelLabel} — ${winShortLabel(a.win)} al ${a.to.toFixed(1)}%`;
+   346→      if (a.level === "crit") toast.error(title, { description: desc });
+   347→      else toast.warning(title, { description: desc });
+   348→      if (settings.browserNotifications) notifyBrowser(`MiniMax · ${title}`, desc);
+   349→    }
+   350→  }, [snapshot, settings]);
+   351→
+   352→  const handleSaveSettings = (s: DashboardSettings) => {
+   353→    setSettings(s);
+   354→    try {
+   355→      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+   356→    } catch {
+   357→      /* noop */
+   358→    }
+   359→    setSnapshot(null);
+   360→    setError(null);
+   361→    void fetchData(s);
+   362→  };
+   363→
+   364→  /** Importa una risposta JSON incollata manualmente (senza chiamare l'API). */
+   365→  const handleImportJson = (raw: unknown) => {
+   366→    try {
+   367→      const snap = parseUsageResponse(raw, {
+   368→        source: "api",
+   369→        region: settings.region,
+   370→        fetchedAt: Date.now(),
+   371→      });
+   372→      if (snap.models.length === 0) {
+   373→        throw new Error("Nessun modello trovato: verifica che il JSON contenga l'array model_remains.");
+   374→      }
+   375→      setSnapshot(snap);
+   376→      setRawJson(raw);
+   377→      setLastEndpoint("json://incollato (risposta API importata manualmente)");
+   378→      markOk();
+   379→      setLastFetch(snap.fetchedAt);
+   380→      setError(null);
+   381→      pushHistory(snap);
+   382→      toast.success("JSON importato: analisi completata");
+   383→    } catch (e) {
+   384→      const message = e instanceof Error ? e.message : "JSON non interpretabile.";
+   385→      setError({ code: "parse", message });
+   386→      toast.error(message);
+   387→    }
+   388→  };
+   389→
+   390→  const handleClearEvents = () => {
+   391→    clearEvents();
+   392→    setEvents([]);
+   393→    toast.success("Registro eventi svuotato");
+   394→  };
+   395→
+   396→  /* ---------------------------- derived ---------------------------- */
+   397→  const general = snapshot ? findModel(snapshot, "general") : undefined;
+   398→  const otherModels = snapshot ? snapshot.models.filter((m) => m.modelName.toLowerCase() !== "general") : [];
+   399→  const trend = React.useMemo(() => computeTrend(history, chartWindow), [history, chartWindow]);
+   400→  const serverTime = React.useMemo(() => (snapshot ? inferServerTime(snapshot.models) : null), [snapshot]);
+   401→  const sourceLabel = !lastEndpoint
+   402→    ? undefined
+   403→    : lastEndpoint.startsWith("json://")
+   404→      ? "Risposta JSON importata manualmente"
+   405→      : lastEndpoint.startsWith("demo://")
+   406→        ? "Modalità demo (nessuna chiamata reale)"
+   407→        : lastEndpoint;
+   408→  const nextRefreshIn =
+   409→    settings.refreshSeconds > 0 && lastFetch && !settings.demoMode
+   410→      ? msUntil(lastFetch + settings.refreshSeconds * 1000, now)
+   411→      : null;
+   412→
+   413→  const needsSetup = !settings.demoMode && !settings.apiKey;
+   414→
+   415→  /* Banner quota bassa (deriva solo dallo snapshot corrente) */
+   416→  const banner = React.useMemo<BannerInfo | null>(() => deriveBanner(snapshot, settings), [snapshot, settings]);
+   417→
+   418→  /* Finestra selezionata nel grafico: reset e residuo per il verdetto di proiezione */
+   419→  const selectedWindow = chartWindow === "interval" ? general?.interval : general?.weekly;
+   420→  const selectedWindowEnd = selectedWindow?.end ?? null;
+   421→  const selectedWindowRemaining = selectedWindow?.remainingPercent ?? null;
+   422→
+   423→  /* ---------------------------- render ----------------------------- */
+   424→  return (
+   425→    <div className="relative min-h-screen bg-[#09090b] text-zinc-100">
+   426→      {/* Decorazioni di sfondo */}
+   427→      <div
+   428→        aria-hidden
+   429→        className="pointer-events-none fixed inset-0"
+   430→        style={{
+   431→          background:
+   432→            "radial-gradient(700px 380px at 12% -5%, rgba(244,63,94,0.10), transparent 60%), radial-gradient(800px 420px at 88% 0%, rgba(245,158,11,0.07), transparent 60%)",
+   433→        }}
+   434→      />
+   435→
+   436→      <div className="relative flex min-h-screen flex-col">
+   437→        {/* ------------------------------ Header ------------------------------ */}
+   438→        <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-xl">
+   439→          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+   440→            <div className="flex items-center gap-3">
+   441→              <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 shadow-lg shadow-rose-500/20">
+   442→                <Zap className="size-5 text-white" />
+   443→              </div>
+   444→              <div>
+   445→                <h1 className="text-sm font-bold leading-tight sm:text-base">MiniMax Token Monitor</h1>
+   446→                <p className="text-[11px] text-zinc-500">Quota · Reset · Statistiche</p>
+   447→              </div>
+   448→            </div>
+   449→
+   450→            <div className="ml-auto flex items-center gap-2">
+   451→              {/* Orologio Roma */}
+   452→              <div className="hidden items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 md:flex">
+   453→                <MapPin className="size-3.5 text-rose-400" />
+   454→                <div className="text-right leading-tight">
+   455→                  <p className="font-mono text-sm font-semibold tabular-nums text-zinc-100">{mounted ? nowRomeTime() : "--:--:--"}</p>
+   456→                  <p className="text-[10px] text-zinc-500">Europe/Rome · {romeZoneInfo(now)}</p>
+   457→                </div>
+   458→              </div>
+   459→
+   460→              <span className="sr-only" aria-live="polite">
+   461→                Ora corrente a Roma: {mounted ? nowRomeTime() : ""}
+   462→              </span>
+   463→
+   464→              <Button
+   465→                variant="outline"
+   466→                size="sm"
+   467→                onClick={() => void fetchData(settings)}
+   468→                disabled={loading || needsSetup}
+   469→                className="h-9 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+   470→              >
+   471→                <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+   472→                {loading ? "Sincronizzo…" : "Aggiorna"}
+   473→              </Button>
+   474→              <Button
+   475→                variant="outline"
+   476→                size="icon"
+   477→                aria-label="Apri impostazioni"
+   478→                onClick={() => setSettingsOpen(true)}
+   479→                className="h-9 w-9 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+   480→              >
+   481→                <Settings2 className="size-4" />
+   482→              </Button>
+   483→            </div>
+   484→          </div>
+   485→
+   486→          {/* Riga badge stato */}
+   487→          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 pb-3 sm:px-6">
+   488→            {snapshot?.planTitle ? (
+   489→              <Badge className="gap-1 border-transparent bg-gradient-to-r from-rose-500/15 to-orange-500/15 text-rose-300 hover:from-rose-500/15">
+   490→                <Sparkles className="size-3" />
+   491→                {snapshot.planTitle}
+   492→              </Badge>
+   493→            ) : null}
+   494→            {snapshot?.credits !== null && snapshot?.credits !== undefined ? (
+   495→              <Badge variant="outline" className="gap-1 border-white/10 text-xs text-amber-300">
+   496→                <Coins className="size-3" />
+   497→                Crediti: {snapshot.credits.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+   498→              </Badge>
+   499→            ) : null}
+   500→            {lastOk === false ? (
+   501→              <Badge variant="outline" className="gap-1 border-rose-400/30 bg-rose-400/10 text-xs text-rose-300">
+   502→                <CircleAlert className="size-3" />
+   503→                API in errore
+   504→              </Badge>
+   505→            ) : snapshot?.source === "demo" || (snapshot === null && settings.demoMode) ? (
+   506→              <Badge variant="outline" className="gap-1 border-violet-400/30 bg-violet-400/10 text-xs text-violet-300">
+   507→                <FlaskConical className="size-3" />
+   508→                Modalità demo — dati simulati
+   509→              </Badge>
+   510→            ) : lastEndpoint.startsWith("json://") ? (
+   511→              <Badge variant="outline" className="gap-1 border-sky-400/30 bg-sky-400/10 text-xs text-sky-300">
+   512→                <ClipboardPaste className="size-3" />
+   513→                JSON importato manualmente
+   514→              </Badge>
+   515→            ) : (
+   516→              <Badge variant="outline" className="gap-1 border-emerald-400/30 bg-emerald-400/10 text-xs text-emerald-300">
+   517→                <KeyRound className="size-3" />
+   518→                API connessa
+   519→              </Badge>
+   520→            )}
+   521→            {lastFetch ? (
+   522→              <Badge variant="outline" className="border-white/10 text-[11px] font-normal text-zinc-400">
+   523→                Ultimo rilevamento: {formatTimeRome(lastFetch)}
+   524→                {settings.refreshSeconds > 0 && !settings.demoMode
+   525→                  ? nextRefreshIn !== null
+   526→                    ? ` · prossimo tra ${formatCountdown(nextRefreshIn)}`
+   527→                    : ""
+   528→                  : ""}
+   529→              </Badge>
+   530→            ) : null}
+   531→            <TrendBadge trend={trend} />
+   532→          </div>
+   533→        </header>
+   534→
+   535→        {/* ------------------------------ Main ------------------------------ */}
+   536→        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
+   537→          {/* Errore */}
+   538→          {error ? (
+   539→            <Alert variant="destructive" className="border-rose-500/30 bg-rose-950/40 text-rose-100">
+   540→              <CircleAlert className="size-4" />
+   541→              <AlertTitle>Impossibile recuperare i dati di utilizzo</AlertTitle>
+   542→              <AlertDescription className="text-rose-200/90">
+   543→                {error.message}
+   544→                <span className="mt-2 block text-xs text-rose-200/60">
+   545→                  Codice: {error.code}
+   546→                  {error.httpStatus ? ` · HTTP ${error.httpStatus}` : ""}
+   547→                </span>
+   548→              </AlertDescription>
+   549→            </Alert>
+   550→          ) : null}
+   551→
+   552→          {/* Setup iniziale */}
+   553→          {needsSetup ? (
+   554→            <div className="mx-auto max-w-xl rounded-2xl border border-white/[0.07] bg-white/[0.04] p-8 text-center backdrop-blur">
+   555→              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500/20 to-orange-500/20">
+   556→                <KeyRound className="size-7 text-rose-400" />
+   557→              </div>
+   558→              <h2 className="text-lg font-bold">Configura il tuo monitor</h2>
+   559→              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-400">
+   560→                Inserisci la <strong className="text-zinc-200">Subscription Key</strong> del tuo Token Plan MiniMax
+   561→                per iniziare a monitorare quota, finestre di reset e statistiche d&apos;uso. Oppure prova la
+   562→                modalità demo con dati simulati.
+   563→              </p>
+   564→              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+   565→                <Button
+   566→                  onClick={() => setSettingsOpen(true)}
+   567→                  className="gap-1.5 bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:from-rose-400 hover:to-orange-400"
+   568→                >
+   569→                  Inserisci la chiave
+   570→                  <ChevronRight className="size-4" />
+   571→                </Button>
+   572→                <Button
+   573→                  variant="outline"
+   574→                  onClick={() =>
+   575→                    handleSaveSettings({ ...settings, demoMode: true })
+   576→                  }
+   577→                  className="gap-1.5 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+   578→                >
+   579→                  <FlaskConical className="size-4 text-violet-300" />
+   580→                  Prova la demo
+   581→                </Button>
+   582→              </div>
+   583→              <p className="mt-6 text-[11px] leading-relaxed text-zinc-600">
+   584→                La chiave si trova nella console MiniMax → Plan Details. Viene salvata solo nel tuo browser.
+   585→              </p>
+   586→            </div>
+   587→          ) : !mounted ? (
+   588→            /* Skeleton al primo rendering */
+   589→            <div className="space-y-6">
+   590→              <div className="grid gap-4 lg:grid-cols-3">
+   591→                {[0, 1, 2].map((i) => (
+   592→                  <div key={i} className="h-48 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
+   593→                ))}
+   594→              </div>
+   595→              <div className="h-64 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
+   596→            </div>
+   597→          ) : snapshot ? (
+   598→            <>
+   599→              {/* Banner quota bassa (avvisi di soglia) */}
+   600→              {banner ? (
+   601→                <Alert
+   602→                  className={
+   603→                    banner.level === "crit"
+   604→                      ? "border-rose-500/30 bg-rose-950/40 text-rose-100"
+   605→                      : "border-amber-500/30 bg-amber-950/40 text-amber-100"
+   606→                  }
+   607→                >
+   608→                  {banner.level === "crit" ? <AlertOctagon className="size-4" /> : <AlertTriangle className="size-4" />}
+   609→                  <AlertTitle>
+   610→                    {banner.level === "crit"
+   611→                      ? "Quota quasi esaurita"
+   612→                      : "Soglia di attenzione superata"}
+   613→                  </AlertTitle>
+   614→                  <AlertDescription>
+   615→                    <ul className={`mt-1 space-y-0.5 ${banner.level === "crit" ? "text-rose-200/90" : "text-amber-200/90"}`}>
+   616→                      {banner.items.map((item) => (
+   617→                        <li key={`${item.model}-${item.win}`}>
+   618→                          {item.modelLabel} · {item.win === "interval" ? "finestra di 5 ore" : "finestra settimanale"}{" "}
+   619→                          al <strong>{item.remaining.toFixed(1)}%</strong> (soglia {item.threshold}%)
+   620→                        </li>
+   621→                      ))}
+   622→                    </ul>
+   623→                  </AlertDescription>
+   624→                </Alert>
+   625→              ) : null}
+   626→
+   627→              {/* Anelli principali */}
+   628→              <MainWindows general={general} now={now} />
+   629→
+   630→              {/* Data odierna a Roma */}
+   631→              <p className="text-center text-xs text-zinc-500">
+   632→                Oggi a Roma: <span className="font-medium text-zinc-400">{formatDateRome(now)}</span>
+   633→              </p>
+   634→
+   635→              {/* Grafico + statistiche */}
+   636→              <HistoryChart
+   637→                history={history}
+   638→                window={chartWindow}
+   639→                onWindowChange={setChartWindow}
+   640→                serverCount={serverCount}
+   641→              />
+   642→              <StatsPanel
+   643→                trend={trend}
+   644→                win={chartWindow}
+   645→                resetAt={selectedWindowEnd}
+   646→                remaining={selectedWindowRemaining}
+   647→                serverCount={serverCount}
+   648→              />
+   649→
+   650→              {/* Vista panoramica: tutte le finestre del piano a confronto */}
+   651→              <PanoramicTable models={snapshot.models} now={now} />
+   652→
+   653→              {/* Analisi di lungo periodo: cicli di finestra, medie, giorni della settimana (I26) */}
+   654→              <LongTermAnalysis history={history} />
+   655→
+   656→              {/* Altri modelli */}
+   657→              {otherModels.length > 0 ? (
+   658→                <section className="space-y-3" aria-label="Altri modelli">
+   659→                  <div className="flex items-center gap-2">
+   660→                    <h2 className="text-sm font-semibold text-zinc-200">Altri modelli</h2>
+   661→                    <Separator className="flex-1 bg-white/[0.06]" />
+   662→                  </div>
+   663→                  <div className="grid gap-4 md:grid-cols-2">
+   664→                    {otherModels.map((m, i) => (
+   665→                      <ModelCard key={m.modelName} model={m} now={now} delay={i * 60} />
+   666→                    ))}
+   667→                  </div>
+   668→                </section>
+   669→              ) : null}
+   670→
+   671→              {/* Card dettaglio "general" se ha dati extra (es. stato, boost) */}
+   672→              {general ? null : null}
+   673→
+   674→              {/* JSON + dettagli tecnici */}
+   675→              <div className="grid gap-4 lg:grid-cols-2">
+   676→                <RawJsonPanel rawJson={rawJson} fetchedAt={lastFetch} endpoint={lastEndpoint} ok={lastOk} />
+   677→                <TechInfo
+   678→                  region={settings.region as Region}
+   679→                  demoMode={settings.demoMode}
+   680→                  lastFetch={lastFetch}
+   681→                  refreshSeconds={settings.refreshSeconds}
+   682→                  serverTime={serverTime}
+   683→                  sourceLabel={sourceLabel}
+   684→                />
+   685→              </div>
+   686→
+   687→              {/* Registro eventi: reset, soglie, errori */}
+   688→              <EventLog events={events} onClear={handleClearEvents} />
+   689→            </>
+   690→          ) : loading ? (
+   691→            <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+   692→              <RefreshCw className="mr-2 size-4 animate-spin" /> Sincronizzazione in corso…
+   693→            </div>
+   694→          ) : null}
+   695→        </main>
+   696→
+   697→        {/* ----------------------------- Footer ----------------------------- */}
+   698→        <footer className="mt-auto border-t border-white/[0.06] bg-[#09090b]/80 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+   699→          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-[11px] text-zinc-600 sm:flex-row sm:px-6">
+   700→            <p>
+   701→              MiniMax Token Monitor · dashboard non ufficiale per il Token Plan di{" "}
+   702→              <a
+   703→                href="https://platform.minimax.io"
+   704→                target="_blank"
+   705→                rel="noopener noreferrer"
+   706→                className="text-zinc-400 underline-offset-2 hover:underline"
+   707→              >
+   708→                platform.minimax.io
+   709→              </a>
+   710→            </p>
+   711→            <p>
+   712→              Fuso orario: Europe/Rome ({romeZoneInfo(now)}) · Orario locale:{" "}
+   713→              <span className="font-mono tabular-nums">{mounted ? nowRomeTime() : "--:--:--"}</span>
+   714→            </p>
+   715→          </div>
+   716→        </footer>
+   717→      </div>
+   718→
+   719→      <SettingsDialog
+   720→        open={settingsOpen}
+   721→        onOpenChange={setSettingsOpen}
+   722→        settings={settings}
+   723→        onSave={handleSaveSettings}
+   724→        onImportJson={handleImportJson}
+   725→      />
+   726→    </div>
+   727→  );
+   728→}
+   729→

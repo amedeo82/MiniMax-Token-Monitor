@@ -86,6 +86,16 @@ export function clearEvents(): void {
   }
 }
 
+/**
+ * I27 — Sostituisce il registro con una lista già fusa con l'archivio server
+ * (usato dal merge all'avvio): il diario locale resta limitato a EVENTS_MAX.
+ */
+export function replaceEvents(events: UsageEvent[]): UsageEvent[] {
+  const next = events.slice(-EVENTS_MAX);
+  writeEvents(next);
+  return next;
+}
+
 let idCounter = 0;
 
 /** Factory di un evento con id univoco (timestamp + contatore monotonicо). */

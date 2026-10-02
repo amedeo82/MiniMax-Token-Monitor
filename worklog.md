@@ -179,3 +179,28 @@ Stage Summary:
 - I26 completata: il dashboard ora ANALIZZA lo storico persistito (fino a 10.000 punti server) invece di limitarsi a mostrarlo — cicli di finestra 5h/settimanali con durata/consumo/ritmo, confronto tra finestre consecutive, consumo medio per giorno della settimana, media mobile sul grafico
 - Scoperta importante documentata: con dati da sorgenti miste (demo+api) servono le regole RESET_TARGET + drawdown, altrimenti l'analisi produce risultati assurdi — ora robusta e verificata
 - Prossimi ingressi naturali: I18 (fallback coding_plan/remains, dipende da V4 — serve chiave reale), verifiche empiriche V1–V6 (richiedono osservazione su consumo reale), roadmap residua (multi-regione, PWA, soglie per finestra, storico eventi su DB)
+
+---
+Task ID: 9
+Agent: Super Z (main)
+Task: I27 — Persistenza del registro eventi su DB server-side (archivio oltre i 200 eventi)
+
+Work Log:
+- Punto di partenza: worklog Task ID 8 chiudeva con "prossimi ingressi naturali: I18 (dipende da V4 — serve chiave reale), verifiche V1–V6 (richiedono consumo reale), roadmap residua". Scelto il primo passo autonomo: roadmap docs/03 §11 punto 7 (storico eventi su DB, stesso schema di I16)
+- Schema Prisma esteso con UsageEventRecord (id client String @id per dedup upsert, t, kind, model, win, message, value, indici t+kind); rimossi dal commento header i riferimenti a costanti non più citate; bun run db:push OK (db/custom.db)
+- Nuova API src/app/api/events/route.ts: POST (max 500 eventi/richiesta, validazione: id+t+kind+message obbligatori, kind in enum, win in {interval,weekly}, message≤500 char, upsert per id, pruning dopo ogni write: cutoff 180 giorni + FIFO oltre 5.000), GET (?limit= def 2000 max 5000, ?since=, ?kind=, ordinato per t), DELETE (svuota). Nessuna chiave API transita qui
+- Nuovo src/lib/server-events.ts: pushEventsToServer (fire-and-forget batch, keepalive, callback onTotal), fetchServerEvents(limit, kind), mergeEvents (dedup per ID — non per t — vince la copia locale), serverEventsToEvents (valida kind/win), clearServerEvents
+- lib/usage-events.ts: aggiunta replaceEvents() (sostituisce il registro con la lista fusa, trim a 200, write localStorage) — usata dal merge all'avvio
+- page.tsx: nuovo callback addEvents() (appendEvents locale + pushEventsToServer) usato sia da markError sia dall'effetto transizioni (rimossa la doppia via setEvents(prev=>...)); merge archivio server all'avvio (fetchServerEvents(5000) → mergeEvents(loadEvents(), remote) → replaceEvents); serverEventsCount state; handleClearEvents ora svuota SEMPRE locale+server (altrimenti il merge risusciterebbe gli eventi cancellati — decisione ADR-11)
+- lib/export.ts: aggiunta exportEventsJson (parità con lo storico)
+- event-log.tsx: il bottone "CSV" diventa menu Esporta (DropdownMenu con tema scuro forzato come in history-chart): Registro locale (CSV/JSON · N eventi in memoria) + Archivio server (fino a 5.000 eventi: CSV/JSON completo con fetchServerEvents(5000) + toast conferma); descrizione con "· N in archivio sul server"; Svuota abilitato anche se locale vuoto ma server pieno
+- Verifiche curl: DELETE reset; POST 3 eventi (1 duplicato id e-2) → stored 3, total 2 con messaggio aggiornato (upsert); GET ordinato; GET ?kind=reset; GET ?since=30min; POST evento invalido (manca message) scartato senza crash; evento 200 giorni fa eliminato dal pruning 180g; POST array vuoto → 400
+- Nota: il primo POST di test con timestamp 2025 (un anno fa) è risultato total 0 — comportamento CORRETTO del pruning, ripetuto con timestamp correnti
+- Verifiche agent-browser (demo): import JSON con interval 18% mentre il demo era a ~38,9% → transizione soglia 25% → evento warn generato e REPLICATO sul server (POST 200, GET conferma campi completi); badge "1 in archivio sul server" nella descrizione; localStorage mm-dash-events-v1 rimosso + reload → evento RIPRISTINATO dal merge server; menu Esporta completo (6 voci, tema scuro #09090b confermato da screenshot); export "CSV completo" → toast "Esportati 1 eventi dall'archivio server"; Svuota → locale 0 + server total 0 + toast aggiornato; reload successivo → nessuna resurrezione (0 eventi); mobile 390px: card 358px, bottoni nel viewport, descrizione a capo corretta; zero errori console; lint e tsc --noEmit puliti su src/
+- Riavvio dev server necessario dopo db:push (il processo teneva in memoria il Prisma Client senza usageEventRecord → "Cannot read properties of undefined (reading 'findMany')" su GET /api/events)
+- Documentazione: docs/03 (mappa codice con server-events.ts + api/events + nota replaceEvents, §4 modello UsageEventRecord, §5.8 sync registro eventi, §10 fase F8 ✅, roadmap §11 punto 7 barrato), docs/04 (I27 ✅, ADR-11, changelog)
+
+Stage Summary:
+- I27 completata: gli eventi (reset, soglie, errori) ora sono durevoli sull'archivio server (SQLite, 5.000 eventi / 180 giorni) oltre il diario locale di 200 voci, con export CSV/JSON completo e sopravvivenza a cache svuotate/cambio dispositivo (stesso schema offline-first di I16)
+- "Svuota" cancella locale+server per coerenza col merge (ADR-11)
+- RESTANO BLOCCATI SULL'UTENTE: I18 (fallback coding_plan/remains) e verifiche V1–V6 richiedono una Subscription Key reale e osservazione del consumo; roadmap residua autonoma: soglie per finestra (punto 6), multi-regione (punto 3), PWA (punto 4), filtri UI sull'archivio eventi

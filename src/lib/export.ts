@@ -95,3 +95,12 @@ export function exportHistoryJson(points: HistoryPoint[]): void {
 export function exportEventsCsv(events: UsageEvent[]): void {
   downloadTextFile(`minimax-eventi-${fileStamp()}.csv`, eventsToCsv(events));
 }
+
+/** Scarica il registro eventi in JSON. */
+export function exportEventsJson(events: UsageEvent[]): void {
+  downloadTextFile(
+    `minimax-eventi-${fileStamp()}.json`,
+    JSON.stringify({ exportedAt: new Date().toISOString(), events }, null, 2),
+    "application/json;charset=utf-8",
+  );
+}
