@@ -96,3 +96,27 @@ Work Log:
 Stage Summary:
 - F6a completata: il dashboard ora misura il consumo token REALE via chat completions, chiudendo il gap "solo percentuali" dell'endpoint quota
 - Nuove attività aperte in docs/04: I19 (persistenza registro token su server), I20 (correlazione token ↔ calo percentuale quota)
+
+---
+Task ID: 5
+Agent: Super Z (main)
+Task: Rimozione F6a (contatore token reale) + F6b: funzionalità di analisi e monitoraggio read-only
+
+Work Log:
+- Decisione (richiesta utente): la sezione "Consumo token reale" usa /v1/chat/completions che con la Subscription Key consuma la quota del piano; non esistono metodi gratuiti integrabili → rimossa interamente (ADR-8)
+- RIMOZIONE F6a: eliminati src/components/token-tracker.tsx, src/app/api/minimax/chat/route.ts (dir rimossa), src/lib/token-log.ts; page.tsx ripulito dai riferimenti; verificato con rg che non restino riferimenti (token-tracker/token-log/mm-dash-tokenlog/api/minimax/chat)
+- NUOVE FUNZIONALITÀ (tutte read-only: solo token_plan/remains + storico locale, zero consumo quota):
+  - I17 lib/usage-events.ts: deriveBanner() (banner stateless da snapshot corrente), evaluateTransitions() (attraversamenti soglia warn/crit + reset = salto ≥+25 punti verso ≥90%), registro eventi localStorage "mm-dash-events-v1" (max 200), makeEvent/appendEvents/loadEvents/clearEvents, notifyBrowser (Notification API)
+  - I21 components/event-log.tsx: EventLog — timeline raggruppata per giorno (Europe/Rome), badge per tipo (reset/warn/crit/error/info), export CSV, svuota
+  - I22 lib/export.ts: historyToCsv/eventsToCsv (separatore «;» + BOM UTF-8 per Excel it-IT), exportHistoryCsv/Json/exportEventsCsv, downloadTextFile; pulsanti export sull'header del grafico
+  - I23 history-chart.tsx: StatsPanel esteso con ProjectionVerdict — confronta esaurimento stimato (trend lineare) con end_time della finestra selezionata: amber "Rischio esaurimento prima del reset" / verde "Quota sufficiente fino al reset" / info
+  - I24 components/model-table.tsx: PanoramicTable — tabella comparativa modello × finestra (residuo con mini-barra colorata, badge stato, countdown + orario reset); windowKindLabel ora esportata da quota-cards
+  - settings-dialog.tsx: nuova sezione "Avvisi e notifiche" — master switch, soglia attenzione (0/5/10/25/50%), soglia critica, avviso reset, notifiche browser con requestPermission; DashboardSettings esteso (alertsEnabled, alertThresholdWarn=25, alertThresholdCrit=10, notifyReset, browserNotifications); retrocompatibilità via merge DEFAULT_SETTINGS
+  - page.tsx: banner avvisi sotto l'header, effetto transizioni (toast sonner + notifiche browser + eventi), markOk/markError (evento "error" solo su transizione ok→errore), EventLog in fondo, PanoramicTable dopo StatsPanel, props resetAt/remaining al verdetto
+- Verifiche agent-browser: banner attenzione con soglia 50% (37.2% < 50); import JSON al 60% → banner sparisce; click Aggiorna (demo 37.5%) → toast warning + evento "warn" registrato correttamente in mm-dash-events-v1; EventLog renderizza (giorno Roma, badge, valore %); verdetto "Quota sufficiente fino al reset" su dati demo (esaurimento 19:34 > reset 16:26); CSV/Svuota senza errori; soglie ripristinate a 25/10; mobile 390px OK; zero errori console; lint pulito
+- Documentazione aggiornata: docs/01 §5.2/§6 (ADR-8, strategie solo manuali/esterne), docs/03 (architettura, mappa codice, modelli dati, §5.5 avvisi/eventi, §5.6 export, layout UI, fasi F6a 🚫 / F6b ✅, roadmap riscritta con 7 candidati + sezione "rimosse"), docs/04 (fasi, I15/I19/I20 🚫, I17/I21/I22/I23/I24 ✅, ADR-8/ADR-9, aperture aggiornate, changelog), README (stato read-only, sezione "Funzionalità", stack, struttura repo)
+
+Stage Summary:
+- Il dashboard ora è dichiaratamente read-only: non invoca mai modelli, non consuma mai la quota che misura (ADR-8)
+- Nuove funzionalità F6b: avvisi soglia configurabili (banner/toast/notifiche), registro eventi, export CSV/JSON, verdetto esaurimento-vs-reset, panoramica modelli — tutte verificate in demo end-to-end
+- Prossimi ingressi naturali: I16 (persistenza server-side Prisma/SQLite per storico lungo + confronto finestre consecutive), I18 (fallback coding_plan/remains, dipende da V4), verifiche empiriche V1–V6

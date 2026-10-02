@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-02.
+> Ultimo aggiornamento: 2026-10-02 (F6a rimossa, F6b avvisi/eventi/export/panoramica).
 
 ---
 
@@ -19,8 +19,11 @@
 │   ├─ tick orologio 1s (countdown vivi)                                   │
 │   ├─ settings (localStorage "mm-dash-settings-v1")                       │
 │   ├─ history  (localStorage "mm-dash-history-v1", max 600 punti)        │
+│   ├─ events   (localStorage "mm-dash-events-v1", max 200)                │
 │   ├─ modalità: API reale │ import JSON │ demo                            │
-│   └─ componenti: quota-cards · quota-ring · history-chart · tech-panels  │
+│   ├─ avvisi: banner soglie, toast, notifiche browser (usage-events.ts)   │
+│   └─ componenti: quota-cards · history-chart · model-table · event-log   │
+│                  quota-ring · tech-panels                                │
 └───────────────▲──────────────────────────────────────────────────────────┘
                 │  POST /api/minimax/usage  { apiKey, region }   (fetch)
 ┌───────────────┴──────────────────────────────────────────────────────────┐
@@ -63,17 +66,18 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 |------|----------------|
 | `src/lib/minimax.ts` | Tipi (`UsageSnapshot`, `ModelQuota`, `QuotaWindow`, `ApiError`), `REGION_ENDPOINTS`, `parseUsageResponse()` (tollerante: risposta piatta o sotto `data`, epoch s/ms, status numerici o testuali), `statusLabel()`, `consumedPercent()`, `inferServerTime()`, `quotaLevel()`, `modelLabel()`, `EXTRA_ENDPOINTS` |
 | `src/lib/time.ts` | `TZ_ROME`, `LOCALE_IT`, `toDate()` (accetta epoch s/ms, ISO, Date), `formatFullRome/DateTimeRome/TimeRome/DateRome/ShortRome`, `romeZoneInfo()`, `formatCountdown()`, `formatDuration()`, `msUntil()`, `windowProgress()` |
+| `src/lib/usage-events.ts` | Motore di monitoraggio: registro eventi (`mm-dash-events-v1`, max 200: `loadEvents/appendEvents/clearEvents/makeEvent`), `deriveBanner()` (banner quota bassa stateless), `evaluateTransitions()` (soglie warn/crit + reset tra due snapshot), `canNotify()/notifyBrowser()` (Notification API), `AlertConfig` |
+| `src/lib/export.ts` | Esportazione locale: `historyToCsv()/eventsToCsv()` (CSV «;» + BOM UTF-8, Excel it-IT), `exportHistoryCsv/Json()`, `exportEventsCsv()`, `downloadTextFile()` |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
-| `src/app/page.tsx` | Stato globale pagina: settings/history (localStorage), fetch/polling, import JSON, demo, orologio 1s, layout |
+| `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
 | `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano |
-| `src/app/api/minimax/chat/route.ts` | Proxy POST → MiniMax Chat Completions (eu/cn); estrae `content`, `reasoning_content` e `usage` (prompt/completion/total tokens, caratteri, cached); timeout 90s; errori in italiano |
-| `src/lib/token-log.ts` | Registro del consumo token reale in localStorage (`mm-dash-tokenlog-v1`, max 500): record `TokenCallRecord`, load/append/clear, aggregazione totali e per modello |
 | `src/components/quota-cards.tsx` | `ModelCard` (card per modello: due finestre con barre, countdown, badge stato), `MainWindows` (riepilogo finestre general), `CountsRow` (residuo/totale/consumato + nota su percentuali), `windowKindLabel()` (5h vs 24h dinamica) |
 | `src/components/quota-ring.tsx` | `QuotaRing`: anello SVG percentuale |
-| `src/components/history-chart.tsx` | `HistoryChart` (Recharts, switch finestra interval/weekly), `computeTrend()`, `StatsPanel`, `TrendBadge` |
+| `src/components/history-chart.tsx` | `HistoryChart` (Recharts, switch finestra interval/weekly, pulsanti export CSV/JSON), `computeTrend()`, `StatsPanel` (+ verdetto `ProjectionVerdict`: esaurimento stimato vs orario di reset), `TrendBadge` |
+| `src/components/model-table.tsx` | `PanoramicTable`: tabella comparativa di tutte le finestre del piano (modello × finestra: residuo con mini-barra, stato, countdown reset) |
+| `src/components/event-log.tsx` | `EventLog`: timeline del registro eventi raggruppata per giorno (Europe/Rome), badge per tipo, export CSV, svuotamento |
 | `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
-| `src/components/token-tracker.tsx` | Pannello "Consumo token reale": invio prompt (o simulazione in demo), badge usage dell'ultima chiamata, totali + ripartizione per modello, storico (max 12 visibili), svuotamento registro |
-| `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode }, import JSON con validazione |
+| `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode, alertsEnabled, alertThresholdWarn, alertThresholdCrit, notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
 
 ---
 
@@ -94,8 +98,21 @@ interface ModelQuota { modelName: string; label: string; interval: QuotaWindow |
 interface UsageSnapshot { planTitle: string | null; credits: number | null; models: ModelQuota[]; fetchedAt: number; source: "api" | "demo"; region: "eu" | "cn"; }
 
 // src/components/settings-dialog.tsx
-interface DashboardSettings { apiKey: string; region: "eu" | "cn"; refreshSeconds: number /* 0 = off */; demoMode: boolean; }
+interface DashboardSettings {
+  apiKey: string;
+  region: "eu" | "cn";
+  refreshSeconds: number;  // 0 = off
+  demoMode: boolean;
+  alertsEnabled: boolean;          // motore avvisi (banner + toast)
+  alertThresholdWarn: number;      // % residua, 0 = disattivata (default 25)
+  alertThresholdCrit: number;      // % residua, 0 = disattivata (default 10)
+  notifyReset: boolean;            // avviso al reset finestre
+  browserNotifications: boolean;   // Notification API (richiede permesso)
+}
 
+// src/lib/usage-events.ts
+type UsageEventKind = "reset" | "warn" | "crit" | "error" | "info";
+interface UsageEvent { id; t: number; kind: UsageEventKind; model: string | null; win: "interval" | "weekly" | null; message: string; value: number | null; }
 // src/components/history-chart.tsx
 interface HistoryPoint { t: number; interval: number; weekly: number; }  // epoch ms + percentuali general
 ```
@@ -128,13 +145,24 @@ Un tick `setInterval` 1s aggiorna `now`; i countdown sono `msUntil(end_time, now
 `inferServerTime()` (dal JSON: `end_time − remains_time`) è mostrata nel TechInfo come
 "ora del server dedotta" per confronto con l'ora locale.
 
-### 5.5 Consumo token reale (pannello TokenTracker)
-`page.tsx` passa `apiKey/region/demoMode` a `TokenTracker` → invio prompt →
-POST `/api/minimax/chat` → risposta con `usage` → record `TokenCallRecord` in
-localStorage (`token-log.ts`) → totali e per-modello ricalcolati con `aggregateTokenLog()`.
-In demo il flusso è identico ma il record è generato localmente (source `demo`),
-così la UI è testabile senza chiave. NB: con Subscription Key la chiamata consuma
-quota reale (avviso visibile nel pannello).
+### 5.5 Avvisi di soglia, reset e registro eventi (F6b)
+Il motore (`lib/usage-events.ts`) lavora SOLO sugli snapshot già ricevuti (zero chiamate
+extra, zero consumo quota):
+- **Banner** (`deriveBanner`): stateless, derivato dallo snapshot corrente — se una delle
+  due finestre di «general» è sotto le soglie configurate appare l'Alert amber/rose;
+- **Transizioni** (`evaluateTransitions`): confronta lo snapshot precedente col nuovo
+  (ref interno di `page.tsx`); genera toast + notifiche browser solo sugli
+  ATTRAVERSAMENTI (prev ≥ soglia > next; reset = salto ≥ +25 punti fino a ≥ 90%);
+  nessuno spam a ogni polling;
+- **Registro eventi**: ogni transizione, errore di rilevamento (ok → errore) e nota
+  viene accodato in `mm-dash-events-v1` (max 200) e mostrato in `EventLog`
+  (timeline raggruppata per giorno Roma, badge per tipo, export CSV, svuotamento).
+
+### 5.6 Esportazione dati (F6b)
+`lib/export.ts` genera CSV («;» + BOM UTF-8, compatibile Excel it-IT) e JSON con i dati
+GIÀ presenti nel browser: storico quota (dal pannello grafico) e registro eventi
+(dal pannello Registro eventi). Nessun dato lascia il dispositivo se non col download
+esplicito richiesto dall'utente.
 
 ---
 
@@ -156,17 +184,15 @@ quota reale (avviso visibile nel pannello).
 ```
 ┌ Header: titolo · stato dati (API/demo/importato) · ultimo aggiornamento (Roma) · refresh · settings ┐
 │ Alert errori (autenticazione/HTTP/rete) quando presenti                                            │
-├ Riga piano: titolo piano + saldo crediti + fuso corrente (romeZoneInfo)                            │
-├ ModelCard "general": Finestra 5h [barra % · countdown reset · badge stato]                        │
-│                      Finestra 7g [barra % · countdown reset · badge stato]                        │
-│                      CountsRow (residuo/totale/consumato, nota "percentuali")                     │
-├ ModelCard "video":   Finestra 24h (allineata mezzanotte UTC) + Finestra 7g                         │
-├ MainWindows: riepilogo grande delle due finestre del general (QuotaRing)                           │
-├ HistoryChart: andamento % nel tempo (switch interval/weekly) + StatsPanel + TrendBadge             │
+│ Banner avvisi soglia (amber/rose) quando una finestra «general» è sotto le soglie                   │
+├ MainWindows: riepilogo grande delle due finestre del general (QuotaRing + countdown + badge)       │
+├ HistoryChart: andamento % nel tempo (switch interval/weekly) + export CSV/JSON                      │
+├ StatsPanel: consumo medio · esaurimento previsto · rilevamenti · VERDETTO esaurimento vs reset     │
+├ PanoramicTable: tutte le finestre del piano a confronto (modello × finestra, stato, reset)         │
 ├ Altri modelli: ModelCard dinamica per ogni voce ≠ general                                          │
-├ TokenTracker: consumo token reale (invio/simulazione, usage, totali, per-modello, storico)         │
 ├ TechInfo: regione, modalità, endpoint usato, refresh, ora server dedotta, altri endpoint           │
-└ RawJsonPanel: JSON grezzo dell'ultima risposta                                                     ┘
+├ RawJsonPanel: JSON grezzo dell'ultima risposta                                                     │
+└ EventLog: registro eventi (reset, soglie, errori) raggruppato per giorno · export CSV · svuota     ┘
 ```
 
 Principi: percentuali come metrica primaria; ogni numero temporale esplicitamente
@@ -211,8 +237,8 @@ etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
 | **F3** Tempo Roma | lib/time.ts, countdown vivi 1s, formati it-IT | Reset mostrati: 17:00 (5h), 03/10 02:00 (video), 05/10 02:00 (weekly); ora server dedotta 13:17:58 | ✅ |
 | **F4** Storico | pushHistory localStorage, HistoryChart, StatsPanel, trend | Grafico renderizzato; dedup <20s; cap 600 punti | ✅ |
 | **F5** Robustezza | Import JSON, modalità demo, TechInfo/RawJson, screenshot verify desktop+mobile | Import JSON reale OK; zero errori console; lint pulito | ✅ |
-| **F6a** Token reali | Route `/api/minimax/chat`, lib/token-log.ts, TokenTracker | Demo: simulazione registrata (usage + storico + svuotamento); API: validazione 400 + 401 chiave errata mappata; lint pulito; mobile OK | ✅ |
-| **F6b** Estensioni | resto della roadmap (§11) | — | ⬜ |
+| ~~**F6a** Token reali~~ | ~~Route `/api/minimax/chat`, lib/token-log.ts, TokenTracker~~ | **RIMOSSA 2026-10-02 (ADR-8)**: ogni chiamata chat con Subscription Key consumava la quota del piano; il monitor resta read-only | 🚫 |
+| **F6b** Estensioni | Avvisi soglia + registro eventi (I17/I21), export CSV/JSON (I22), verdetto esaurimento vs reset (I23), panoramica modelli (I24) | Banner soglia verificato in demo; transizione → toast + evento; verdetto corretto su dati demo; lint pulito; mobile OK | ✅ |
 
 Verifiche effettuate con agent-browser (screenshot in `scripts/verify_*.png`,
 `preview_*.png`): render desktop/mobile, import JSON reale, coincidenza dei countdown
@@ -222,15 +248,28 @@ con i calcoli manuali, pannello endpoint, console pulita.
 
 ## 11. Estensioni future (roadmap candidate)
 
+> Aggiornata al 2026-10-02: rimossi il contatore token reale (ADR-8) e la correlazione
+> token↔quota che ne dipendeva; implementate le estensioni F6b di analisi/monitoraggio.
+
 1. **Persistenza storica server-side** (Prisma/SQLite già disponibile nel repo):
-   storico multiplo giorni/settimane, confronto tra finestre, sopravvivenza al cambio browser.
-   → includere anche la persistenza del registro token (`token-log`), oggi solo localStorage.
-2. ~~**Contatore token reale**: mini-passerella `/api/chat` che chiama `/v1/chat/completions` e registra `usage.total_tokens` per richiesta~~ → **IMPLEMENTATO** (F6a: `docs/03` §5.5).
-3. **Notifiche soglie**: browser notification quando `remaining_percent < 10/25%`
-   o al reset della finestra.
-4. **Endpoint alternativo** `coding_plan/remains` come fallback automatico se
-   `token_plan/remains` fallisse (V4 in `docs/04`).
-5. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
-6. **PWA/offline**: installazione e ultima snapshot cache.
-7. **Confronto modelli**: breakdown percentuali per ogni voce `model_name` in un'unica vista settimanale.
-8. **Integrazione token ↔ quota**: correlare i token registrati dal TokenTracker con il calo percentuale rilevato dal polling di quota, per stimare "token per punto percentuale" del proprio piano.
+   storico multiplo giorni/settimane, confronto tra finestre consecutive (es. weekly
+   corrente vs precedente), sopravvivenza al cambio browser.
+2. **Fallback automatico** su `coding_plan/remains` se `token_plan/remains` fallisse (V4 in `docs/04`).
+3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
+4. **PWA/offline**: installazione e ultima snapshot cache; notifiche soglia anche a tab
+   chiuso via Service Worker (oggi: banner + toast + Notification API solo a tab aperto).
+5. **Statistiche aggregate di lungo periodo**: consumo medio per giorno della settimana,
+   consumo per ciclo 5h, medie mobili — richiede lo storico server-side (punto 1).
+6. **Soglie personalizzate per finestra**: oggi le soglie sono globali (warn/crit);
+   potrebbe avere senso differenziarle tra finestra 5h e settimanale.
+7. **Storico eventi oltre 200**: oggi il registro è un diario di sessione; con il
+   DB server-side può diventare storico completo con filtri.
+
+### Rimosse dalla roadmap
+
+- ~~Contatore token reale via `/v1/chat/completions`~~ — **rimosso** (era F6a, ADR-8):
+  con la Subscription Key ogni chiamata consuma la quota del piano che il monitor deve
+  solo osservare. Alternativa senza consumo: lettura manuale della console ufficiale
+  (docs/01 §6).
+- ~~Correlazione token ↔ calo percentuale quota~~ — **rimossa** (dipendeva dal contatore,
+  ADR-8).

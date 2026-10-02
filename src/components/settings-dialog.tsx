@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, KeyRound, ExternalLink, ShieldCheck, ClipboardPaste } from "lucide-react";
+import { Eye, EyeOff, KeyRound, ExternalLink, ShieldCheck, ClipboardPaste, BellRing } from "lucide-react";
 import { REGION_LABELS, Region } from "@/lib/minimax";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -25,6 +25,16 @@ export interface DashboardSettings {
   /** Intervallo di aggiornamento automatico in secondi; 0 = disattivato. */
   refreshSeconds: number;
   demoMode: boolean;
+  /** Motore avvisi attivo (banner + toast). */
+  alertsEnabled: boolean;
+  /** Soglia "attenzione" in % residua; 0 = disattivata. */
+  alertThresholdWarn: number;
+  /** Soglia "critica" in % residua; 0 = disattivata. */
+  alertThresholdCrit: number;
+  /** Notifica quando una finestra si resetta. */
+  notifyReset: boolean;
+  /** Usa anche le notifiche del browser (Notification API). */
+  browserNotifications: boolean;
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
@@ -32,6 +42,11 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   region: "eu",
   refreshSeconds: 60,
   demoMode: true,
+  alertsEnabled: true,
+  alertThresholdWarn: 25,
+  alertThresholdCrit: 10,
+  notifyReset: true,
+  browserNotifications: false,
 };
 
 const REFRESH_OPTIONS = [
@@ -39,6 +54,14 @@ const REFRESH_OPTIONS = [
   { value: 30, label: "Ogni 30 secondi" },
   { value: 60, label: "Ogni minuto" },
   { value: 300, label: "Ogni 5 minuti" },
+];
+
+const THRESHOLD_OPTIONS = [
+  { value: 0, label: "Disattivata" },
+  { value: 5, label: "5% residuo" },
+  { value: 10, label: "10% residuo" },
+  { value: 25, label: "25% residuo" },
+  { value: 50, label: "50% residuo" },
 ];
 
 interface SettingsDialogProps {
@@ -55,6 +78,11 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   const [region, setRegion] = React.useState<Region>(settings.region);
   const [refreshSeconds, setRefreshSeconds] = React.useState(settings.refreshSeconds);
   const [demoMode, setDemoMode] = React.useState(settings.demoMode);
+  const [alertsEnabled, setAlertsEnabled] = React.useState(settings.alertsEnabled);
+  const [alertThresholdWarn, setAlertThresholdWarn] = React.useState(settings.alertThresholdWarn);
+  const [alertThresholdCrit, setAlertThresholdCrit] = React.useState(settings.alertThresholdCrit);
+  const [notifyReset, setNotifyReset] = React.useState(settings.notifyReset);
+  const [browserNotifications, setBrowserNotifications] = React.useState(settings.browserNotifications);
   const [showKey, setShowKey] = React.useState(false);
   const [jsonText, setJsonText] = React.useState("");
   const [jsonError, setJsonError] = React.useState<string | null>(null);
@@ -65,11 +93,38 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       setRegion(settings.region);
       setRefreshSeconds(settings.refreshSeconds);
       setDemoMode(settings.demoMode);
+      setAlertsEnabled(settings.alertsEnabled);
+      setAlertThresholdWarn(settings.alertThresholdWarn);
+      setAlertThresholdCrit(settings.alertThresholdCrit);
+      setNotifyReset(settings.notifyReset);
+      setBrowserNotifications(settings.browserNotifications);
       setShowKey(false);
       setJsonText("");
       setJsonError(null);
     }
   }, [open, settings]);
+
+  /** Chiede il permesso per le notifiche del browser e registra l'esito. */
+  const handleBrowserNotifications = async (enabled: boolean) => {
+    if (!enabled) {
+      setBrowserNotifications(false);
+      return;
+    }
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setBrowserNotifications(false);
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        setBrowserNotifications(true);
+      } else {
+        setBrowserNotifications(false);
+      }
+    } catch {
+      setBrowserNotifications(false);
+    }
+  };
 
   const handleImport = () => {
     setJsonError(null);
@@ -92,6 +147,11 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       region,
       refreshSeconds,
       demoMode: demoMode || !apiKey.trim(),
+      alertsEnabled,
+      alertThresholdWarn,
+      alertThresholdCrit,
+      notifyReset,
+      browserNotifications,
     });
     onOpenChange(false);
   };
@@ -186,6 +246,98 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-zinc-500">Troppe richieste possono innescare limiti di frequenza</p>
+            </div>
+          </div>
+
+          <Separator className="bg-white/[0.06]" />
+
+          {/* ---------------- Avvisi e notifiche ---------------- */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5">
+              <BellRing className="size-3.5 text-amber-400" />
+              <Label className="text-xs font-medium text-zinc-300">Avvisi di soglia</Label>
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="alerts-enabled" className="text-xs text-zinc-400">
+                  Avvisa quando la quota scende sotto le soglie
+                </Label>
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  Banner fisso + notifica a comparsa al superamento di una soglia e al reset delle finestre.
+                </p>
+              </div>
+              <Switch id="alerts-enabled" checked={alertsEnabled} onCheckedChange={setAlertsEnabled} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-zinc-400">Soglia di attenzione</Label>
+                <Select
+                  value={String(alertThresholdWarn)}
+                  onValueChange={(v) => setAlertThresholdWarn(Number(v))}
+                  disabled={!alertsEnabled}
+                >
+                  <SelectTrigger className="border-white/10 bg-white/[0.05] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                    {THRESHOLD_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)} className="text-xs">
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-zinc-400">Soglia critica</Label>
+                <Select
+                  value={String(alertThresholdCrit)}
+                  onValueChange={(v) => setAlertThresholdCrit(Number(v))}
+                  disabled={!alertsEnabled}
+                >
+                  <SelectTrigger className="border-white/10 bg-white/[0.05] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                    {THRESHOLD_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)} className="text-xs">
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="notify-reset" className="text-xs text-zinc-400">
+                  Avvisa al reset delle finestre
+                </Label>
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  Notifica quando una finestra torna al 100% (reset rilevato tra due rilevamenti).
+                </p>
+              </div>
+              <Switch id="notify-reset" checked={notifyReset} onCheckedChange={setNotifyReset} disabled={!alertsEnabled} />
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="browser-notifications" className="text-xs text-zinc-400">
+                  Notifiche del browser
+                </Label>
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  Mostra gli avvisi anche come notifiche di sistema, anche quando il tab è in secondo piano.
+                </p>
+              </div>
+              <Switch
+                id="browser-notifications"
+                checked={browserNotifications}
+                onCheckedChange={(v) => void handleBrowserNotifications(v)}
+                disabled={!alertsEnabled}
+              />
             </div>
           </div>
 
