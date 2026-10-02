@@ -158,3 +158,24 @@ Stage Summary:
 - I16 completata: lo storico quota ora è durevole sul server (SQLite fino a 10.000 punti / 90 giorni) e sopravvive a cache svuotate e cambio dispositivo (merge offline-first, ADR-10)
 - Nuovi dati disponibili per analisi future: confronto finestre consecutive, medie mobili, statistiche di lungo periodo (roadmap aggiornata)
 - Dashboard comunque perfettamente funzionante senza server (errori di replica silenziosi)
+
+---
+Task ID: 8
+Agent: Super Z (main)
+Task: I26 — Analisi di lungo periodo (cicli di finestra, medie mobili, consumo per giorno)
+
+Work Log:
+- Punto di partenza: il worklog rivelava che il Task ID 7 (I16 — persistenza server-side) era già stato completato nella porzione precedente della sessione; verificata la coerenza del codice (schema UsagePoint, api/history, lib/server-history.ts tutti presenti). Prossimo step dalla roadmap docs/03 §11 (punti 1 e 5, sbloccati da I16): analisi di lungo periodo
+- Creato src/lib/cycles.ts (funzioni pure): detectCycles() segmenta lo storico nei cicli di finestra (reset = salto ≥ +15 punti — RESET_JUMP), summarizeCycles() (medie solo sui cicli completati + ciclo in corso), weekdayConsumption() (consumo per giorno della settimana Europe/Rome, attribuito al punto medio), movingAverage() (SMA)
+- BUGFIX rilevato in verifica: con sorgenti miste (punti api reali weekly 57% alternati a punti demo ~77%) i salti +20 venivano interpretati come reset → cicli fittizi da 1 minuto e ritmo medio >5000 %/h. Fix: (1) reset valido solo se il post-salto ≥ 85% (nuova costante RESET_TARGET — un reset vero riporta la finestra quasi piena); (2) consumo rivalutato come DRAWDOWN (inizio − minimo del ciclo) e attribuzione giornaliera solo sul calo del minimo progressivo: i rimbalzi senza reset non sono consumo reale (la quota non risale mai senza reset)
+- Creato src/components/analysis-panel.tsx: pannello «Analisi di lungo periodo» con 3 tab — Cicli 5 ore / Cicli settimanali (4 KPI: cicli rilevati/completati, durata media, consumo medio, ritmo medio %/h + minimo registrato; tabella ultimi 8 cicli: inizio, fine, durata, consumo con 93→27, residuo min, ritmo; ciclo in corso evidenziato in amber) e Per giorno (BarChart doppio: consumo medio/giorno per finestra 5h e settimanale, tooltip scuro); scarica automaticamente fino a 10.000 punti dal server al mount (fetchServerHistory) e li fonde con lo storico locale (mergeHistories), pulsante «Ricarica dal server», badge conteggio punti, placeholder se <2 punti
+- history-chart.tsx: grafico migrato da AreaChart a ComposedChart (recharts 2.15) con toggle «Media mobile» (SMA-10, linea tratteggiata rosa #f472b6, tooltip esteso con la media, stato attivo del pulsante in rosa)
+- page.tsx: LongTermAnalysis renderizzato tra PanoramicTable e «Altri modelli»
+- Fix documentale: rimossa la riga I16 duplicata in docs/04 (⬜ e ✅ entrambe presenti)
+- Verifiche agent-browser (dati sintetici iniettati in localStorage per NON toccare lo storico reale dell'utente sul server — 45 punti, 6 cicli 5h completati + weekly con reset): pannello corretto al centesimo (cicli puliti −66,0% 93→27, 4h30m, 14,67 %/h; medie su 7 cicli 6h47m/59,6%/13,18 %/h coincidenti al calcolo manuale; weekly 2 cicli: completato −12,0% 22h 0,55 %/h esatto); falsi reset eliminati dopo il fix; tab Per giorno con barre mer/gio/ven e 3 giorni osservati; toggle SMA attivo con sovrapposizione corretta; mobile 390px ok; console senza errori; dati sintetici rimossi a fine verifica (localStorage pulito, storico server intatto con i soli punti reali); lint + tsc puliti su src/
+- Documentazione: docs/03 (mappa codice: lib/cycles.ts + analysis-panel.tsx + nota SMA su history-chart; roadmap §11: punti 1 e 5 barrati come implementati), docs/04 (I26 ✅, bugfix §6 sorgenti miste, apertura §7 I23 aggiornata con media mobile disponibile, changelog)
+
+Stage Summary:
+- I26 completata: il dashboard ora ANALIZZA lo storico persistito (fino a 10.000 punti server) invece di limitarsi a mostrarlo — cicli di finestra 5h/settimanali con durata/consumo/ritmo, confronto tra finestre consecutive, consumo medio per giorno della settimana, media mobile sul grafico
+- Scoperta importante documentata: con dati da sorgenti miste (demo+api) servono le regole RESET_TARGET + drawdown, altrimenti l'analisi produce risultati assurdi — ora robusta e verificata
+- Prossimi ingressi naturali: I18 (fallback coding_plan/remains, dipende da V4 — serve chiave reale), verifiche empiriche V1–V6 (richiedono osservazione su consumo reale), roadmap residua (multi-regione, PWA, soglie per finestra, storico eventi su DB)

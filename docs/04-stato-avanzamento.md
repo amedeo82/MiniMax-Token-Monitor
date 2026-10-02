@@ -68,7 +68,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I13 | Bugfix `videoDayStart` non definito in demo.ts | F5 | ✅ | Rilevato via agent-browser |
 | I14 | Documentazione di progetto (questi 4 file + README) | — | ✅ | 2026-10-02 |
 | I15 | ~~Contatore token reale via `/v1/chat/completions`~~ | F6a | 🚫 | **Rimossa 2026-10-02 (ADR-8)**: con la Subscription Key ogni chiamata consumava la quota del piano; rimossi `api/minimax/chat`, `lib/token-log.ts`, `TokenTracker` |
-| I16 | Persistenza storica server-side (Prisma/SQLite) | F6 | ⬜ | Schema già disponibile nel repo |
+| I16 | Persistenza storica server-side (Prisma/SQLite) | F7 | ✅ | Modello `UsagePoint`, `api/history` (POST upsert/pruning, GET, DELETE), `lib/server-history.ts` (sync offline-first), merge all'avvio, export completo dal server — 2026-10-02 |
 | I17 | Notifiche soglie (<10/25% o reset) | F6b | ✅ | `lib/usage-events.ts` (banner + toast + Notification API, soglie configurabili) — 2026-10-02 |
 | I18 | Fallback automatico su `coding_plan/remains` | F6b | ⬜ | Dipende da V4 |
 | I19 | ~~Persistenza del registro token su server~~ | F6b | 🚫 | **Rimossa**: dipendeva da I15 (ADR-8) |
@@ -78,7 +78,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I23 | Verdetto «esaurimento stimato vs orario di reset» | F6b | ✅ | `ProjectionVerdict` in `StatsPanel` (amber se si esaurisce prima del reset, verde altrimenti) — 2026-10-02 |
 | I24 | Vista panoramica modelli (tutte le finestre a confronto) | F6b | ✅ | `PanoramicTable` (modello × finestra: residuo, stato, countdown reset) — 2026-10-02 |
 | I25 | Riprogettazione UI finestra impostazioni | UX | ✅ | `settings-dialog.tsx` su 3 tab (Connessione/Avvisi/Dati), `max-h-[85svh]` con contenuto scrollabile, header/footer fissi — 2026-10-02 |
-| I16 | Persistenza storica server-side (Prisma/SQLite) | F7 | ✅ | Modello `UsagePoint`, `api/history` (POST upsert/pruning, GET, DELETE), `lib/server-history.ts` (sync offline-first), merge all'avvio, export completo dal server — 2026-10-02 |
+| I26 | Analisi di lungo periodo (cicli, medie, giorni della settimana) | F7 | ✅ | `lib/cycles.ts` (rilevamento cicli con `RESET_JUMP`=15 e `RESET_TARGET`=85, consumo=drawdown, `weekdayConsumption`, SMA) + `analysis-panel.tsx` (3 tab, KPI, tabella cicli, barre per giorno) + toggle «Media mobile» (SMA-10) sul grafico; scarica fino a 10.000 punti dal server — 2026-10-02 |
 
 ---
 
@@ -122,13 +122,14 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | 2026-10-02 | `videoDayStart` non definito in `demo.ts` (crash runtime demo) | Corretto: finestra giornaliera video calcolata su mezzanotte UTC (`Math.floor(now / DAY_MS) * DAY_MS`) |
 | 2026-10-02 | Finestra impostazioni fuori schermo: dopo l'aggiunta della sezione avvisi la dialog (layout grid, senza vincolo d'altezza) superava il viewport e il pulsante «Salva» diventava irraggiungibile | Riprogettata (I25): layout a colonna con `max-h-[85svh]`, contenuti distribuiti su 3 tab, area centrale scrollabile, header/tablist/footer fissi; verificata a 1366×768, 1280×500 (scroll interno attivo, footer visibile) e 390×844 |
 | 2026-10-02 | Rischio interpretazione errata dei `*_usage_count` | Badge/nota esplicativa nella UI (`CountsRow`) + pannello TechInfo con l'avviso semantico |
+| 2026-10-02 | Falsi reset nell'analisi dei cicli (I26) con sorgenti miste: punti «api» reali (es. weekly 57%) alternati a punti «demo» (~77%) generavano salti +20 interpretati come reset, con cicli fittizi da 1 minuto e ritimi assurdi (>5000 %/h) | Regola reset bicondizione: salto ≥ +15 punti **e** valore post-salto ≥ 85% (`RESET_TARGET`, un reset vero riporta la finestra quasi piena); consumo rivalutato come **drawdown** (inizio − minimo del ciclo) e attribuzione per giorno solo sul calo del minimo progressivo: i rimbalzi senza reset non sono consumo. Verificato: dati misti ora producono esattamente i cicli attesi (2 settimanali, medie coincidenti con i valori teorici) |
 
 ## 7. Aperture di progettazione
 
 - ❓ Come mostrare il "primo utilizzo" previsto (finestra rolling) senza confondere l'utente: oggi il dashboard mostra "reset disponibile da HH:MM".
 - ❓ Se arrivano più di due `model_name` (es. `image`, `audio`, `search`): la UI genera card dinamicamente (e la `PanoramicTable` le include tutte), ma `MainWindows`/storico sono ancorati a `general` — da generalizzare se il piano cambia.
 - ✅ Notifica soglie: risolto in F6b con banner + toast + Notification API (ADR-9); il Service Worker per notifiche a tab chiuso resta opzione futura (roadmap `docs/03` §11.4).
-- ❓ Il verdetto di proiezione (I23) usa un modello lineare sui primi 60 rilevamenti: valutare una media mobile o una regressione pesata quando lo storico cresce (dipende da I16 → **risolto il prerequisito: I16 ora fornisce fino a 10.000 punti persistenti**).
+- ❓ Il verdetto di proiezione (I23) usa un modello lineare sui primi 60 rilevamenti: valutare una media mobile o una regressione pesata quando lo storico cresce (dipende da I16 → **risolto il prerequisito: I16 ora fornisce fino a 10.000 punti persistenti**; la **media mobile è disponibile** sul grafico con I26, la regressione pesata resta opzione futura).
 
 ---
 
@@ -148,3 +149,4 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | 2026-10-02 | Verifica F6b | agent-browser: banner attenzione con soglia 50% (37,2% < 50), transizione import→demo genera toast + evento in registro, `mm-dash-events-v1` corretto, verdetto «Quota sufficiente fino al reset» su dati demo, export CSV/JSON senza errori, svuotamento registro, desktop+mobile OK, zero errori console, lint pulito |
 | 2026-10-02 | `settings-dialog.tsx`, questo file (I25, §6) | **I25 — finestra impostazioni fuori schermo**: riprogettata su 3 tab con `max-h-[85svh]`, area scrollabile e footer fisso (bugfix §6); verificata con agent-browser a 1366×768, 1280×500 e 390×844 |
 | 2026-10-02 | `prisma/schema.prisma`, `api/history/route.ts`, `lib/server-history.ts`, `page.tsx`, `history-chart.tsx`, `docs/03`, questo file (I16, ADR-10, F7) | **I16 — persistenza storico server-side**: modello `UsagePoint`, API POST/GET/DELETE con pruning (10.000 punti / 90 giorni), sync offline-first con merge all'avvio, badge «punti salvati sul server», menu Esporta con voci «storico completo dal server»; anche i rilevamenti demo entrano nello storico; verifiche curl (dedup upsert 3→2, since, DELETE, validazione) e agent-browser (replica, merge sopravvive a storage svuotato e al backfill demo, tema scuro menu) |
+| 2026-10-02 | `lib/cycles.ts`, `analysis-panel.tsx`, `history-chart.tsx`, `page.tsx`, `docs/03` (mappa, roadmap), questo file (I26, §6 bugfix, §7) | **I26 — analisi di lungo periodo**: rilevamento cicli di finestra (reset = salto ≥+15 → ≥85), statistiche per ciclo (durata, consumo=drawdown, ritmo %/h), consumo medio per giorno della settimana (Europe/Rome), media mobile SMA-10 attivabile sul grafico; pannello con 3 tab che fonde lo storico locale con fino a 10.000 punti server (scarico automatico al mount); fix falsi reset con sorgenti miste (bugfix §6); verifiche agent-browser con storico sintetico (45 punti, 6 cicli 5h + weekly): medie coincidenti ai valori teorici al centesimo (66,0% · 14,67 %/h · 0,55 %/h), desktop+mobile, console pulita, lint+tsc OK |
