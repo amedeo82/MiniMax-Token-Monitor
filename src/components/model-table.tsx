@@ -53,7 +53,7 @@ function WindowRow({ model, win, kind, now }: { model: ModelQuota; win: QuotaWin
   const status = statusLabel(win.status);
   const resetIn = msUntil(win.end, now);
   return (
-    <TableRow className="border-white/[0.05] hover:bg-white/[0.02]">
+    <TableRow className="border-white/[0.05] hover:bg-white/[0.02]!">
       <TableCell className="py-2.5">
         <p className="text-xs font-medium text-zinc-200">{model.label}</p>
         <p className="font-mono text-[10px] text-zinc-600">{model.modelName}</p>

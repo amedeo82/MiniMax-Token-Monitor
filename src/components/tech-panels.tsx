@@ -91,7 +91,7 @@ export function RawJsonPanel({ rawJson, fetchedAt, endpoint, ok }: RawJsonPanelP
               size="sm"
               onClick={copy}
               disabled={!jsonText}
-              className="h-7 gap-1.5 border-white/10 bg-transparent px-2 text-[11px] text-zinc-300 hover:bg-white/5"
+              className="h-7 gap-1.5 border-white/10 bg-transparent px-2 text-[11px] text-zinc-300 hover:bg-white/5!"
             >
               {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
               {copied ? "Copiato" : "Copia"}

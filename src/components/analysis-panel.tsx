@@ -132,7 +132,7 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
             aria-label="Ricarica lo storico completo dal server"
             disabled={loading}
             onClick={() => void load()}
-            className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+            className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
           >
             <RefreshCw className={`size-3.5 text-zinc-400 ${loading ? "animate-spin" : ""}`} />
             {loading ? "Carico…" : "Ricarica dal server"}

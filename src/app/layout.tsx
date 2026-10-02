@@ -38,12 +38,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it" suppressHydrationWarning>
+    <html lang="it" className="dark" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster position="top-right" richColors closeButton theme="dark" />
       </body>
     </html>
   );

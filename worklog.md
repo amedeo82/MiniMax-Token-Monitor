@@ -204,3 +204,33 @@ Stage Summary:
 - I27 completata: gli eventi (reset, soglie, errori) ora sono durevoli sull'archivio server (SQLite, 5.000 eventi / 180 giorni) oltre il diario locale di 200 voci, con export CSV/JSON completo e sopravvivenza a cache svuotate/cambio dispositivo (stesso schema offline-first di I16)
 - "Svuota" cancella locale+server per coerenza col merge (ADR-11)
 - RESTANO BLOCCATI SULL'UTENTE: I18 (fallback coding_plan/remains) e verifiche V1–V6 richiedono una Subscription Key reale e osservazione del consumo; roadmap residua autonoma: soglie per finestra (punto 6), multi-regione (punto 3), PWA (punto 4), filtri UI sull'archivio eventi
+
+---
+Task ID: 10
+Agent: Super Z (main)
+Task: Fix CSS — stati hover e disabled «nero su nero» sui pulsanti (segnalazione utente)
+
+Work Log:
+- Segnalazione utente: «effetti hover dei pulsanti nero su nero, non leggibili; anche lo stato deactivated è nero su nero»
+- Riproduzione con agent-browser: hover sul bottone «Esporta» → computed testo lab(2.75%) = NERO su bg white/4% (quasi nero), isHover:true confermato; screenshot scripts/bug_hover_esporta_before.png mostra la voce illeggibile accanto a «Media mobile»
+- CAUSA RADICE: app dark-only ma senza classe `dark` su <html> → tema shadcn rimasto light (--accent-foreground ≈ nero); al hover la regola shadcn `hover:text-accent-foreground` (variante hover) batteva le classi testo custom → testo nero su fondo scuro. Tutte le superfici dell'app erano override manuali (bg-white/[0.04] ecc.) proprio perché i token erano light
+- SCOPERTA SECONDARIA: anche le dark-variant Tailwind 4 (es. dark:bg-input/30) vengono emesse DOPO le hover a pari specificità e seppellivano gli hover custom (hover:bg-white/[0.08] impercettibile: bg 4%→4,5%; verificato con confronto pixel screenshot: 22,21,22 identico prima/durante hover)
+- FIX SISTEMICO a 3 livelli:
+  1. layout.tsx: className="dark" su <html> → token shadcn dark (accent grigio scuro 15%, popover scuro, input/border bianco traslucido, switch/select/disabled coerenti), dark: varianti finalmente attive; Toaster sonner theme="dark" esplicito
+  2. globals.css: blocco di regole UNLAYERED (fuori @layer → vincono sulle utilities layered per CSS Cascade 5, niente giochi di specificità) per gli hover custom: bg-white/[0.08], bg-white/5, bg-white/[0.02], bg-rose-500/20, text-rose-300, tab inattivi ([data-slot=tabs-trigger][data-state=inactive]:hover → zinc-200 + white/5)
+  3. Componenti: `!` sulle classi hover custom (page.tsx Aggiorna/impostazioni/Prova demo, event-log Esporta/Svuota, history-chart Media mobile/Esporta, analysis-panel Ricarica, settings-dialog Analizza JSON/Annulla, tech-panels Copia, model-table righe); history-chart tab grafico: rimosso data-[state=active]:text-zinc-900 (residuo light su fondo ora scuro = altro caso nero-su-nero) → text-zinc-100 + hover su inattivi
+- VERIFICHE (computed style + pixel screenshot prima/durante hover):
+  - Aggiorna: testo bianco, bg 22→31 rgb (white/8) — feedback percettibile
+  - Esporta: testo bianco lab(98.26) (ERA NERO) — bug primario risolto
+  - Svuota: testo rosa rgb(253,164,175) + bg white/8 (intent design preservato)
+  - Voci dropdown: bg white/8 + bianco; menu già scuro
+  - Tab Settimanale inattivo: bg white/5 + testo zinc-200 (prima nessun feedback)
+  - Dialog impostazioni: tab Connessione/Avvisi/Dati ok, switch ON (track bianco/knob scuro) e OFF, sezione Avvisi disattivata (opacity-50) ora leggibile (grigi chiari, non più nero su nero), bottone «Analizza» disabled = testo bianco attenuato (opacity 0.5), gradiente «Salva» con hover rose-400→orange-400 funzionante
+  - Badge: nessun bleeding di bg-primary (custom vincono); body ora scuro zinc-950
+  - Mobile 390px ok, console senza errori; bun run lint EXIT=0, tsc --noEmit pulito su src/
+- Documentazione: docs/04 §6 (riga bugfix hover/disabled con analisi completa) + §8 changelog
+
+Stage Summary:
+- Risolto il bug segnalato: tutti gli stati hover, disabled, switch, select e tab sono ora leggibili e coerenti col tema scuro; il feedback hover è tornato percettibile (bg +8% e testo più chiaro, rosa su Svuota)
+- Lezione tecnica documentata: in un'app dark-only il tema shadcn DEVE essere attivato con .dark su <html>; gli hover custom vanno garantiti con regole unlayered in globals.css perché Tailwind 4 emette le dark-variant dopo le hover a pari specificità
+- Prossimi ingressi naturali (invariati): I18 (fallback coding_plan/remains) e verifiche empiriche V1–V6 — richiedono una Subscription Key reale e osservazione del consumo; roadmap residua autonoma: soglie per finestra (punto 6), multi-regione (punto 3), PWA (punto 4)

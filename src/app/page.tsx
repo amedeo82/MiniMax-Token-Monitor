@@ -507,7 +507,7 @@ export default function DashboardPage() {
                 size="sm"
                 onClick={() => void fetchData(settings)}
                 disabled={loading || needsSetup}
-                className="h-9 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+                className="h-9 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
               >
                 <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
                 {loading ? "Sincronizzo…" : "Aggiorna"}
@@ -517,7 +517,7 @@ export default function DashboardPage() {
                 size="icon"
                 aria-label="Apri impostazioni"
                 onClick={() => setSettingsOpen(true)}
-                className="h-9 w-9 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                className="h-9 w-9 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]!"
               >
                 <Settings2 className="size-4" />
               </Button>
@@ -615,7 +615,7 @@ export default function DashboardPage() {
                   onClick={() =>
                     handleSaveSettings({ ...settings, demoMode: true })
                   }
-                  className="gap-1.5 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                  className="gap-1.5 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]!"
                 >
                   <FlaskConical className="size-4 text-violet-300" />
                   Prova la demo
