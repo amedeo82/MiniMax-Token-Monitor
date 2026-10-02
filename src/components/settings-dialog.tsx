@@ -9,13 +9,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, KeyRound, ExternalLink, ShieldCheck, ClipboardPaste, BellRing } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  KeyRound,
+  ExternalLink,
+  ShieldCheck,
+  ClipboardPaste,
+  BellRing,
+  Database,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { REGION_LABELS, Region } from "@/lib/minimax";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -64,6 +75,8 @@ const THRESHOLD_OPTIONS = [
   { value: 50, label: "50% residuo" },
 ];
 
+type SettingsTab = "connection" | "alerts" | "data";
+
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -86,6 +99,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   const [showKey, setShowKey] = React.useState(false);
   const [jsonText, setJsonText] = React.useState("");
   const [jsonError, setJsonError] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<SettingsTab>("connection");
 
   React.useEffect(() => {
     if (open) {
@@ -101,6 +115,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       setShowKey(false);
       setJsonText("");
       setJsonError(null);
+      setActiveTab("connection");
     }
   }, [open, settings]);
 
@@ -156,250 +171,311 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
     onOpenChange(false);
   };
 
+  const selectTriggerClass = "border-white/10 bg-white/[0.05] text-xs";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-zinc-950/95 text-zinc-100 sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      {/* Finestra a colonna: header e tablist fissi, contenuto scrollabile, footer sempre visibile. */}
+      <DialogContent className="flex max-h-[85svh] flex-col gap-0 overflow-hidden border-white/10 bg-zinc-950/95 p-0 text-zinc-100 shadow-2xl sm:max-w-lg">
+        <DialogHeader className="shrink-0 gap-1 border-b border-white/[0.06] px-5 pb-3 pr-12 pt-4 text-left">
+          <DialogTitle className="flex items-center gap-2 text-base">
             <KeyRound className="size-4 text-rose-400" />
             Impostazioni
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
-            Configura la Subscription Key del Token Plan e le preferenze della dashboard.
+          <DialogDescription className="text-xs text-zinc-500">
+            Connessione, avvisi di soglia e importazione dati.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 py-1">
-          <div className="space-y-2">
-            <Label htmlFor="api-key" className="text-xs font-medium text-zinc-300">
-              Subscription Key
-            </Label>
-            <div className="relative">
-              <Input
-                id="api-key"
-                type={showKey ? "text" : "password"}
-                placeholder="eyJhbGciOi… (incolla qui la chiave)"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="border-white/10 bg-white/[0.05] pr-10 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey((v) => !v)}
-                aria-label={showKey ? "Nascondi chiave" : "Mostra chiave"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300"
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as SettingsTab)}
+          className="flex min-h-0 flex-1 flex-col gap-0"
+        >
+          {/* Tablist sempre visibile, fuori dall'area scrollabile */}
+          <div className="shrink-0 border-b border-white/[0.06] px-5 py-2.5">
+            <TabsList className="grid h-8 w-full grid-cols-3 gap-1 border border-white/[0.06] bg-white/[0.03]! p-0.5">
+              <TabsTrigger
+                value="connection"
+                className="h-7 gap-1.5 text-xs text-zinc-400! data-[state=active]:border-white/10! data-[state=active]:bg-white/[0.08]! data-[state=active]:text-zinc-100!"
               >
-                {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
-            <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-zinc-500">
-              <ShieldCheck className="mt-0.5 size-3 shrink-0 text-emerald-500" />
-              La chiave è salvata solo in locale nel tuo browser (localStorage) e viene inviata esclusivamente al
-              server di questa dashboard, che la inoltra all&apos;API MiniMax.
-            </p>
-            <a
-              href="https://platform.minimax.io/console/plan"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-400 hover:text-rose-300"
-            >
-              Trova la Subscription Key nella console MiniMax
-              <ExternalLink className="size-3" />
-            </a>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-zinc-300">Regione API</Label>
-              <Select value={region} onValueChange={(v) => setRegion(v as Region)}>
-                <SelectTrigger className="border-white/10 bg-white/[0.05] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
-                  {(Object.keys(REGION_LABELS) as Region[]).map((r) => (
-                    <SelectItem key={r} value={r} className="text-xs">
-                      {REGION_LABELS[r]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-zinc-500">Per l&apos;Europa usa minimax.io</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-zinc-300">Aggiornamento automatico</Label>
-              <Select
-                value={String(refreshSeconds)}
-                onValueChange={(v) => setRefreshSeconds(Number(v))}
+                <KeyRound className="size-3.5" />
+                Connessione
+              </TabsTrigger>
+              <TabsTrigger
+                value="alerts"
+                className="h-7 gap-1.5 text-xs text-zinc-400! data-[state=active]:border-white/10! data-[state=active]:bg-white/[0.08]! data-[state=active]:text-zinc-100!"
               >
-                <SelectTrigger className="border-white/10 bg-white/[0.05] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
-                  {REFRESH_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={String(o.value)} className="text-xs">
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-zinc-500">Troppe richieste possono innescare limiti di frequenza</p>
-            </div>
+                <BellRing className="size-3.5" />
+                Avvisi
+              </TabsTrigger>
+              <TabsTrigger
+                value="data"
+                className="h-7 gap-1.5 text-xs text-zinc-400! data-[state=active]:border-white/10! data-[state=active]:bg-white/[0.08]! data-[state=active]:text-zinc-100!"
+              >
+                <ClipboardPaste className="size-3.5" />
+                Dati
+              </TabsTrigger>
+            </TabsList>
           </div>
 
-          <Separator className="bg-white/[0.06]" />
-
-          {/* ---------------- Avvisi e notifiche ---------------- */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-1.5">
-              <BellRing className="size-3.5 text-amber-400" />
-              <Label className="text-xs font-medium text-zinc-300">Avvisi di soglia</Label>
-            </div>
-
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="alerts-enabled" className="text-xs text-zinc-400">
-                  Avvisa quando la quota scende sotto le soglie
-                </Label>
-                <p className="text-[11px] leading-relaxed text-zinc-500">
-                  Banner fisso + notifica a comparsa al superamento di una soglia e al reset delle finestre.
-                </p>
-              </div>
-              <Switch id="alerts-enabled" checked={alertsEnabled} onCheckedChange={setAlertsEnabled} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          {/* Area scrollabile */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+            {/* ---------------- Tab 1: Connessione ---------------- */}
+            <TabsContent value="connection" className="mt-0 space-y-4 outline-none">
               <div className="space-y-2">
-                <Label className="text-xs text-zinc-400">Soglia di attenzione</Label>
-                <Select
-                  value={String(alertThresholdWarn)}
-                  onValueChange={(v) => setAlertThresholdWarn(Number(v))}
-                  disabled={!alertsEnabled}
-                >
-                  <SelectTrigger className="border-white/10 bg-white/[0.05] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
-                    {THRESHOLD_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={String(o.value)} className="text-xs">
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="api-key" className="text-xs font-medium text-zinc-300">
+                    Subscription Key
+                  </Label>
+                  <a
+                    href="https://platform.minimax.io/console/plan"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-rose-400 hover:text-rose-300"
+                  >
+                    Trova nella console
+                    <ExternalLink className="size-3" />
+                  </a>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="api-key"
+                    type={showKey ? "text" : "password"}
+                    placeholder="eyJhbGciOi… (incolla qui la chiave)"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="border-white/10 bg-white/[0.05] pr-10 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey((v) => !v)}
+                    aria-label={showKey ? "Nascondi chiave" : "Mostra chiave"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300"
+                  >
+                    {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-zinc-500">
+                  <ShieldCheck className="mt-0.5 size-3 shrink-0 text-emerald-500" />
+                  Salvata solo nel tuo browser e inoltrata esclusivamente al server di questa dashboard.
+                </p>
               </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-zinc-300">Regione API</Label>
+                  <Select value={region} onValueChange={(v) => setRegion(v as Region)}>
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                      {(Object.keys(REGION_LABELS) as Region[]).map((r) => (
+                        <SelectItem key={r} value={r} className="text-xs">
+                          {REGION_LABELS[r]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-zinc-500">Per l&apos;Europa usa minimax.io</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-zinc-300">Aggiornamento automatico</Label>
+                  <Select
+                    value={String(refreshSeconds)}
+                    onValueChange={(v) => setRefreshSeconds(Number(v))}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                      {REFRESH_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={String(o.value)} className="text-xs">
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-zinc-500">Richieste frequenti possono innescare limiti</p>
+                </div>
+              </div>
+
+              <div className="flex items-start justify-between gap-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="demo-mode" className="text-xs text-zinc-300">
+                    Modalità demo
+                  </Label>
+                  <p className="text-[11px] leading-relaxed text-zinc-500">
+                    Dati simulati realistici senza chiamare l&apos;API.
+                  </p>
+                </div>
+                <Switch id="demo-mode" checked={demoMode} onCheckedChange={setDemoMode} />
+              </div>
+            </TabsContent>
+
+            {/* ---------------- Tab 2: Avvisi ---------------- */}
+            <TabsContent value="alerts" className="mt-0 space-y-3 outline-none">
+              <div className="flex items-start justify-between gap-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="alerts-enabled" className="text-xs text-zinc-300">
+                    Avvisi di soglia attivi
+                  </Label>
+                  <p className="text-[11px] leading-relaxed text-zinc-500">
+                    Banner fisso + notifica a comparsa al superamento di una soglia.
+                  </p>
+                </div>
+                <Switch id="alerts-enabled" checked={alertsEnabled} onCheckedChange={setAlertsEnabled} />
+              </div>
+
+              <div className={cn("space-y-3", !alertsEnabled && "pointer-events-none opacity-50")}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-zinc-400">Soglia di attenzione</Label>
+                    <Select
+                      value={String(alertThresholdWarn)}
+                      onValueChange={(v) => setAlertThresholdWarn(Number(v))}
+                      disabled={!alertsEnabled}
+                    >
+                      <SelectTrigger className={selectTriggerClass}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                        {THRESHOLD_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={String(o.value)} className="text-xs">
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-zinc-400">Soglia critica</Label>
+                    <Select
+                      value={String(alertThresholdCrit)}
+                      onValueChange={(v) => setAlertThresholdCrit(Number(v))}
+                      disabled={!alertsEnabled}
+                    >
+                      <SelectTrigger className={selectTriggerClass}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                        {THRESHOLD_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={String(o.value)} className="text-xs">
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="notify-reset" className="text-xs text-zinc-300">
+                      Avvisa al reset delle finestre
+                    </Label>
+                    <p className="text-[11px] leading-relaxed text-zinc-500">
+                      Notifica quando una finestra torna al 100% (reset tra due rilevamenti).
+                    </p>
+                  </div>
+                  <Switch
+                    id="notify-reset"
+                    checked={notifyReset}
+                    onCheckedChange={setNotifyReset}
+                    disabled={!alertsEnabled}
+                  />
+                </div>
+
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="browser-notifications" className="text-xs text-zinc-300">
+                      Notifiche del browser
+                    </Label>
+                    <p className="text-[11px] leading-relaxed text-zinc-500">
+                      Avvisi di sistema anche con il tab in secondo piano.
+                    </p>
+                  </div>
+                  <Switch
+                    id="browser-notifications"
+                    checked={browserNotifications}
+                    onCheckedChange={(v) => void handleBrowserNotifications(v)}
+                    disabled={!alertsEnabled}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ---------------- Tab 3: Dati ---------------- */}
+            <TabsContent value="data" className="mt-0 space-y-4 outline-none">
               <div className="space-y-2">
-                <Label className="text-xs text-zinc-400">Soglia critica</Label>
-                <Select
-                  value={String(alertThresholdCrit)}
-                  onValueChange={(v) => setAlertThresholdCrit(Number(v))}
-                  disabled={!alertsEnabled}
+                <Label htmlFor="json-paste" className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+                  <ClipboardPaste className="size-3.5 text-zinc-400" />
+                  Importa una risposta JSON
+                </Label>
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  Incolla la risposta di <span className="font-mono text-zinc-400">/v1/token_plan/remains</span> per
+                  analizzarla nella dashboard senza configurare la chiave.
+                </p>
+                <Textarea
+                  id="json-paste"
+                  value={jsonText}
+                  onChange={(e) => setJsonText(e.target.value)}
+                  placeholder='{ "base_resp": { "status_code": 0, … }, "model_remains": [ … ] }'
+                  rows={5}
+                  className="border-white/10 bg-white/[0.05] font-mono text-[11px] text-zinc-100 placeholder:text-zinc-600"
+                  spellCheck={false}
+                />
+                {jsonError ? <p className="text-[11px] font-medium text-rose-400">{jsonError}</p> : null}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImport}
+                  disabled={!jsonText.trim()}
+                  className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
                 >
-                  <SelectTrigger className="border-white/10 bg-white/[0.05] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
-                    {THRESHOLD_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={String(o.value)} className="text-xs">
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <ClipboardPaste className="size-3.5" />
+                  Analizza il JSON incollato
+                </Button>
               </div>
-            </div>
 
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="notify-reset" className="text-xs text-zinc-400">
-                  Avvisa al reset delle finestre
-                </Label>
-                <p className="text-[11px] leading-relaxed text-zinc-500">
-                  Notifica quando una finestra torna al 100% (reset rilevato tra due rilevamenti).
+              <Separator className="bg-white/[0.06]" />
+
+              <div className="flex items-start gap-2 text-[11px] leading-relaxed text-zinc-500">
+                <Database className="mt-0.5 size-3.5 shrink-0 text-zinc-400" />
+                <p>
+                  Chiave, impostazioni e storico dei rilevamenti (max 600 punti) risiedono esclusivamente nel
+                  localStorage del tuo browser: nessun dato viene inviato a servizi di terze parti.
                 </p>
               </div>
-              <Switch id="notify-reset" checked={notifyReset} onCheckedChange={setNotifyReset} disabled={!alertsEnabled} />
-            </div>
-
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="browser-notifications" className="text-xs text-zinc-400">
-                  Notifiche del browser
-                </Label>
-                <p className="text-[11px] leading-relaxed text-zinc-500">
-                  Mostra gli avvisi anche come notifiche di sistema, anche quando il tab è in secondo piano.
-                </p>
-              </div>
-              <Switch
-                id="browser-notifications"
-                checked={browserNotifications}
-                onCheckedChange={(v) => void handleBrowserNotifications(v)}
-                disabled={!alertsEnabled}
-              />
-            </div>
+            </TabsContent>
           </div>
+        </Tabs>
 
-          <Separator className="bg-white/[0.06]" />
-
-          <div className="space-y-2">
-            <Label htmlFor="json-paste" className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
-              <ClipboardPaste className="size-3.5 text-zinc-400" />
-              Incolla una risposta JSON dell&apos;API
-            </Label>
-            <p className="text-[11px] leading-relaxed text-zinc-500">
-              Se hai già interrogato <span className="font-mono text-zinc-400">/v1/token_plan/remains</span> (ad esempio con
-              curl), incolla qui la risposta per vederla analizzata nella dashboard senza configurare la chiave.
-            </p>
-            <Textarea
-              id="json-paste"
-              value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
-              placeholder='{ "base_resp": { "status_code": 0, … }, "model_remains": [ … ] }'
-              rows={5}
-              className="border-white/10 bg-white/[0.05] font-mono text-[11px] text-zinc-100 placeholder:text-zinc-600"
-              spellCheck={false}
-            />
-            {jsonError ? <p className="text-[11px] font-medium text-rose-400">{jsonError}</p> : null}
+        {/* Footer sempre visibile */}
+        <DialogFooter className="shrink-0 flex-row items-center justify-between gap-2 border-t border-white/[0.06] px-5 py-3">
+          <p className="hidden truncate text-[11px] text-zinc-600 sm:block">
+            Le modifiche si applicano al salvataggio
+          </p>
+          <div className="ml-auto flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={handleImport}
-              disabled={!jsonText.trim()}
-              className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]"
+              onClick={() => onOpenChange(false)}
+              className="text-zinc-400 hover:text-zinc-200"
             >
-              <ClipboardPaste className="size-3.5" />
-              Analizza il JSON incollato
+              Annulla
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              className="bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:from-rose-400 hover:to-orange-400"
+            >
+              Salva impostazioni
             </Button>
           </div>
-
-          <Separator className="bg-white/[0.06]" />
-
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="demo-mode" className="text-xs font-medium text-zinc-300">
-                Modalità demo
-              </Label>
-              <p className="text-[11px] leading-relaxed text-zinc-500">
-                Mostra dati simulati realistici senza chiamare l&apos;API. Utile per esplorare la dashboard prima di
-                inserire la chiave.
-              </p>
-            </div>
-            <Switch id="demo-mode" checked={demoMode} onCheckedChange={setDemoMode} />
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400 hover:text-zinc-200">
-            Annulla
-          </Button>
-          <Button
-            onClick={handleSave}
-            className="bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:from-rose-400 hover:to-orange-400"
-          >
-            Salva impostazioni
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

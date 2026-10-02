@@ -120,3 +120,21 @@ Stage Summary:
 - Il dashboard ora è dichiaratamente read-only: non invoca mai modelli, non consuma mai la quota che misura (ADR-8)
 - Nuove funzionalità F6b: avvisi soglia configurabili (banner/toast/notifiche), registro eventi, export CSV/JSON, verdetto esaurimento-vs-reset, panoramica modelli — tutte verificate in demo end-to-end
 - Prossimi ingressi naturali: I16 (persistenza server-side Prisma/SQLite per storico lungo + confronto finestre consecutive), I18 (fallback coding_plan/remains, dipende da V4), verifiche empiriche V1–V6
+
+---
+Task ID: 6
+Agent: Super Z (main)
+Task: Riprogettazione UI della finestra di impostazioni (dialog fuori schermo)
+
+Work Log:
+- Segnalazione utente: dopo l'aggiunta della sezione avvisi, la dialog impostazioni superava l'altezza dello schermo rendendo irraggiungibile il pulsante «Salva» (layout grid senza vincolo d'altezza in DialogContent)
+- Riscritto src/components/settings-dialog.tsx: layout a colonna con max-h-[85svh], DialogContent flex gap-0 overflow-hidden p-0; header compatto con bordo; tablist Radix Tabs sempre visibile (Connessione / Avvisi / Dati); area centrale scrollabile (overflow-y-auto overscroll-contain, min-h-0 flex-1); footer fisso con Annulla/Salva sempre raggiungibile
+- Distribuzione contenuti: tab «Connessione» (Subscription Key + link console, regione, refresh, modalità demo), tab «Avvisi» (master switch, soglie warn/crit, reset, notifiche browser — sottosezioni disabilitate con opacity + pointer-events-none se master off), tab «Dati» (import JSON + nota privacy localStorage)
+- Reset del tab attivo a «Connessione» all'apertura della dialog; interfaccia pubblica (DashboardSettings, props) invariata → page.tsx non modificato
+- Fix tema: ripristinate classi dark su DialogContent (border-white/10 bg-zinc-950/95 text-zinc-100) e forzate con important le classi di TabsList/TabsTrigger per coerenza col tema scuro
+- Verifiche agent-browser: tsc --noEmit pulito su src/; dialog 516px @1366×768 (fitsScreen true), tab Avvisi 499px senza scroll, @1280×500 scroll interno attivo e footer visibile, @390×844 dialog 358×616 fitsScreen true; screenshot di controllo in scripts/verify_settings_*.png; tema scuro confermato su tutti e tre i tab
+- Documentazione: docs/04 aggiornato (attività I25 ✅, bugfix in §6, riga changelog)
+
+Stage Summary:
+- La finestra impostazioni non fuoriesce più dallo schermo su nessun viewport: header/tablist/footer fissi, contenuto scrollabile solo quando serve
+- UI più snella e organizzata: 3 tab al posto di un unico form lungo; nessuna modifica a contratti/props o ad altri componenti
