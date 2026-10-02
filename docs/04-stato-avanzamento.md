@@ -78,6 +78,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I23 | Verdetto «esaurimento stimato vs orario di reset» | F6b | ✅ | `ProjectionVerdict` in `StatsPanel` (amber se si esaurisce prima del reset, verde altrimenti) — 2026-10-02 |
 | I24 | Vista panoramica modelli (tutte le finestre a confronto) | F6b | ✅ | `PanoramicTable` (modello × finestra: residuo, stato, countdown reset) — 2026-10-02 |
 | I25 | Riprogettazione UI finestra impostazioni | UX | ✅ | `settings-dialog.tsx` su 3 tab (Connessione/Avvisi/Dati), `max-h-[85svh]` con contenuto scrollabile, header/footer fissi — 2026-10-02 |
+| I16 | Persistenza storica server-side (Prisma/SQLite) | F7 | ✅ | Modello `UsagePoint`, `api/history` (POST upsert/pruning, GET, DELETE), `lib/server-history.ts` (sync offline-first), merge all'avvio, export completo dal server — 2026-10-02 |
 
 ---
 
@@ -110,6 +111,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | ADR-7 | 2026-10-02 | Modalità demo + import JSON come prima-class citizens | Permettono sviluppo/verifica senza esporre la chiave e senza API | Solo API reale (blocca lo sviluppo senza chiave) |
 | ADR-8 | 2026-10-02 | **Rimozione del contatore token reale** (F6a): il dashboard NON invoca modelli e resta read-only su `token_plan/remains` | L'unico metodo programmatico per misurare i token (`usage` di `/v1/chat/completions`) richiede di consumare la quota stessa del piano; un monitor che consuma ciò che misura non è accettabile | Mantenere F6a dietro avviso esplicito (rischio di consumare quota senza accorgersene) |
 | ADR-9 | 2026-10-02 | Avvisi **client-side e senza stato server**: banner stateless + transizioni tra snapshot consecutivi + registro eventi in localStorage (max 200) | Zero chiamate extra (il polling esiste già), nessun backend, niente spam di notifiche a ogni poll | Service worker (rimandato a F6 future), controllo soglie lato server |
+| ADR-10 | 2026-10-02 | Storico server **offline-first**: replica fire-and-forget su SQLite + merge all'avvio (dedup per timestamp, vince il locale); il localStorage resta la fonte primaria per la UI | La dashboard funziona identica anche senza server; lo storico sopravvive a cache svuotate; il server conserva granularità piena (10.000 punti, 90 giorni) mentre la UI resta snella (600) | Solo localStorage (perso a cambio device), sync bidirezionale bloccante (latenza + complessità) |
 
 ---
 
@@ -126,7 +128,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 - ❓ Come mostrare il "primo utilizzo" previsto (finestra rolling) senza confondere l'utente: oggi il dashboard mostra "reset disponibile da HH:MM".
 - ❓ Se arrivano più di due `model_name` (es. `image`, `audio`, `search`): la UI genera card dinamicamente (e la `PanoramicTable` le include tutte), ma `MainWindows`/storico sono ancorati a `general` — da generalizzare se il piano cambia.
 - ✅ Notifica soglie: risolto in F6b con banner + toast + Notification API (ADR-9); il Service Worker per notifiche a tab chiuso resta opzione futura (roadmap `docs/03` §11.4).
-- ❓ Il verdetto di proiezione (I23) usa un modello lineare sui primi 60 rilevamenti: valutare una media mobile o una regressione pesata quando lo storico cresce (dipende da I16).
+- ❓ Il verdetto di proiezione (I23) usa un modello lineare sui primi 60 rilevamenti: valutare una media mobile o una regressione pesata quando lo storico cresce (dipende da I16 → **risolto il prerequisito: I16 ora fornisce fino a 10.000 punti persistenti**).
 
 ---
 
@@ -145,3 +147,4 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | 2026-10-02 | `docs/03` §3/§4/§5.5/§5.6/§7/§10/§11, questo file | **F6b implementata**: I17 avvisi soglia (banner + toast + notifiche browser, soglie configurabili), I21 registro eventi + `EventLog`, I22 export CSV/JSON (`lib/export.ts`), I23 verdetto esaurimento vs reset (`ProjectionVerdict`), I24 `PanoramicTable`; nuove chiavi localStorage `mm-dash-events-v1` e campi settings (ADR-9) |
 | 2026-10-02 | Verifica F6b | agent-browser: banner attenzione con soglia 50% (37,2% < 50), transizione import→demo genera toast + evento in registro, `mm-dash-events-v1` corretto, verdetto «Quota sufficiente fino al reset» su dati demo, export CSV/JSON senza errori, svuotamento registro, desktop+mobile OK, zero errori console, lint pulito |
 | 2026-10-02 | `settings-dialog.tsx`, questo file (I25, §6) | **I25 — finestra impostazioni fuori schermo**: riprogettata su 3 tab con `max-h-[85svh]`, area scrollabile e footer fisso (bugfix §6); verificata con agent-browser a 1366×768, 1280×500 e 390×844 |
+| 2026-10-02 | `prisma/schema.prisma`, `api/history/route.ts`, `lib/server-history.ts`, `page.tsx`, `history-chart.tsx`, `docs/03`, questo file (I16, ADR-10, F7) | **I16 — persistenza storico server-side**: modello `UsagePoint`, API POST/GET/DELETE con pruning (10.000 punti / 90 giorni), sync offline-first con merge all'avvio, badge «punti salvati sul server», menu Esporta con voci «storico completo dal server»; anche i rilevamenti demo entrano nello storico; verifiche curl (dedup upsert 3→2, since, DELETE, validazione) e agent-browser (replica, merge sopravvive a storage svuotato e al backfill demo, tema scuro menu) |
