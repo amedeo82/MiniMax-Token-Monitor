@@ -9,9 +9,10 @@ import { ModelCard, MainWindows } from "@/components/quota-cards";
 import { HistoryChart, StatsPanel, computeTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
 import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/components/settings-dialog";
 import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
-import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse } from "@/lib/minimax";
+import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
 import { makeDemoSnapshot, makeDemoHistory } from "@/lib/demo";
 import { formatCountdown, formatDateRome, formatTimeRome, nowRomeTime, romeZoneInfo, msUntil } from "@/lib/time";
+import { toast } from "sonner";
 import {
   RefreshCw,
   Settings2,
@@ -23,6 +24,7 @@ import {
   CircleAlert,
   Sparkles,
   ChevronRight,
+  ClipboardPaste,
 } from "lucide-react";
 
 const SETTINGS_KEY = "mm-dash-settings-v1";
@@ -249,10 +251,44 @@ export default function DashboardPage() {
     void fetchData(s);
   };
 
+  /** Importa una risposta JSON incollata manualmente (senza chiamare l'API). */
+  const handleImportJson = (raw: unknown) => {
+    try {
+      const snap = parseUsageResponse(raw, {
+        source: "api",
+        region: settings.region,
+        fetchedAt: Date.now(),
+      });
+      if (snap.models.length === 0) {
+        throw new Error("Nessun modello trovato: verifica che il JSON contenga l'array model_remains.");
+      }
+      setSnapshot(snap);
+      setRawJson(raw);
+      setLastEndpoint("json://incollato (risposta API importata manualmente)");
+      setLastOk(true);
+      setLastFetch(snap.fetchedAt);
+      setError(null);
+      pushHistory(snap);
+      toast.success("JSON importato: analisi completata");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "JSON non interpretabile.";
+      setError({ code: "parse", message });
+      toast.error(message);
+    }
+  };
+
   /* ---------------------------- derived ---------------------------- */
   const general = snapshot ? findModel(snapshot, "general") : undefined;
   const otherModels = snapshot ? snapshot.models.filter((m) => m.modelName.toLowerCase() !== "general") : [];
   const trend = React.useMemo(() => computeTrend(history, chartWindow), [history, chartWindow]);
+  const serverTime = React.useMemo(() => (snapshot ? inferServerTime(snapshot.models) : null), [snapshot]);
+  const sourceLabel = !lastEndpoint
+    ? undefined
+    : lastEndpoint.startsWith("json://")
+      ? "Risposta JSON importata manualmente"
+      : lastEndpoint.startsWith("demo://")
+        ? "Modalità demo (nessuna chiamata reale)"
+        : lastEndpoint;
   const nextRefreshIn =
     settings.refreshSeconds > 0 && lastFetch && !settings.demoMode
       ? msUntil(lastFetch + settings.refreshSeconds * 1000, now)
@@ -337,15 +373,20 @@ export default function DashboardPage() {
                 Crediti: {snapshot.credits.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Badge>
             ) : null}
-            {settings.demoMode ? (
+            {lastOk === false ? (
+              <Badge variant="outline" className="gap-1 border-rose-400/30 bg-rose-400/10 text-xs text-rose-300">
+                <CircleAlert className="size-3" />
+                API in errore
+              </Badge>
+            ) : snapshot?.source === "demo" || (snapshot === null && settings.demoMode) ? (
               <Badge variant="outline" className="gap-1 border-violet-400/30 bg-violet-400/10 text-xs text-violet-300">
                 <FlaskConical className="size-3" />
                 Modalità demo — dati simulati
               </Badge>
-            ) : lastOk === false ? (
-              <Badge variant="outline" className="gap-1 border-rose-400/30 bg-rose-400/10 text-xs text-rose-300">
-                <CircleAlert className="size-3" />
-                API in errore
+            ) : lastEndpoint.startsWith("json://") ? (
+              <Badge variant="outline" className="gap-1 border-sky-400/30 bg-sky-400/10 text-xs text-sky-300">
+                <ClipboardPaste className="size-3" />
+                JSON importato manualmente
               </Badge>
             ) : (
               <Badge variant="outline" className="gap-1 border-emerald-400/30 bg-emerald-400/10 text-xs text-emerald-300">
@@ -469,6 +510,8 @@ export default function DashboardPage() {
                   demoMode={settings.demoMode}
                   lastFetch={lastFetch}
                   refreshSeconds={settings.refreshSeconds}
+                  serverTime={serverTime}
+                  sourceLabel={sourceLabel}
                 />
               </div>
             </>
@@ -501,7 +544,13 @@ export default function DashboardPage() {
         </footer>
       </div>
 
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} settings={settings} onSave={handleSaveSettings} />
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={settings}
+        onSave={handleSaveSettings}
+        onImportJson={handleImportJson}
+      />
     </div>
   );
 }

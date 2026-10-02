@@ -151,9 +151,99 @@ export const WINDOW_LABELS = {
   weekly: { short: "Settimanale", long: "Finestra di 7 giorni", desc: "Tutti i modelli, video incluso" },
 } as const;
 
+/**
+ * Endpoint aggiuntivi della piattaforma MiniMax utili per arricchire il monitoraggio
+ * (riferimenti: platform.minimax.io/docs, issue GitHub MiniMax-AI/MiniMax-M2 #88/#99).
+ */
+export const EXTRA_ENDPOINTS: { method: string; url: string; desc: string }[] = [
+  {
+    method: "GET",
+    url: "https://api.minimax.io/v1/models",
+    desc: "Catalogo dei modelli disponibili (OpenAI-compatible): MiniMax-M3, H3, ecc.",
+  },
+  {
+    method: "POST",
+    url: "https://api.minimax.io/v1/chat/completions",
+    desc: "Chat completions: ogni risposta include usage {prompt_tokens, completion_tokens, total_tokens, cached_tokens} → consumo token reale",
+  },
+  {
+    method: "POST",
+    url: "https://api.minimax.io/v1/video_generation",
+    desc: "Creazione task di generazione video (modelli H3)",
+  },
+  {
+    method: "GET",
+    url: "https://api.minimax.io/v1/query/video_generation?task_id=…",
+    desc: "Stato e risultato di un task video",
+  },
+];
+
 /* ------------------------------------------------------------------ */
 /* Parsing                                                             */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Normalizza il codice di stato: l'API talvolta usa numeri (1, 2, 3)
+ * e talvolta stringhe ("normal", "exhausted", …).
+ */
+function normalizeStatus(v: unknown): string | null {
+  if (typeof v === "number" && isFinite(v)) return String(v);
+  return str(v);
+}
+
+/**
+ * Mappatura empirica dei codici di stato osservati nell'API Token Plan:
+ * - 1 → finestra attiva / in uso (es. modello "general" con consumo registrato)
+ * - 3 → finestra inattiva / mai usata nel periodo (es. modello "video" inutilizzato)
+ * - 2 → ipotesi non confermata: esaurita (da verificare empiricamente)
+ * - stringhe testuali usate da alcune versioni dell'endpoint
+ */
+export function statusLabel(status: string | null): {
+  label: string;
+  tone: "ok" | "idle" | "warn" | "crit";
+  hint: string;
+} | null {
+  if (status === null) return null;
+  switch (status) {
+    case "1":
+      return { label: "Attiva · in uso", tone: "ok", hint: "Finestra attiva con utilizzo registrato" };
+    case "2":
+      return { label: "Esaurita (ipotesi)", tone: "crit", hint: "Codice 2: presumibilmente quota esaurita" };
+    case "3":
+      return { label: "Inattiva · mai usata", tone: "idle", hint: "Nessun utilizzo registrato in questa finestra" };
+    case "normal":
+      return { label: "Normale", tone: "ok", hint: "Stato normale riportato dall'API" };
+    case "exhausted":
+    case "exhausted_hard":
+      return { label: "Esaurita", tone: "crit", hint: "Quota della finestra terminata" };
+    case "throttled":
+      return { label: "Limitata", tone: "warn", hint: "Frequenza di richieste temporaneamente limitata" };
+    default:
+      return { label: `Stato ${status}`, tone: "warn", hint: "Codice di stato non catalogato" };
+  }
+}
+
+/**
+ * Deduce l'ora del server dal momento della risposta: end_time − remains_time.
+ * Consente di sincronizzare i countdown senza fidarsi dell'orologio locale.
+ */
+export function inferServerTime(models: ModelQuota[]): number | null {
+  for (const m of models) {
+    for (const w of [m.interval, m.weekly]) {
+      if (w?.end !== null && w?.end !== undefined && w.remainsTimeMs !== null && w.remainsTimeMs > 0) {
+        const t = w.end - w.remainsTimeMs;
+        if (t > 1_000_000_000_000) return t;
+      }
+    }
+  }
+  return null;
+}
+
+/** Percentuale consumata (100 − residua), già limitata a 0–100. */
+export function consumedPercent(w: QuotaWindow): number | null {
+  if (w.remainingPercent === null) return null;
+  return Math.max(0, Math.min(100, 100 - w.remainingPercent));
+}
 
 function parseWindow(
   item: Record<string, unknown>,
@@ -175,7 +265,7 @@ function parseWindow(
   const start = epochMs(item[startKey]);
   const end = epochMs(item[endKey]);
   const remainsTimeMs = durationMs(item[remainsKey]);
-  const status = str(item[statusKey]);
+  const status = normalizeStatus(item[statusKey]);
 
   // Nessun dato utile → finestra assente
   const hasAny =

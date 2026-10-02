@@ -35,8 +35,14 @@ export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()
   const weeklyEnd = weeklyStart + WEEK_MS;
   const weeklyRemaining = simulatedRemaining(now - weeklyStart, WEEK_MS, 100, 31) + jitter(0.8);
 
-  // Modello video: solo finestra settimanale, consumo più elevato
+  // Modello video: finestra settimanale condivisa, consumo più elevato
   const videoWeeklyRemaining = simulatedRemaining(now - weeklyStart, WEEK_MS, 100, 18) + jitter(1.5);
+
+  // Finestra giornaliera del video: allineata a mezzanotte UTC (02:00 Roma in CEST)
+  const DAY_MS = 24 * 3600_000;
+  const videoDayStart = Math.floor(now / DAY_MS) * DAY_MS; // mezzanotte UTC corrente
+  const videoDayEnd = videoDayStart + DAY_MS;
+  const videoDailyRemaining = 100; // video mai usato oggi → finestra intatta (stato 3)
 
   const raw = {
     base_resp: { status_code: 0, status_msg: "success" },
@@ -48,24 +54,34 @@ export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()
         current_interval_remaining_percent: Math.round(intervalRemaining * 10) / 10,
         current_interval_total_count: 0,
         current_interval_usage_count: 0,
-        current_interval_status: "normal",
+        current_interval_status: 1,
         start_time: intervalStart,
         end_time: intervalEnd,
         remains_time: Math.max(0, intervalEnd - now),
         current_weekly_remaining_percent: Math.round(weeklyRemaining * 10) / 10,
         current_weekly_total_count: 0,
         current_weekly_usage_count: 0,
-        current_weekly_status: "normal",
+        current_weekly_status: 1,
         weekly_start_time: weeklyStart,
         weekly_end_time: weeklyEnd,
         weekly_remains_time: Math.max(0, weeklyEnd - now),
       },
       {
+        // Il modello "video" nella risposta reale espone anche una finestra
+        // giornaliera di 24h (allineata a mezzanotte UTC = 02:00 a Roma in CEST),
+        // oltre a quella settimanale condivisa.
         model_name: "video",
+        current_interval_remaining_percent: Math.round(videoDailyRemaining * 10) / 10,
+        current_interval_total_count: 0,
+        current_interval_usage_count: 0,
+        current_interval_status: 3,
+        start_time: videoDayStart,
+        end_time: videoDayEnd,
+        remains_time: Math.max(0, videoDayEnd - now),
         current_weekly_remaining_percent: Math.round(videoWeeklyRemaining * 10) / 10,
         current_weekly_total_count: 0,
         current_weekly_usage_count: 0,
-        current_weekly_status: "normal",
+        current_weekly_status: 3,
         weekly_start_time: weeklyStart,
         weekly_end_time: weeklyEnd,
         weekly_remains_time: Math.max(0, weeklyEnd - now),
