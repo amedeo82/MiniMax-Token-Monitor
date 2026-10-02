@@ -1,0 +1,519 @@
+     1→<pre>
+     2→[upstream statusline lines]
+     3→Usage: ▓▓▓▓░░░░ 40% 🕗1h27m·5h · ▓▓░░░░░░ 20% 🕔4d3h·7d    # Quota
+     4→Balance: ¥110.00 · $3.5                                        # Balance
+     5→</pre>
+     6→
+     7→# CreditGauge
+     8→
+     9→[![License](https://img.shields.io/github/license/cwf818/creditgauge)](LICENSE)
+    10→[![Tag](https://img.shields.io/github/tag/cwf818/creditgauge)](https://github.com/cwf818/creditgauge/tags)
+    11→[![Stars](https://img.shields.io/github/stars/cwf818/creditgauge)](https://github.com/cwf818/creditgauge/stargazers)
+    12→
+    13→A provider-agnostic Claude Code statusline plugin for **token-plan usage / remaining quota**. It picks what to render from `ANTHROPIC_BASE_URL`, so the same plugin works against any supported provider's plan endpoint — no per-provider re-install. Currently supported:
+    14→
+    15→- **MiniMax** — `Usage: …` / `Remain: …` (5-hour + weekly windows), from `/v1/token_plan/remains`
+    16→- **DeepSeek** — `Balance: …` (account balance), from `/user/balance`
+    17→
+    18→For vanilla Anthropic, OpenRouter, or any other provider not on the list above, the plugin **hides itself** and passes any chained upstream statusline through unchanged.
+    19→
+    20→We deliberately don't reimplement the kitchen-sink statuslines that already exist for vanilla Anthropic — [`claude-hud`](https://github.com/jarrodwatts/claude-hud) and [`ccstatusline`](https://github.com/sirmalloc/ccstatusline) cover that. This plugin focuses on provider-specific **quota / balance** data, plus lightweight usage statistics read from Claude Code's stdin payload.
+    21→
+    22→ANSI colors are 5-band (256-color SGR): bright green / dark green / yellow / orange / red. Applied to the displayed value + the colored bar segment; the empty part of the bar stays uncolored so it remains readable.
+    23→
+    24→## Snapshots
+    25→
+    26→**`simple` preset** — minimal layout, single Quota line on its own, working with a pre-installed `claude-hud`:
+    27→
+    28→![toPGauge simple preset](https://github.com/cwf818/creditgauge/raw/main/screenshots/screenshot-simple.png)
+    29→
+    30→**`standard` preset** — context, memory, git, session / project / 5h-align / 7d-align scanners, plus the live quota line:
+    31→
+    32→![toPGauge standard preset](https://github.com/cwf818/creditgauge/raw/main/screenshots/screenshot-standard.png)
+    33→
+    34→## Documentation
+    35→
+    36→- [**快速上手指南.md**](./快速上手指南.md) — 5-minute快速上手指南：效果、简介、安装、基本配置、插件、安全与协议。
+    37→- [**MANUAL.md**](./MANUAL.md) — exhaustive configuration reference. Top-level schema, provider entries, presets, fragments, inline-args grammar, full `m_*` module catalog, recipes, plugin ABI.
+    38→- [**HOW_TO_CREATE_A_PLUGIN.md**](./HOW_TO_CREATE_A_PLUGIN.md) — wire up a custom provider (kimi / moonshot / z.ai / etc.) without forking the plugin. User-side plugin ABI, fill contract, override resolution.
+    39→- [**CHANGELOG.md**](./CHANGELOG.md) — per-version change history (breaking changes, new modules, removed aliases, schema upgrades).
+    40→
+    41→## Install
+    42→
+    43→The plugin is a single-plugin marketplace. Install it in three steps:
+    44→
+    45→```
+    46→/plugin marketplace add cwf818/creditgauge
+    47→/plugin install creditgauge@creditgauge
+    48→```
+    49→
+    50→> After the plugin install, run `/reload-plugins` so the loader picks up the new commands before wiring it into `settings.json`. Forgetting this step is the most common cause of "command not found" right after install.
+    51→
+    52→Then wire it into `settings.json`:
+    53→
+    54→```
+    55→/creditgauge:install
+    56→```
+    57→
+    58→This patches the active `settings.json` (user-level by default; pass `--project` for project-level):
+    59→
+    60→### Install via npx (no marketplace required)
+    61→
+    62→```
+    63→npx creditgauge
+    64→```
+    65→
+    66→Launches a TUI (powered by @clack/prompts) with five options: Install,
+    67→Uninstall, Clean, View diagnostics, Exit. The TUI shells out to the same
+    68→`scripts/*.sh` that the slash commands use, so behavior is identical.
+    69→
+    70→Non-interactive form (script-friendly):
+    71→
+    72→```
+    73→npx creditgauge install          # user-level
+    74→npx creditgauge install --project   # project-level
+    75→npx creditgauge uninstall
+    76→npx creditgauge clean --dry-run
+    77→npx creditgauge reset
+    78→npx creditgauge diagnostics      # last 20 plugin warning/error entries
+    79→npx creditgauge plugin add       # install a query plugin (interactive)
+    80→npx creditgauge plugin remove    # remove a query plugin
+    81→npx creditgauge plugin auth      # authenticate a query plugin
+    82→npx creditgauge plugin list      # list available plugins
+    83→npx creditgauge plugin status    # query usage for one/all providers
+    84→npx creditgauge status           # alias of `plugin status`
+    85→npx creditgauge --version
+    86→npx creditgauge --help
+    87→```
+    88→
+    89→> The plugin must be in Claude Code's cache first
+    90→> (`~/.claude/plugins/cache/creditgauge/creditgauge/<version>/`).
+    91→> If it isn't, `npx creditgauge install` prints a hint pointing at the
+    92→> marketplace flow. Once installed once via marketplace, all subsequent
+    93→> `npx creditgauge install` calls work.
+    94→
+    95→1. If `statusLine.command` already points to our wrapper (checked via `isOurWrapperCommand` — the command string itself, not the `_creditgauge_managed` marker), the command is a no-op.
+    96→2. Otherwise, the current `settings.json` is backed up to `settings.json.bak.<ISO-timestamp>`.
+    97→3. The original `statusLine.command` is preserved at `<claude-root>/plugins/creditgauge/state/upstream-cmd.sh` and `<claude-root>/plugins/creditgauge/state/upstream-cmd.txt` — sibling of `config.json`, **stable** across `/plugin install` rolls and cache wipes.
+    98→4. The `statusLine` is rewritten to invoke our wrapper, which sets `CREDITGAUGE_UPSTREAM_CMD=<upstream-cmd.sh>` so the original statusline runs above our line.
+    99→5. **`statusLine.refreshInterval` is managed**: if missing, it's created at `10`. If present and `> 10`, it's clamped down to `10` and a notice is printed to stdout (`install.sh: clamped statusLine.refreshInterval from N to 10 — set it back manually if you want to keep N`). Values `≤ 10` are left alone.
+   100→
+   101→`install.sh` auto-builds `dist/index.js` if it's missing (the marketplace install only copies source, not the bundle). Re-running the slash command is always a no-op once installed.
+   102→
+   103→### Install-journal (write-ahead log)
+   104→
+   105→Every change `install.sh` makes to `settings.json` is recorded as a per-field entry in `<claude-root>/plugins/creditgauge/state/install-journal.json`. Three entry kinds:
+   106→
+   107→| `action`     | Meaning                                                            |
+   108→| ------------ | ------------------------------------------------------------------ |
+   109→| `create`     | The field did not exist before install; `after` is the value we wrote. |
+   110→| `mutate`     | An existing field was changed; `before`/`after` snapshot both sides. |
+   111→| `clamp-down` | An over-threshold value was clamped (e.g. `refreshInterval` 30 → 10). |
+   112→
+   113→Each entry has `{id, ts, action, before, after}`. The journal is the **authoritative record** of what install did — uninstall reads it (see below) to revert only the parts the user hasn't touched since. The journal itself lives in the **preserved** group (sibling of `config.json`), so `:uninstall` keeps it around unless you pass `--completely`. Hand-editing the file is supported; just keep the schema.
+   114→
+   115→If you want to preview what install will do, run `/creditgauge:install --dry-run` first.
+   116→
+   117→If your active `settings.json` doesn't exist at the project level, install creates a minimal one (with `permissions.defaultMode: bypassPermissions`). It does **not** copy from the user-level file.
+   118→
+   119→### Restore from backup
+   120→
+   121→```
+   122→/creditgauge:install --restore
+   123→```
+   124→
+   125→Replaces the active `settings.json` with the most recent `settings.json.bak.<ts>`. Useful if you want to roll back an edit that wasn't made by us.
+   126→
+   127→## Commands
+   128→
+   129→Seven slash commands ship with the plugin:
+   130→
+   131→| Command                       | What it does                                                              |
+   132→| ----------------------------- | ------------------------------------------------------------------------- |
+   133→| `/creditgauge:install`           | Wire the wrapper into `settings.json` (or `--restore`).                  |
+   134→| `/creditgauge:uninstall`         | Restore `settings.json`, wipe cache + marketplace + loader rows.         |
+   135→| `/creditgauge:clean`             | Trim old `.bak.<ts>` files (keeps the most recent per file).             |
+   136→| `/creditgauge:clean-cache`       | Remove stale version dirs from the plugin cache, keeping only the newest. |
+   137→| `/creditgauge:clean-journal`     | Remove old .jsonl journal files under state/<projectHash>/ by age or --all.                                                                  |
+   138→| `/creditgauge:reset`             | Wipe the 3 cache files for the current project only (cache.json, state.json, cache.stat.json); preserves diagnostics + token-sample history. |
+   139→| `/creditgauge:config`            | Read config state; switch statuslineTemplate preset; disable/enable upstream. |
+   140→
+   141→Each is a Pattern B2 slash command — the body is a `!`-fenced shell block that loads `scripts/<name>.sh` directly via `${CLAUDE_PLUGIN_ROOT}`, with `allowed-tools` scoped to that script. See [Project layout](#project-layout) for the file map.
+   142→
+   143→## Uninstall
+   144→
+   145→```
+   146→/creditgauge:uninstall
+   147→```
+   148→
+   149→This is a self-contained cleanup that works even after the plugin's cache and marketplace have been wiped. It does all of the following:
+   150→
+   151→1. **Restore `statusLine`** — strategy in order:
+   152→   - If `<claude-root>/plugins/creditgauge/state/install-journal.json` has unapplied entries, apply them **field-by-field**: each entry's `after` is compared against the *current* `settings.json`; matching fields are reverted (created → removed, mutated → restored to `before`, clamped → restored to `before`), and fields the user changed after install are left alone. This is the journal-driven path — the **default for any install that ran with the journal writer enabled**.
+   153→   - Else (legacy / pre-journal install), fall back to `${CLAUDE_ROOT}/plugins/creditgauge/state/upstream-cmd.txt` (byte-for-byte restore of the original command).
+   154→   - Else, fall back to the most recent `settings.json.bak.<ts>` whose `statusLine.command` does **not** point to our wrapper (the state before the plugin was installed).
+   155→   - Else, strip the marker but leave the wrapper in place and print a warning.
+   156→2. **Remove `creditgauge@creditgauge` from `settings.json.enabledPlugins`** (other plugins preserved).
+   157→3. **Remove `creditgauge` from `settings.json.extraKnownMarketplaces`** (Claude Code records the marketplace source there too — leaving it would re-add the marketplace on next `/plugin marketplace add` with no visible diff).
+   158→4. **Wipe** `cache/creditgauge/`, `marketplaces/creditgauge/`, and the loader's leftover `marketplaces/cwf818-creditgauge/` alias.
+   159→5. **Strip the plugin's row** from `installed_plugins.json` and `known_marketplaces.json` (with timestamped `.bak.<TS>` backups).
+   160→6. **Trim old `.bak.<ts>` files** — invokes `scripts/clean.sh` as the final step so uninstall leaves a tidy filesystem (one newest backup per file). User-named backups like `settings.json.bak-pre-v0.1.8` are NOT touched.
+   161→
+   162→`settings.json` and the two JSON files are backed up **before** any destructive change. Line endings (CRLF/LF) are preserved. The script is **idempotent** — re-running on a clean system prints `nothing to do` and exits 0. Add `--dry-run` to preview actions without modifying anything.
+   163→
+   164→The `env` block of `settings.json` (including your `ANTHROPIC_AUTH_TOKEN`) is **not** touched. The script runs locally with no API calls and never reads `ANTHROPIC_AUTH_TOKEN`.
+   165→
+   166→After uninstall, re-install with the four-step flow:
+   167→
+   168→```
+   169→/plugin marketplace add cwf818/creditgauge
+   170→/plugin install creditgauge@creditgauge
+   171→/reload-plugins
+   172→/creditgauge:install
+   173→```
+   174→
+   175→For dev iteration, `npm run dev:uninstall` (or `npm run dev:uninstall:dry`) does the same thing from the command line.
+   176→
+   177→## Clean
+   178→
+   179→```
+   180→/creditgauge:clean
+   181→```
+   182→
+   183→Removes the old `.bak.YYYYMMDDTHHMMSS` backup files our installer leaves behind, keeping only the most recent one per base file:
+   184→
+   185→- `settings.json.bak.<ts>` → keeps the newest
+   186→- `installed_plugins.json.bak.<ts>` → keeps the newest
+   187→- `known_marketplaces.json.bak.<ts>` → keeps the newest
+   188→
+   189→User-named backups (e.g. `settings.json.bak-pre-v0.1.8`) are **not** touched — only the script-generated timestamp pattern. Idempotent: if at most one backup exists per file, prints `nothing to clean` and exits 0. Add `--dry-run` to preview.
+   190→
+   191→The uninstall slash command already runs `clean.sh` as its final step, so explicit cleanup is usually unnecessary after a fresh uninstall. Use the clean command directly if you want to tidy up between installs, or if you've accumulated a lot of `.bak.<ts>` files from earlier dev iteration.
+   192→
+   193→For dev iteration, `npm run settings:clean` (or `npm run settings:clean:dry`) does the same thing from the command line.
+   194→
+   195→## Clean cache
+   196→
+   197→```
+   198→/creditgauge:clean-cache
+   199→```
+   200→
+   201→Every `/plugin install` rolls the cache forward — Claude Code creates a new `<version>` directory under `<cache>/creditgauge/` but does **not** remove the previous one. Old version dirs pile up over time (~40-50 MB each: full source tree + node_modules). The `statusLine.command` written by `:install` is already version-independent — it `ls -d`s every version dir, sorts by version, and `exec`s the highest — so old dirs are pure dead weight.
+   202→
+   203→`/creditgauge:clean-cache` walks the cache, finds all `^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$` version directories, sorts numerically (so `0.2.10` sorts AFTER `0.2.9`, not lexically), keeps the newest, and removes the rest.
+   204→
+   205→**Safety:** non-version entries (`.in_use`, `.orphaned_at_*`, hidden dirs, files, anything not matching the version regex) are left untouched. Idempotent: re-running is a no-op once only the newest remains. Add `--dry-run` to preview.
+   206→
+   207→## How it composes with other statuslines
+   208→
+   209→- The wrapper script is `scripts/wrapper.sh`. If `CREDITGAUGE_UPSTREAM_CMD` is set, it runs that path as a bash script (`bash "$CREDITGAUGE_UPSTREAM_CMD"`), captures stdout, and exposes it to the plugin entry as the `CREDITGAUGE_UPSTREAM` env var. If unset, the wrapper runs the plugin as the sole statusline.
+   210→- `CREDITGAUGE_UPSTREAM_CMD` is an **absolute path** to a bash script — `install.sh` writes one at `${CLAUDE_ROOT}/plugins/creditgauge/state/upstream-cmd.sh` whose body is `exec bash -c '<original-command>'`. This path is **stable** (sibling of `config.json`, NOT inside the per-version cache dir), so `/plugin install` rolls don't move it.
+   211→- The plugin preserves interior newlines in upstream output and injects `\x1b[0m` before its own line if upstream ends with an unclosed ANSI SGR — so multi-line, ANSI-colored upstream statuslines render correctly.
+   212→
+   213→## Activation
+   214→
+   215→The plugin picks a **provider** from `ANTHROPIC_BASE_URL` and renders exactly one line:
+   216→
+   217→| `ANTHROPIC_BASE_URL`                    | Line                     | API                                                  |
+   218→| --------------------------------------- | ------------------------ | ---------------------------------------------------- |
+   219→| `https://api.minimaxi.com/anthropic`    | `Usage: …` / `Remain: …` | `GET https://www.minimaxi.com/v1/token_plan/remains` |
+   220→| `https://api.deepseek.com/anthropic`    | `Balance: …`             | `GET https://api.deepseek.com/user/balance`          |
+   221→| anything else (vanilla Anthropic, etc.) | (hidden)                 | —                                                    |
+   222→
+   223→Both endpoints are called with `Authorization: Bearer $ANTHROPIC_AUTH_TOKEN` — the same token, no new env vars. The provider table lives in the `providers` config block (see [MANUAL.md §3](./MANUAL.md#3-providers)). On vanilla Anthropic, OpenRouter, or any other provider the plugin doesn't recognize, the line is hidden and any upstream output passes through unchanged.
+   224→
+   225→### MiniMax token-plan line
+   226→
+   227→<pre>
+   228→ Usage: ▓▓▓░░░░░ 38% 🕖47m·5h · ▓▓▓░░░░░ 39% 🕓4d47m·7d
+   229→Remain: ░░░▓▓▓▓▓ 62% 🕖47m·5h · ░░░▓▓▓▓▓ 61% 🕓4d47m·7d
+   230→</pre>
+   231→
+   232→Two windows (5-hour + weekly), split-bar with colored percentage, reset
+   233→glyph + countdown, window label after a `·`. The bar
+   234→glyphs flip in remaining mode — both modes read left-to-right as
+   235→"what's spent → what's left":
+   236→
+   237→- `used` mode: `▓▓▓▓▓░░░` — `▓` is consumed (colored), `░` is remaining (plain)
+   238→- `remaining` mode: `░░░░░▓▓` — `░` is consumed (plain), `▓` is remaining (colored)
+   239→
+   240→The reset countdown uses the shared time-formatting template:
+   241→
+   242→| Remaining | Rendered  | Note                                       |
+   243→| --------- | --------- | ------------------------------------------ |
+   244→| `-1ms`    | `0s`      | past-due, explicit "this window has reset" |
+   245→| `30s`     | `30s`     |                                            |
+   246→| `5m`      | `5m`      |                                            |
+   247→| `60m`     | `1h0m`    | internal zero preserved                    |
+   248→| `90m`     | `1h30m`   |                                            |
+   249→| `24h`     | `1d0h`    |                                            |
+   250→
+   251→`maxUnitCount` (default `2`) controls how many units are shown. Leading
+   252→zeros are dropped (`0d0h5m` → `5m`); internal and trailing zeros are
+   253→kept (`2h0m` → `2h0m`, NOT `2h`). See `timeFormat.maxUnitCount` in
+   254→[MANUAL.md §2](./MANUAL.md#2-top-level-schema) for the full set of options.
+   255→
+   256→### DeepSeek balance line
+   257→
+   258→When `ANTHROPIC_BASE_URL` matches the configured `providers.deepseek` entry (default: exact match against `https://api.deepseek.com/anthropic`), the plugin fetches the user's account balance and renders:
+   259→
+   260→```
+   261→Balance: ¥110.00             # is_available=true, single CNY entry
+   262→Balance: $25.00               # is_available=true, single USD entry
+   263→Balance: ¥110 · $3.5         # multi-currency: ALL entries from balance_infos,
+   264→                             # joined by ' · ', each entry colored independently
+   265→                             # by its own balance.
+   266→Balance: not available!       # is_available=false or no parseable entries
+   267→```
+   268→
+   269→Per-currency display prefix: `USD` → `$`, `CNY` / `RMB` → `¥`. Any other
+   270→currency code is rendered as itself, uppercased (e.g. `EUR42.50`).
+   271→
+   272→5-band color thresholds on **each entry's** numeric value
+   273→(`thresholds.balanceBands`, default `[5, 10, 20, 50]`) — see [MANUAL.md §2](./MANUAL.md#2-top-level-schema).
+   274→
+   275→## Display mode
+   276→
+   277→Default mode is **`remaining`** — the line begins with `Remain:` and the percentage shown is the percentage of the window you've left. The colored bar segment represents the remaining portion.
+   278→
+   279→Switch to `used` mode via the config file:
+   280→
+   281→```json
+   282→{ "display": "used" }
+   283→```
+   284→
+   285→See [MANUAL.md §2](./MANUAL.md#2-top-level-schema) for the full schema.
+   286→
+   287→In used mode the line begins with `Usage:` and the percentage is what's been consumed; the colored bar segment represents the consumed portion.
+   288→
+   289→`display` is MiniMax-only — DeepSeek's `Balance:` line doesn't have a percentage to flip. The window / context-window / mem-usage modules (`m_windowQuota|term:short|mid|long`, `m_windowContext`, `m_windowMemUsage`) also accept an inline `|display:used|remaining` override that takes precedence over the global `display` for that one module.
+   290→
+   291→## Configuration
+   292→
+   293→The full schema (top-level keys, provider entries, presets, fragments, inline-args grammar, module reference) lives at [MANUAL.md §2 Configuration](./MANUAL.md#2-top-level-schema).
+   294→
+   295→Path:
+   296→
+   297→- **Unix**: `~/.claude/plugins/creditgauge/config.json`
+   298→- **Windows**: `%USERPROFILE%\.claude\plugins\creditgauge\config.json`
+   299→
+   300→Loaded once at startup. **Missing file** → all defaults. **Malformed JSON** or a **single bad field** → one stderr line (`creditgauge: config <reason>; using defaults`) and the default for _that_ field only — the rest of your config is still honored. The plugin never blanks the statusline on bad config.
+   301→
+   302→A reference with every field is at [config.example.json](./config.example.json). Copy it to the path above and edit.
+   303→
+   304→## Diagnostics log
+   305→
+   306→Opt-in JSONL log of plugin-internal events. Gated by two-level AND-gate:
+   307→
+   308→1. Set the env var: `export CREDITGAUGE_DIAGNOSTICS_ENABLE=1`
+   309→2. Pick slices in `config.json`:
+   310→   ```json
+   311→   { "debug": { "stdin": true, "cache": true } }
+   312→   ```
+   313→
+   314→Both must be truthy — env alone is no longer enough (v0.10.x behavior
+   315→change). 8 subkeys: `stdin`, `statusStore`, `config`, `cache`,
+   316→`statCache`, `smokeNormalizeTick`, `pluginVersion`, `parse`. See
+   317→[MANUAL.md SS20](./MANUAL.md#20-debug-logging) for the full subkey
+   318→table, truthy-value rules, and file location.
+   319→
+   320→The log file lives at:
+   321→```
+   322→~/.claude/plugins/creditgauge/state/<projectHash>/diagnostics.jsonl
+   323→```
+   324→
+   325→Capped at the last 1000 entries. Use it as a postmortem trail —
+   326→`tail -f` while debugging, or `grep` by level and source. Wipe with
+   327→`/creditgauge:reset` (per-project) or `/creditgauge:clean --purge-runtime`
+   328→(all projects).
+   329→
+   330→## Auth
+   331→
+   332→The plugin reuses `process.env.ANTHROPIC_AUTH_TOKEN` to call the provider's plan endpoint. **No new env vars.** See [SECURITY.md](./SECURITY.md) for how the token is handled.
+   333→
+   334→## Caching
+   335→
+   336→The Claude Code statusline is updated in response to interaction events by default (every prompt, every tool result). Starting with **Claude Code 2.1.97**, the `statusLine.refreshInterval` field is honored, letting the statusline refresh on a fixed cadence instead. Two scopes of "refresh interval" are involved and they're independent:
+   337→
+   338→- **This plugin's 60 s TTL** — how long we cache a successful API response before re-fetching. MiniMax and DeepSeek have different rate-limit policies and refresh cadences; 60 s is a deliberate default that keeps the statusline responsive without hammering the API. Cache entries are shadowed to disk under the top-level `state/cache.json` (sibling of `config.json`, wiped by `:uninstall`), so the TTL is honored **across per-tick child-process spawns** — the second tick within 60 s reuses the first tick's value instead of re-fetching. Rows are keyed by provider id, so different providers never collide on the same file.
+   339→- **Claude Code's `statusLine.refreshInterval`** — how often the harness invokes the statusline command. Set in `~/.claude/settings.json` independently of this plugin:
+   340→
+   341→  ```json
+   342→  {
+   343→    "statusLine": {
+   344→      "type": "command",
+   345→      "command": "...",
+   346→      "refreshInterval": 60
+   347→    }
+   348→  }
+   349→  ```
+   350→
+   351→  Unit is **seconds** (not milliseconds — that's a frequent footgun; the harness will reject or misbehave on values like `30000`). For this plugin, **30–120 s is a sensible range**: shorter than the 60 s TTL is wasted, much longer and the line lags behind reality. The `refreshInterval` value does **not** affect the API-call TTL — they are independent knobs.
+   352→
+   353→  This plugin **manages `statusLine.refreshInterval`** as part of `:install`: if the field is missing, it's created at `10`; if it exceeds `10`, it's clamped down to `10` (with a stdout notice). See [Install-journal](#install-journal-write-ahead-log) below. Set it back manually if you want a higher cadence — uninstall will respect whatever value you chose.
+   354→
+   355→### Failure handling
+   356→
+   357→Three outcomes when the provider API is called:
+   358→
+   359→| Outcome                    | What you see on the statusline                                                                                                                                                |
+   360→| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   361→| Fresh fetch                | The normal `Usage: …` / `Balance: …` line, no suffix on the default template. (Includes within-TTL cache hits — the broken-chain suffix is reserved for stale state. If your template includes `m_age`, you'll see a healthy `🔗 X ago` here instead.) |
+   362→| Fetch failed, cache exists | The last good value, **with a dim `⛓️‍💥 X ago` suffix** at the end (e.g. `Balance: ¥110 ⛓️‍💥 5m ago`). The broken-chain emoji IS the indicator (no leading separator).   |
+   363→| Fetch failed, no cache     | `Usage: not available!` (MiniMax) or `Balance: not available!` (DeepSeek) in red. Plugin is alive but the provider is unreachable.                                            |
+   364→
+   365→The `X ago` format uses the **same template as the reset countdown**:
+   366→d/h/m units, `maxUnitCount=2` default, drop leading zeros but keep
+   367→internal/trailing zeros. Sub-minute follows `timeFormat.minUnit`:
+   368→`minUnit="m"` → `<1m ago`; `minUnit="s"` → `${seconds}s ago`. Examples
+   369→(with default `minUnit="s"`):
+   370→
+   371→| Cached age  | Rendered suffix        |
+   372→| ----------- | ---------------------- |
+   373→| 30 s        | `⛓️‍💥 30s ago`          |
+   374→| 5 min       | `⛓️‍💥 5m ago`           |
+   375→| 90 min      | `⛓️‍💥 1h30m ago`         |
+   376→| 24 h        | `⛓️‍💥 1d0h ago`          |
+   377→
+   378→The hard-fail `not available!` line intentionally has no age suffix
+   379→because there is no cached value to be stale-OF.
+   380→
+   381→## Develop
+   382→
+   383→```bash
+   384→npm install
+   385→npm run typecheck    # tsc --noEmit
+   386→npm test             # node --test --import tsx src/**/*.test.ts
+   387→npm run build        # esbuild → dist/index.js
+   388→npm run dev          # esbuild --watch
+   389→```
+   390→
+   391→### Per-tick pipeline
+   392→
+   393→The per-tick pipeline is split between **data-processor (writes)** and **render (reads)** — owned by `src/data-processor.ts` and `src/tick-state.ts`. The render code (`src/render.ts`) is **read-only** against `tickState.pending`; it never calls `tickState.mark` / `setAvg` / `setPrevTick` / `setLastSpeed` / `setLastApiMs` / `setLastTokenHitRate`. Writes are coalesced into a single `commit()` flush per tick — at most one full-file rewrite of `state/<projectHash>/status.json` even on active renders.
+   394→
+   395→### Response shape
+   396→
+   397→The MiniMax plugin (`query_plugins/minimax/index.js`) projects the raw response into canonical `Quota` directly — there's no host-side parser layer to describe here. See [HOW_TO_CREATE_A_PLUGIN.md](./HOW_TO_CREATE_A_PLUGIN.md) for the plugin ABI and `query_plugins/minimax/index.js` for the worked example.
+   398→
+   399→If `base_resp.status_code ≠ 0`, the response is treated as failure and the line is omitted.
+   400→
+   401→The verified real shape (captured against `https://www.minimaxi.com/v1/token_plan/remains`):
+   402→
+   403→```json
+   404→{
+   405→  "model_remains": [
+   406→    {
+   407→      "model_name": "...",
+   408→      "current_interval_remaining_percent": 60,
+   409→      "current_weekly_remaining_percent": 92,
+   410→      "end_time": "...",
+   411→      "weekly_end_time": "..."
+   412→    }
+   413→  ],
+   414→  "base_resp": { "status_code": 0 }
+   415→}
+   416→```
+   417→
+   418→The plugin picks the entry with the **lowest interval remaining %** as the source of truth (the most-active model). If you capture a fresh response and the shape diverges, save it as `src/__fixtures__/remains.real.json` and tighten the parser in `query_plugins/minimax/index.js`.
+   419→
+   420→The DeepSeek response shape is simpler — `{ is_available: bool, balance_infos: [{ currency, total_balance, granted_balance, topped_up_balance }, ...] }` — and the parser iterates **all** entries so every currency the account holds is rendered.
+   421→
+   422→### Dev loop: re-installing the plugin from scratch
+   423→
+   424→When iterating on the install flow (changes to `scripts/install.sh`, `scripts/uninstall.sh`, the slash commands, the version, etc.) you need to fully wipe the plugin's on-disk state before `/plugin install` will re-fetch a clean copy. The plugin loader caches marketplace state and refuses to bump an already-installed plugin — on Windows this surfaces as `EPERM: operation not permitted, rename ... -> ... .bak`.
+   425→
+   426→Use the bundled dev helper (does **not** touch `settings.json` — your statusLine is preserved):
+   427→
+   428→```bash
+   429→# Preview what will be removed:
+   430→npm run dev:uninstall:dry
+   431→
+   432→# Wipe creditgauge state:
+   433→npm run dev:uninstall
+   434→```
+   435→
+   436→It removes:
+   437→
+   438→- the creditgauge row from `installed_plugins.json` and `known_marketplaces.json` (with timestamped `.bak.<ts>` backups of both files).
+   439→- `cache/creditgauge/`, `marketplaces/creditgauge/`, and the loader's leftover `marketplaces/cwf818-creditgauge/` directory.
+   440→
+   441→Then re-install:
+   442→
+   443→```
+   444→/plugin marketplace add cwf818/creditgauge
+   445→/plugin install creditgauge@creditgauge
+   446→/reload-plugins
+   447→/creditgauge:install
+   448→```
+   449→
+   450→If the loader still says "EPERM" after `dev:uninstall`, the most common cause is a Claude Code process holding a file lock on the marketplace dir. **Quit all running Claude Code sessions** (not just this one) and re-run `npm run dev:uninstall`.
+   451→
+   452→## Project layout
+   453→
+   454→```
+   455→src/
+   456→  index.ts            # entry — stdin drain, provider dispatch, cache, render, compose
+   457→  types.ts            # Provider = string | null; ProviderType / CompareMethod / ProviderEntry
+   458→  providers.ts        # URL matching, fetcher / template / fail-label dispatch
+   459→  plugins/minimax/index.js    # Quota fetch + tolerant parser for /v1/token_plan/remains
+   460→  plugins/deepseek/index.js   # BALANCE fetch + parser for /user/balance
+   461→  api.quote.ts        # m_quote remote fetch + dot-path scan
+   462→  quotes.ts           # bundled quotes.json (100+ bilingual entries) — m_quote local fallback
+   463→  render.ts           # read-only against tickState.pending; MODULES + INLINE_RENDERERS + INLINE_SCHEMAS dispatchers
+   464→  data-processor.ts   # processTick + setPrevTick + setAvg + setLastSpeed/ApiMs/TokenHitRate — owns ALL writes to tickState.pending
+   465→  tick-state.ts       # per-tick in-memory Store: beginTick / mark / commit
+   466→  status-store.ts     # three-layer acc (session/project/model) + cold-slot JSONL replay + stat cache
+   467→  cache.ts            # 60s TTL + stale-on-error; per-project cache.json shadowing
+   468→  composition.ts      # reads CREDITGAUGE_UPSTREAM, prepends (preserving ANSI/multi-line) and appends line
+   469→  config.ts           # loads ~/.claude/plugins/creditgauge/config.json; module-level singleton store
+   470→  diagnostics.ts      # JSONL append logger (opt-in via CREDITGAUGE_DIAGNOSTICS_ENABLE); 1000-line cap
+   471→  dispatch.ts         # providerType → module-set dispatch (provider-aware gating)
+   472→  git-info.ts         # m_branch / m_gitStatus read-side helpers (cwd-based)
+   473→  session-parse.ts    # parseTokenSnapshot — stdin JSON → TokenSnapshot; m_tokenTotalIn invariant check
+   474→  token-store.ts      # append-only JSONL state file at state/<projectHash>/<sessionId>.jsonl for m_acc* / m_sum*
+   475→  __fixtures__/       # remains.real.json, balance.real.json, balance.multi.json, …
+   476→  *.test.ts           # node:test unit tests
+   477→.claude-plugin/
+   478→  plugin.json         # plugin manifest (declares commands, version, keywords)
+   479→  marketplace.json    # single-plugin marketplace wiring
+   480→commands/
+   481→  install.md          # /creditgauge:install slash command
+   482→  uninstall.md        # /creditgauge:uninstall slash command
+   483→  clean.md            # /creditgauge:clean slash command
+   484→  clean-cache.md      # /creditgauge:clean-cache slash command
+   485→  config.md            # /creditgauge:config slash command
+   486→scripts/
+   487→  wrapper.sh          # bash wrapper: CREDITGAUGE_UPSTREAM_CMD → CREDITGAUGE_UPSTREAM → us
+   488→  install.sh          # settings.json patcher (install only)
+   489→  uninstall.sh        # self-contained uninstaller (used by :uninstall and dev:uninstall)
+   490→  clean.sh            # trim old .bak.<ts> files; --purge-runtime also wipes state/<projectHash>/{cache.json,diagnostics.jsonl,*.jsonl}
+   491→  clean-cache.sh      # prune old version dirs under cache/creditgauge/, keep newest
+   492→  migrate-state.sh    # legacy state/token-samples/<hash>/<sid>.jsonl → state/<hash>/<sid>.jsonl
+   493→  dev-uninstall.sh    # DEV-ONLY thin shim → exec uninstall.sh
+   494→  lib/edit-settings.mjs  # ESM helper used by install.sh
+   495→  test-edit-settings.sh  # shell regression tests for edit-settings.mjs
+   496→  test-install.sh        # shell regression tests for install.sh (isolated tmpdir)
+   497→  test-clean-cache.sh    # shell regression tests for clean-cache.sh
+   498→settings.example.json # template (NEVER commit real settings.json)
+   499→```
+   500→
+   501→## What's new
+   502→
+   503→**v1.1.9** — Token cost tracking at processTick time (cost stored in JSONL + accumulator, survives across sessions via replay); dedicated `config.tokenPrices.json` with 5-layer cascade; default provider filter on `m_sum*` modules now defaults to all models instead of active-only; install-journal change report display with tiered command handling; ⏱️ API ms integrated into default statusline preset; unified ¥ (U+00A5) symbol; fix uninstall.sh `set -u` crash.
+   504→
+   505→**v1.1.8** — New `creditgauge-plugin` CLI (`npx creditgauge plugin add/remove/auth/list`) for query plugin lifecycle management; new opencode.ai workspace quota plugin; query plugin metadata registry (`query_plugins/plugins.json`). Supports `opencode`, `bigmodel`, `copilot-api`, `kimi` out of the box.
+   506→
+   507→**v1.1.7** — New `npx creditgauge install` (auto-mirrors into plugin cache on cache miss, no marketplace required); new `/creditgauge:reset` slash command to wipe per-project runtime caches; new `standard-slim` preset with compressed header row and reduced spacing (removed in a later release — superseded by the `solo` preset).
+   508→
+   509→**v1.0.0** — Renamed from `topgauge` to `creditgauge` (hard cut, no compat shim). See CHANGELOG for the rename history (`tokenplan-usage-hud` → `topgauge` v0.7.0 → `creditgauge` v1.0.0).
+   510→
+   511→**v0.9.7** — Install-journal: `install.sh` records every per-field change to `settings.json.statusLine` to a write-ahead log; `uninstall.sh` reverts field-by-field, preserving any field the user touched after install.
+   512→
+   513→**v0.9.6** — `m_sumEstQuota|term:short` projects the spent cost up to a full-period spend using the aligned plan window's `used%`. Renders `est:$30.20` (fixed 2dp, per-model currency). Prefix is configurable via `labels.labelEstQuota` (default `"est:"`).
+   514→
+   515→> Requires `tokenPrices.<modelId>` to be configured for the target model (see MANUAL §m_tokenCost). Without it, the module renders `est:n/a`.
+   516→
+   517→## License
+   518→
+   519→MIT — see [LICENSE](./LICENSE).

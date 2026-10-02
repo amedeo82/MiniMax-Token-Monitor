@@ -61,3 +61,20 @@ Work Log:
 Stage Summary:
 - Dashboard completa e verificata end-to-end: modalità demo, import JSON manuale, chiamata API reale via proxy /api/minimax/usage con Subscription Key
 - Tutti i valori visualizzati coincidono con l'analisi manuale dei timestamp (Europe/Rome, it-IT)
+
+---
+Task ID: 3
+Agent: Super Z (main)
+Task: Creazione della documentazione di progetto persistente (scoperte, piano di implementazione, tracking avanzamento)
+
+Work Log:
+- Riletto il worklog precedente, tutti gli artefatti di ricerca in scripts/ (mplan_faq, usagerules, faq token-plan, chatapi, listmodels, issue #88/#99, CreditGauge, CodexBar, dsh-provider-usage) e il codice implementato (lib/minimax.ts, lib/time.ts, lib/demo.ts, api/minimax/usage/route.ts, page.tsx, componenti)
+- Creato README.md: panoramica progetto, indice documentazione, stack, avvio rapido, sintesi regole piano, struttura repo
+- Creato docs/01-api-minimax-ricerca.md: endpoint confermati con marca di affidabilità (✅/🔶/❓), chiavi Subscription vs pay-as-you-go, endpoint primario eu/cn, alternativo coding_plan/remains, endpoint complementari (models, chat/completions con usage, video_generation), strategie per il consumo token, regole piano, codici di stato, archivio artefatti scripts/, fonti online
+- Creato docs/02-analisi-json-quota.md: JSON reale completo, schema dei 15 campi con unità e affidabilità, semantica critica percentuali vs conteggi (issue #99), verifiche matematiche (durate finestre 5h/24h/7g, triangolazione t_query = end − remains coincidente su 3 campi, countdown coerenti), tabella conversioni Europe/Rome, allineamenti finestre (weekly lunedì 00:00 UTC, video 24h mezzanotte UTC, general rolling 5h — coincide con l'esempio delle docs), formule derivate, cosa NON si può ricavare, casi limite
+- Creato docs/03-piano-implementazione.md: architettura con diagramma proxy, stack, mappa del codice, modelli dati TS, flussi chiave (API/polling, import JSON, demo, countdown vivi), regole d'oro fuso Europe/Rome, layout UI, tabella gestione errori, sicurezza, fasi F0–F6 con criteri di accettazione (F0–F5 completate), roadmap estensioni F6
+- Creato docs/04-stato-avanzamento.md: protocollo di aggiornamento per le prossime sessioni, riepilogo fasi, 11 attività di ricerca (R1–R11), 18 attività di implementazione (I1–I18), 6 verifiche empiriche aperte con procedure (V1–V6), 7 decisioni ADR, bugfix storici, changelog documentazione
+
+Stage Summary:
+- La documentazione persistente copre ricerche (docs/01–02: non andranno mai rifatte), implementazione (docs/03: guida operativa) e avanzamento (docs/04: tracking + protocollo per future sessioni)
+- Prossimo ingresso naturale per il lavoro: fasi F6 (estensioni) e verifiche empiriche V1–V6 elencate in docs/04

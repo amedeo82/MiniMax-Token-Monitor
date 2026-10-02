@@ -1,0 +1,238 @@
+# 02 — Analisi completa della risposta JSON di quota
+
+> **Scopo**: documento di riferimento per lo schema della risposta di
+> `/v1/token_plan/remains`, le unità di misura (verificate matematicamente), la
+> semantica dei campi (inclusa la trappola dei `*_usage_count`) e le conversioni
+> orario **Europe/Rome**. Se devi toccare il parser (`src/lib/minimax.ts`) o la
+> logica temporale (`src/lib/time.ts`), parti da qui.
+>
+> Ultimo aggiornamento: 2026-10-02.
+
+---
+
+## 1. La risposta reale analizzata
+
+JSON fornito dall'utente (query dell'endpoint con Subscription Key, regione Europa).
+`base_resp` ricostruito nella forma tipica (`status_msg: "success"`) — i campi
+analizzati sono quelli originali, intatti.
+
+```json
+{
+  "model_remains": [
+    {
+      "start_time": 1790935200000,
+      "end_time": 1790953200000,
+      "remains_time": 13321286,
+      "current_interval_total_count": 0,
+      "current_interval_usage_count": 0,
+      "model_name": "general",
+      "current_weekly_total_count": 0,
+      "current_weekly_usage_count": 0,
+      "weekly_start_time": 1790553600000,
+      "weekly_end_time": 1791158400000,
+      "weekly_remains_time": 218521286,
+      "current_interval_status": 1,
+      "current_interval_remaining_percent": 100,
+      "current_weekly_status": 1,
+      "current_weekly_remaining_percent": 64
+    },
+    {
+      "start_time": 1790899200000,
+      "end_time": 1790985600000,
+      "remains_time": 45721286,
+      "current_interval_total_count": 0,
+      "current_interval_usage_count": 0,
+      "model_name": "video",
+      "current_weekly_total_count": 0,
+      "current_weekly_usage_count": 0,
+      "weekly_start_time": 1790553600000,
+      "weekly_end_time": 1791158400000,
+      "weekly_remains_time": 218521286,
+      "current_interval_status": 3,
+      "current_interval_remaining_percent": 100,
+      "current_weekly_status": 3,
+      "current_weekly_remaining_percent": 100
+    }
+  ],
+  "base_resp": { "status_code": 0, "status_msg": "success" }
+}
+```
+
+---
+
+## 2. Schema dei campi (per ogni voce di `model_remains`)
+
+| Campo | Tipo | Unità | Significato | Affidabilità |
+|-------|------|-------|-------------|--------------|
+| `model_name` | string | — | Categoria d'uso del modello: `general` (testo/immagini/audio), `video` | ✅ |
+| `start_time` | epoch | **ms** | Inizio della finestra breve (5h per general, 24h per video) | ✅ |
+| `end_time` | epoch | **ms** | Fine della finestra breve = **momento del reset** | ✅ |
+| `remains_time` | durata | **ms** | Countdown residuo della finestra breve (= `end_time − t_query`) | ✅ (verifica §4) |
+| `current_interval_total_count` | int | conteggi | Quota totale della finestra breve. `0` = **non dichiarata** (piano tracciato a percentuali) | ⚠️ inaffidabile |
+| `current_interval_usage_count` | int | conteggi | **TRAPPOLA**: quando popolato indica quota *RESIDUA*, non consumata (issue #99). Qui `0` = non popolato | ⚠️ inaffidabile |
+| `current_interval_status` | int | — | Stato finestra breve: `1` attiva/in uso, `3` inattiva/mai usata, `2` esaurita (ipotesi) | 🔶 |
+| `current_interval_remaining_percent` | 0–100 | % | **Percentuale rimanente finestra breve — fonte della verità** | ✅ |
+| `current_weekly_total_count` | int | conteggi | Come `total_count`, per la finestra settimanale | ⚠️ inaffidabile |
+| `current_weekly_usage_count` | int | conteggi | Come `usage_count`, per la finestra settimanale | ⚠️ inaffidabile |
+| `current_weekly_status` | int | — | Stato finestra settimanale (stessa codifica) | 🔶 |
+| `current_weekly_remaining_percent` | 0–100 | % | **Percentuale rimanente settimanale — fonte della verità** | ✅ |
+| `weekly_start_time` | epoch | **ms** | Inizio finestra settimanale (condivisa tra i modelli) | ✅ |
+| `weekly_end_time` | epoch | **ms** | Fine finestra settimanale = reset settimanale | ✅ |
+| `weekly_remains_time` | durata | **ms** | Countdown residuo settimanale | ✅ (verifica §4) |
+
+Alla radice della risposta possono comparire anche: `current_subscribe_title` /
+`plan_name` (titolo piano) e `points_balance` / `credits_balance` (saldo crediti) —
+alias gestiti dal parser.
+
+---
+
+## 3. Semantica critica: percentuali vs conteggi
+
+**Il contraddittorio che ha richiesto la ricerca**: nel JSON reale il modello
+`general` ha `current_weekly_remaining_percent: 64` (quindi **36% consumato**) ma
+`current_weekly_usage_count: 0`. Se i conteggi fossero attendibili dovrebbero
+riflettere il consumo: non lo fanno.
+
+Confronto con l'issue **#99** (risposta ufficiale del team MiniMax): lì i conteggi
+erano popolati e **`usage_count` rappresentava la quota RESIDUA**, tanto che il calcolo
+corretto era `consumato = total_count − usage_count`.
+
+Sintesi operativa (implementata nel dashboard):
+
+1. **Le percentuali sono l'unica fonte affidabile** nei piani tracciati a percentuale
+   (piani attuali). Consumato = `100 − remaining_percent`.
+2. I conteggi valgono `0` → **non significativi**: il dashboard li mostra solo con la
+   dicitura "non dichiarati" e la nota esplicativa (componente `CountsRow`).
+3. Se in futuro l'endpoint dovesse restituire conteggi > 0 (piani a conteggi), la
+   lettura corretta è `usage_count = residuo` → `consumato = total − usage`
+   (l'implementazione mostra sempre entrambi i valori con l'etichetta giusta).
+
+---
+
+## 4. Verifiche matematiche (triangolazione completa)
+
+Tutti i calcoli seguenti sono stati verificati a mano sui valori del JSON reale.
+
+### 4.1 Durata delle finestre
+
+```
+general:  end − start = 1.790.953.200.000 − 1.790.935.200.000 =  18.000.000 ms =  5 ore ✅
+video:    end − start = 1.790.985.600.000 − 1.790.899.200.000 =  86.400.000 ms = 24 ore ✅
+weekly:   end − start = 1.791.158.400.000 − 1.790.553.600.000 = 604.800.000 ms =  7 giorni ✅
+```
+
+### 4.2 L'unità di `remains_time` è il millisecondo
+
+Deriviamo il **momento della query** in tre modi indipendenti: `t_query = end − remains_time`.
+
+```
+da general:  1.790.953.200.000 −   13.321.286 = 1.790.939.878.714
+da video:    1.790.985.600.000 −   45.721.286 = 1.790.939.878.714   ← identico ✅
+da weekly:   1.791.158.400.000 −  218.521.286 = 1.790.939.878.714   ← identico ✅
+```
+
+Tre campi diversi, tre finestre diverse, **lo stesso istante**: `remains_time` e
+`weekly_remains_time` sono durate in **millisecondi** e la query è avvenuta a
+`1.790.939.878.714 ms`. Se fossero stati secondi, il valore derivato sarebbe
+incoerente di ~1000× e le tre stime non coinciderebbero mai.
+
+### 4.3 Countdown coerenti con le scadenze
+
+```
+general:  13.321.286 ms =  3h 42m 01s   → 17:00 − 13:17:58,7 =  3:42:01 ✅
+video:    45.721.286 ms = 12h 42m 01s   → 02:00 (03/10) − 13:17:58,7 = 12:42:01 ✅
+weekly:  218.521.286 ms =  2g 12h 42m 01s → 02:00 (05/10) − 13:17:58,7 = 60:42:01 ✅
+```
+
+### 4.4 Conclusione
+
+- **Tutti i timestamp** della risposta sono epoch in **millisecondi**.
+- **`remains_time` / `weekly_remains_time`** sono **durate in millisecondi**, calcolate
+  dal server come `end_time − t_query`.
+- Nel dashboard `remains_time` serve come **sincronizzazione** (deduzione dell'ora del
+  server, `inferServerTime()`), mentre i countdown mostrati vengono **ricalcolati
+  localmente** ogni secondo da `end_time` (così non derivano dallo skew dell'orologio
+  locale rispetto a `fetchedAt`).
+
+---
+
+## 5. Conversioni Europe/Rome del JSON reale
+
+Roma nel 2026: **CEST (UTC+2)** fino al 25/10, poi CET (UTC+1). Nelle date campione è
+tutto CEST → UTC + 2 ore.
+
+| Valore | Epoch (ms) | UTC | Europe/Rome | Nota |
+|--------|-----------:|-----|-------------|------|
+| weekly start | 1.790.553.600.000 | lun 28/09/2026 00:00 | **lun 28/09 02:00** | lunedì UTC |
+| general start | 1.790.935.200.000 | ven 02/10/2026 10:00 | **ven 02/10 12:00** | rolling 5h |
+| general end | 1.790.953.200.000 | ven 02/10/2026 15:00 | **ven 02/10 17:00** | reset 5h |
+| video start | 1.790.899.200.000 | sab→ven 02/10/2026 00:00 | **ven 02/10 02:00** | mezzanotte UTC |
+| video end | 1.790.985.600.000 | sab 03/10/2026 00:00 | **sab 03/10 02:00** | reset giornaliero |
+| weekly end | 1.791.158.400.000 | lun 05/10/2026 00:00 | **lun 05/10 02:00** | reset settimanale |
+| momento query | 1.790.939.878.714 | ven 02/10/2026 11:17:58,7 | **ven 02/10 13:17:58,7** | derivato (§4.2) |
+
+Giorni della settimana verificati: 28/09/2026 = **lunedì**, 02/10/2026 = **venerdì**.
+
+### Osservazioni di allineamento (importanti!)
+
+1. **Weekly**: inizia **lunedì 00:00 UTC** (lunedì 02:00 a Roma in CEST, 01:00 in CET).
+   ⚠️ L'ancoraggio è **UTC**: col cambio ora legale/solare l'orologio locale di Roma
+   dell'reset cambia (02:00 ↔ 01:00). **Mai** usare offset fissi: solo
+   `Intl.DateTimeFormat` con `timeZone: "Europe/Rome"` (già fatto in `src/lib/time.ts`).
+2. **Video (interval 24h)**: allineato a **mezzanotte UTC** (02:00 a Roma in CEST).
+   Coerente con l'ipotesi che tracci il tetto giornaliero di generazioni video
+   (i piani recenti includono "N video al giorno") 🔶.
+3. **General (5h)**: `start 10:00 UTC → end 15:00 UTC`. È una finestra **rolling**:
+   secondo le docs ufficiali *"if your first use is at 10:00, that 5-hour window ends
+   at 15:00"* — l'esempio della documentazione coincide esattamente col nostro campione.
+   Lo start della finestra = momento del **primo utilizzo dopo la scadenza precedente**.
+
+---
+
+## 6. Lettura del campione reale (cosa stava succedendo)
+
+- `general` era in una finestra 5h attiva (ven 12:00→17:00 Roma), aperta con il primo
+  utilizzo; nel momento della query restava il 100% della finestra 5h (nessun consumo
+  in quella finestra: i precedenti 36% settimanali erano stati consumati in finestre 5h
+  precedenti), mentre il piano settimanale era al **64%**.
+- `video` non era mai stato usato nel periodo: finestre con stato `3` ("inattiva · mai
+  usata") e percentuali al 100%.
+- Le finestre **settimanali** dei due modelli condividono esattamente `weekly_start_time`,
+  `weekly_end_time`, `weekly_remains_time` → i **confini** della finestra settimanale
+  sono condivisi; la **percentuale** è invece **per modello** (64 vs 100).
+
+---
+
+## 7. Formule derivate usate nel dashboard
+
+| Metrica | Formula | Implementazione |
+|---------|---------|-----------------|
+| Consumo % di una finestra | `consumato = 100 − remaining_percent` (clamp 0–100) | `consumedPercent()` in `src/lib/minimax.ts` |
+| Countdown al reset | `end_time − now` ricalcolato ogni secondo | `msUntil()` + tick 1s in `page.tsx`; fallback `remains_time` |
+| Ora del server | `end_time − remains_time` (prima finestra valida) | `inferServerTime()` |
+| Avanzamento finestra | `(now − start_time) / (end_time − start_time)` · 100 | `windowProgress()` |
+| Prossimo reset breve | `end_time` corrente | mostrato con `formatDateTimeRome()` |
+| Prossimo reset settimanale | `weekly_end_time` | idem |
+| Apertura nuova finestra 5h | dopo il reset, al **primo utilizzo** (rolling): lo start non è prevedibile | il dashboard mostra "reset disponibile da HH:MM" |
+
+---
+
+## 8. Cosa NON si può ricavare da questo endpoint
+
+- **Token assoluti consumati**: l'endpoint non espone numeri di token né costi. Le
+  strategie per ottenerli sono in `docs/01` §6 (`usage` delle chat completions,
+  console, CLI `mmx quota`).
+- **Quota totale del piano** in unità native (i `*_total_count` valgono 0).
+- **Storico**: l'endpoint è un'istantanea → lo storico va costruito lato client
+  (il progetto lo fa via `localStorage`, max 600 campioni).
+
+## 9. Casi limite e comportamenti da tenere d'occhio
+
+| Caso | Comportamento atteso | Stato |
+|------|----------------------|-------|
+| Finestra mai usata | `status: 3`, percent 100, finestra "virtuale" (video: 24h allineata UTC) | ✅ osservato |
+| Finestra attiva | `status: 1`, percent < 100 se consumato | ✅ osservato |
+| Quota esaurita | Presumibilmente `status: 2` e percent → 0 | ❓ da verificare (V1 in `docs/04`) |
+| Subito dopo il reset senza nuovo uso | ❓ start_time della nuova finestra: = end_time precedente o invariato? Da osservare | ❓ (V3) |
+| Risposta annidata sotto `data` / epoch in secondi / status testuali | Varianti di formato osservate nei progetti open-source | ✅ gestite dal parser |
+| Chiave errata | `base_resp.status_code: 1004` | ✅ gestito (messaggio dedicato) |
