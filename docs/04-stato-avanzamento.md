@@ -26,8 +26,8 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | F3 | Tempo Europe/Rome + it-IT, ora server dedotta | ✅ | 2026-10-02 |
 | F4 | Storico localStorage + grafico + trend | ✅ | 2026-10-02 |
 | F5 | Robustezza: import JSON, demo, pannelli tecnici, verifiche browser | ✅ | 2026-10-02 |
-| F6a | Contatore token reale (chat completions + campo usage) | ✅ | 2026-10-02 |
-| F6b | Resto delle estensioni (roadmap in `docs/03` §11) | ⬜ | — |
+| F6a | ~~Contatore token reale (chat completions + campo usage)~~ — **rimossa (ADR-8): consumava la quota del piano** | 🚫 | 2026-10-02 |
+| F6b | Estensioni analisi/monitoraggio: avvisi soglia, registro eventi, export CSV/JSON, verdetto esaurimento vs reset, panoramica modelli | ✅ | 2026-10-02 |
 
 ---
 
@@ -67,12 +67,16 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I12 | Verifica end-to-end agent-browser (desktop+mobile, import, console) | F5 | ✅ | Screenshot in `scripts/verify_*.png` |
 | I13 | Bugfix `videoDayStart` non definito in demo.ts | F5 | ✅ | Rilevato via agent-browser |
 | I14 | Documentazione di progetto (questi 4 file + README) | — | ✅ | 2026-10-02 |
-| I15 | Contatore token reale via `/v1/chat/completions` (`usage`) | F6a | ✅ | Route `/api/minimax/chat` + `lib/token-log.ts` + `TokenTracker`; verificato in demo e con errori reali (400/401) — 2026-10-02 |
+| I15 | ~~Contatore token reale via `/v1/chat/completions`~~ | F6a | 🚫 | **Rimossa 2026-10-02 (ADR-8)**: con la Subscription Key ogni chiamata consumava la quota del piano; rimossi `api/minimax/chat`, `lib/token-log.ts`, `TokenTracker` |
 | I16 | Persistenza storica server-side (Prisma/SQLite) | F6 | ⬜ | Schema già disponibile nel repo |
-| I17 | Notifiche soglie (<10/25% o reset) | F6 | ⬜ | |
+| I17 | Notifiche soglie (<10/25% o reset) | F6b | ✅ | `lib/usage-events.ts` (banner + toast + Notification API, soglie configurabili) — 2026-10-02 |
 | I18 | Fallback automatico su `coding_plan/remains` | F6b | ⬜ | Dipende da V4 |
-| I19 | Persistenza del registro token su server (Prisma/SQLite) | F6b | ⬜ | Oggi solo localStorage (`docs/03` §11.1) |
-| I20 | Correlazione token ↔ calo percentuale quota ("token per punto %") | F6b | ⬜ | Nuova idea dalla F6a (`docs/03` §11.8) |
+| I19 | ~~Persistenza del registro token su server~~ | F6b | 🚫 | **Rimossa**: dipendeva da I15 (ADR-8) |
+| I20 | ~~Correlazione token ↔ calo percentuale quota~~ | F6b | 🚫 | **Rimossa**: dipendeva da I15 (ADR-8) |
+| I21 | Registro eventi persistente + timeline UI | F6b | ✅ | `mm-dash-events-v1` (max 200) + `EventLog` (per giorno Roma, badge, svuota) — 2026-10-02 |
+| I22 | Export storico ed eventi in CSV/JSON | F6b | ✅ | `lib/export.ts` (CSV «;» + BOM per Excel it-IT); pulsanti su grafico e registro — 2026-10-02 |
+| I23 | Verdetto «esaurimento stimato vs orario di reset» | F6b | ✅ | `ProjectionVerdict` in `StatsPanel` (amber se si esaurisce prima del reset, verde altrimenti) — 2026-10-02 |
+| I24 | Vista panoramica modelli (tutte le finestre a confronto) | F6b | ✅ | `PanoramicTable` (modello × finestra: residuo, stato, countdown reset) — 2026-10-02 |
 
 ---
 
@@ -103,6 +107,8 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | ADR-5 | 2026-10-02 | Storico in **localStorage** (max 600 punti, dedup 20s) | Zero backend, sufficiente per trend di sessione/giornata | DB server-side → rimandato a I16 (F6) |
 | ADR-6 | 2026-10-02 | Parser tollerante (risposta sotto `data`, epoch s/ms, status numerici/testuali) | Le versioni/endpoint MiniMax variano (prove da CreditGauge/CodexBar/dsh) | Parser rigido (si rompe al primo cambiamento) |
 | ADR-7 | 2026-10-02 | Modalità demo + import JSON come prima-class citizens | Permettono sviluppo/verifica senza esporre la chiave e senza API | Solo API reale (blocca lo sviluppo senza chiave) |
+| ADR-8 | 2026-10-02 | **Rimozione del contatore token reale** (F6a): il dashboard NON invoca modelli e resta read-only su `token_plan/remains` | L'unico metodo programmatico per misurare i token (`usage` di `/v1/chat/completions`) richiede di consumare la quota stessa del piano; un monitor che consuma ciò che misura non è accettabile | Mantenere F6a dietro avviso esplicito (rischio di consumare quota senza accorgersene) |
+| ADR-9 | 2026-10-02 | Avvisi **client-side e senza stato server**: banner stateless + transizioni tra snapshot consecutivi + registro eventi in localStorage (max 200) | Zero chiamate extra (il polling esiste già), nessun backend, niente spam di notifiche a ogni poll | Service worker (rimandato a F6 future), controllo soglie lato server |
 
 ---
 
@@ -116,8 +122,9 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 ## 7. Aperture di progettazione
 
 - ❓ Come mostrare il "primo utilizzo" previsto (finestra rolling) senza confondere l'utente: oggi il dashboard mostra "reset disponibile da HH:MM".
-- ❓ Se arrivano più di due `model_name` (es. `image`, `audio`, `search`): la UI genera card dinamicamente, ma `MainWindows`/storico sono ancorati a `general` — da generalizzare se il piano cambia.
-- ❓ Notifica persistente (service worker) vs toast per le soglie (I17).
+- ❓ Se arrivano più di due `model_name` (es. `image`, `audio`, `search`): la UI genera card dinamicamente (e la `PanoramicTable` le include tutte), ma `MainWindows`/storico sono ancorati a `general` — da generalizzare se il piano cambia.
+- ✅ Notifica soglie: risolto in F6b con banner + toast + Notification API (ADR-9); il Service Worker per notifiche a tab chiuso resta opzione futura (roadmap `docs/03` §11.4).
+- ❓ Il verdetto di proiezione (I23) usa un modello lineare sui primi 60 rilevamenti: valutare una media mobile o una regressione pesata quando lo storico cresce (dipende da I16).
 
 ---
 
@@ -132,3 +139,6 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | 2026-10-02 | `docs/04-stato-avanzamento.md` | Creato: questo file (fasi, attività R/I, verifiche V, ADR, changelog) |
 | 2026-10-02 | `docs/01` §6, `docs/03` §3/§5.5/§7/§10/§11, questo file | Aggiornati per **I15 — contatore token reale**: nuova route `/api/minimax/chat`, `lib/token-log.ts`, componente `TokenTracker`, fase F6a completata, avviso consumo reale con Subscription Key |
 | 2026-10-02 | Verifica F6a | agent-browser: pannello renderizzato (desktop+mobile), simulazione demo registrata (prompt 19 + risposta 407 = 426 token), storico e svuotamento OK, `localStorage` confermato, route testata con curl (400 missing_key, 401 chiave errata mappata), zero errori console, lint pulito |
+| 2026-10-02 | `docs/01` §5.2/§6, `docs/03` (mappa, §5.5→§5.5/5.6, layout, fasi, roadmap), questo file | **Rimozione F6a (ADR-8)**: eliminati `api/minimax/chat/route.ts`, `lib/token-log.ts`, `token-tracker.tsx`; il dashboard è read-only; I15/I19/I20 archiviate come 🚫 |
+| 2026-10-02 | `docs/03` §3/§4/§5.5/§5.6/§7/§10/§11, questo file | **F6b implementata**: I17 avvisi soglia (banner + toast + notifiche browser, soglie configurabili), I21 registro eventi + `EventLog`, I22 export CSV/JSON (`lib/export.ts`), I23 verdetto esaurimento vs reset (`ProjectionVerdict`), I24 `PanoramicTable`; nuove chiavi localStorage `mm-dash-events-v1` e campi settings (ADR-9) |
+| 2026-10-02 | Verifica F6b | agent-browser: banner attenzione con soglia 50% (37,2% < 50), transizione import→demo genera toast + evento in registro, `mm-dash-events-v1` corretto, verdetto «Quota sufficiente fino al reset» su dati demo, export CSV/JSON senza errori, svuotamento registro, desktop+mobile OK, zero errori console, lint pulito |

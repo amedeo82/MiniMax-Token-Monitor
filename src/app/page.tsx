@@ -9,7 +9,19 @@ import { ModelCard, MainWindows } from "@/components/quota-cards";
 import { HistoryChart, StatsPanel, computeTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
 import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/components/settings-dialog";
 import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
-import { TokenTracker } from "@/components/token-tracker";
+import { EventLog } from "@/components/event-log";
+import { PanoramicTable } from "@/components/model-table";
+import {
+  deriveBanner,
+  evaluateTransitions,
+  appendEvents,
+  loadEvents,
+  clearEvents,
+  makeEvent,
+  notifyBrowser,
+  type UsageEvent,
+  type BannerInfo,
+} from "@/lib/usage-events";
 import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
 import { makeDemoSnapshot, makeDemoHistory } from "@/lib/demo";
 import { formatCountdown, formatDateRome, formatTimeRome, nowRomeTime, romeZoneInfo, msUntil } from "@/lib/time";
@@ -26,6 +38,8 @@ import {
   Sparkles,
   ChevronRight,
   ClipboardPaste,
+  AlertTriangle,
+  AlertOctagon,
 } from "lucide-react";
 
 const SETTINGS_KEY = "mm-dash-settings-v1";
@@ -65,15 +79,21 @@ export default function DashboardPage() {
   const [error, setError] = React.useState<ApiError | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [history, setHistory] = React.useState<HistoryPoint[]>([]);
+  const [events, setEvents] = React.useState<UsageEvent[]>([]);
   const [chartWindow, setChartWindow] = React.useState<"interval" | "weekly">("interval");
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [now, setNow] = React.useState<number>(() => Date.now());
+
+  /* Riferimenti per il confronto tra rilevamenti consecutivi (transizioni) */
+  const prevSnapRef = React.useRef<UsageSnapshot | null>(null);
+  const prevOkRef = React.useRef<boolean | null>(null);
 
   /* ----------------------------- init ----------------------------- */
   React.useEffect(() => {
     const s = loadSettings();
     setSettings(s);
     setHistory(loadHistory());
+    setEvents(loadEvents());
     setMounted(true);
     setNow(Date.now());
   }, []);
@@ -107,6 +127,23 @@ export default function DashboardPage() {
       }
       return trimmed;
     });
+  }, []);
+
+  const winShortLabel = (win: "interval" | "weekly") => (win === "interval" ? "finestra di 5 ore" : "finestra settimanale");
+
+  /** Registra lo stato "errore" (con evento solo sulla transizione ok → errore). */
+  const markError = React.useCallback((message: string) => {
+    setLastOk(false);
+    if (prevOkRef.current !== false) {
+      prevOkRef.current = false;
+      setEvents((prev) => appendEvents(makeEvent("error", `Rilevamento fallito: ${message}`)));
+    }
+  }, []);
+
+  /** Registra lo stato "connesso". */
+  const markOk = React.useCallback(() => {
+    setLastOk(true);
+    prevOkRef.current = true;
   }, []);
 
   const fetchData = React.useCallback(
@@ -149,7 +186,7 @@ export default function DashboardPage() {
             })),
           });
           setLastEndpoint("demo://token_plan/remains");
-          setLastOk(true);
+          markOk();
           setLastFetch(snap.fetchedAt);
           // Popola la storia demo se vuota
           setHistory((prev) => {
@@ -192,39 +229,41 @@ export default function DashboardPage() {
             });
             setSnapshot(snap);
             setRawJson(json.data);
-            setLastOk(true);
+            markOk();
             pushHistory(snap);
           } catch (e) {
             // Errore di business dell'API (es. status_code 1004) o parsing
-            setLastOk(false);
             setRawJson(json.data);
             const err = e as Error & { statusCode?: number };
+            markError(err.message);
             setError({
               code: err.statusCode ? `api_${err.statusCode}` : "parse",
               message: err.message,
             });
           }
         } else {
-          setLastOk(false);
+          const message = json.error?.message ?? "Errore sconosciuto durante la sincronizzazione.";
+          markError(message);
           setRawJson(json.data ?? null);
           setError(
             json.error ?? {
               code: "unknown",
-              message: "Errore sconosciuto durante la sincronizzazione.",
+              message,
             },
           );
         }
       } catch (e) {
-        setLastOk(false);
+        const message = e instanceof Error ? e.message : "Errore imprevisto lato client.";
+        markError(message);
         setError({
           code: "client",
-          message: e instanceof Error ? e.message : "Errore imprevisto lato client.",
+          message,
         });
       } finally {
         setLoading(false);
       }
     },
-    [pushHistory],
+    [pushHistory, markError, markOk],
   );
 
   /* Prima sincronizzazione al mount */
@@ -239,6 +278,32 @@ export default function DashboardPage() {
     const id = setInterval(() => void fetchData(settings, true), settings.refreshSeconds * 1000);
     return () => clearInterval(id);
   }, [mounted, settings, fetchData]);
+
+  /* Transizioni tra snapshot: toast + notifiche browser + eventi nel registro */
+  React.useEffect(() => {
+    if (!snapshot) return;
+    const result = evaluateTransitions(prevSnapRef.current, snapshot, settings);
+    prevSnapRef.current = snapshot;
+    if (result.resets.length === 0 && result.alerts.length === 0) return;
+
+    if (result.events.length > 0) setEvents((prev) => appendEvents(result.events));
+
+    for (const r of result.resets) {
+      toast.success("Finestra resettata", {
+        description: `${r.modelLabel} — ${winShortLabel(r.win)} tornata al ${r.to.toFixed(1)}%`,
+      });
+      if (settings.browserNotifications) {
+        notifyBrowser("MiniMax · Finestra resettata", `${r.modelLabel}: quota tornata al ${r.to.toFixed(1)}%`);
+      }
+    }
+    for (const a of result.alerts) {
+      const title = a.level === "crit" ? "Quota quasi esaurita" : "Soglia di attenzione superata";
+      const desc = `${a.modelLabel} — ${winShortLabel(a.win)} al ${a.to.toFixed(1)}%`;
+      if (a.level === "crit") toast.error(title, { description: desc });
+      else toast.warning(title, { description: desc });
+      if (settings.browserNotifications) notifyBrowser(`MiniMax · ${title}`, desc);
+    }
+  }, [snapshot, settings]);
 
   const handleSaveSettings = (s: DashboardSettings) => {
     setSettings(s);
@@ -266,7 +331,7 @@ export default function DashboardPage() {
       setSnapshot(snap);
       setRawJson(raw);
       setLastEndpoint("json://incollato (risposta API importata manualmente)");
-      setLastOk(true);
+      markOk();
       setLastFetch(snap.fetchedAt);
       setError(null);
       pushHistory(snap);
@@ -276,6 +341,12 @@ export default function DashboardPage() {
       setError({ code: "parse", message });
       toast.error(message);
     }
+  };
+
+  const handleClearEvents = () => {
+    clearEvents();
+    setEvents([]);
+    toast.success("Registro eventi svuotato");
   };
 
   /* ---------------------------- derived ---------------------------- */
@@ -296,6 +367,14 @@ export default function DashboardPage() {
       : null;
 
   const needsSetup = !settings.demoMode && !settings.apiKey;
+
+  /* Banner quota bassa (deriva solo dallo snapshot corrente) */
+  const banner = React.useMemo<BannerInfo | null>(() => deriveBanner(snapshot, settings), [snapshot, settings]);
+
+  /* Finestra selezionata nel grafico: reset e residuo per il verdetto di proiezione */
+  const selectedWindow = chartWindow === "interval" ? general?.interval : general?.weekly;
+  const selectedWindowEnd = selectedWindow?.end ?? null;
+  const selectedWindowRemaining = selectedWindow?.remainingPercent ?? null;
 
   /* ---------------------------- render ----------------------------- */
   return (
@@ -473,6 +552,34 @@ export default function DashboardPage() {
             </div>
           ) : snapshot ? (
             <>
+              {/* Banner quota bassa (avvisi di soglia) */}
+              {banner ? (
+                <Alert
+                  className={
+                    banner.level === "crit"
+                      ? "border-rose-500/30 bg-rose-950/40 text-rose-100"
+                      : "border-amber-500/30 bg-amber-950/40 text-amber-100"
+                  }
+                >
+                  {banner.level === "crit" ? <AlertOctagon className="size-4" /> : <AlertTriangle className="size-4" />}
+                  <AlertTitle>
+                    {banner.level === "crit"
+                      ? "Quota quasi esaurita"
+                      : "Soglia di attenzione superata"}
+                  </AlertTitle>
+                  <AlertDescription>
+                    <ul className={`mt-1 space-y-0.5 ${banner.level === "crit" ? "text-rose-200/90" : "text-amber-200/90"}`}>
+                      {banner.items.map((item) => (
+                        <li key={`${item.model}-${item.win}`}>
+                          {item.modelLabel} · {item.win === "interval" ? "finestra di 5 ore" : "finestra settimanale"}{" "}
+                          al <strong>{item.remaining.toFixed(1)}%</strong> (soglia {item.threshold}%)
+                        </li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
               {/* Anelli principali */}
               <MainWindows general={general} now={now} />
 
@@ -483,7 +590,15 @@ export default function DashboardPage() {
 
               {/* Grafico + statistiche */}
               <HistoryChart history={history} window={chartWindow} onWindowChange={setChartWindow} />
-              <StatsPanel trend={trend} win={chartWindow} />
+              <StatsPanel
+                trend={trend}
+                win={chartWindow}
+                resetAt={selectedWindowEnd}
+                remaining={selectedWindowRemaining}
+              />
+
+              {/* Vista panoramica: tutte le finestre del piano a confronto */}
+              <PanoramicTable models={snapshot.models} now={now} />
 
               {/* Altri modelli */}
               {otherModels.length > 0 ? (
@@ -503,9 +618,6 @@ export default function DashboardPage() {
               {/* Card dettaglio "general" se ha dati extra (es. stato, boost) */}
               {general ? null : null}
 
-              {/* Contatore token reale (chat completions + campo usage) */}
-              <TokenTracker apiKey={settings.apiKey} region={settings.region} demoMode={settings.demoMode} />
-
               {/* JSON + dettagli tecnici */}
               <div className="grid gap-4 lg:grid-cols-2">
                 <RawJsonPanel rawJson={rawJson} fetchedAt={lastFetch} endpoint={lastEndpoint} ok={lastOk} />
@@ -518,6 +630,9 @@ export default function DashboardPage() {
                   sourceLabel={sourceLabel}
                 />
               </div>
+
+              {/* Registro eventi: reset, soglie, errori */}
+              <EventLog events={events} onClear={handleClearEvents} />
             </>
           ) : loading ? (
             <div className="flex h-64 items-center justify-center text-sm text-zinc-500">

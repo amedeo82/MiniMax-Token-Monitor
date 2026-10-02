@@ -4,6 +4,7 @@ import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Area,
   AreaChart,
@@ -14,8 +15,9 @@ import {
   YAxis,
   ReferenceLine,
 } from "recharts";
-import { formatCountdown, formatDateTimeRome, formatShortRome } from "@/lib/time";
-import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge } from "lucide-react";
+import { formatCountdown, formatDateTimeRome, formatShortRome, formatTimeRome } from "@/lib/time";
+import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
+import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, FileJson, ShieldCheck, AlertTriangle, Info } from "lucide-react";
 
 export interface HistoryPoint {
   t: number;
@@ -70,12 +72,36 @@ export function HistoryChart({ history, window: win, onWindowChange }: HistoryCh
             Cronologia locale degli ultimi rilevamenti (orario Europe/Rome)
           </CardDescription>
         </div>
-        <Tabs value={win} onValueChange={(v) => onWindowChange(v as "interval" | "weekly")}>
-          <TabsList className="bg-white/[0.06]">
-            <TabsTrigger value="interval" className="text-xs data-[state=active]:text-zinc-900">5 ore</TabsTrigger>
-            <TabsTrigger value="weekly" className="text-xs data-[state=active]:text-zinc-900">Settimanale</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Esporta lo storico in CSV"
+            title="Esporta lo storico in CSV"
+            disabled={history.length === 0}
+            onClick={() => exportHistoryCsv(history)}
+            className="h-8 w-8 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+          >
+            <Download className="size-3.5 text-zinc-400" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Esporta lo storico in JSON"
+            title="Esporta lo storico in JSON"
+            disabled={history.length === 0}
+            onClick={() => exportHistoryJson(history)}
+            className="h-8 w-8 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+          >
+            <FileJson className="size-3.5 text-zinc-400" />
+          </Button>
+          <Tabs value={win} onValueChange={(v) => onWindowChange(v as "interval" | "weekly")}>
+            <TabsList className="bg-white/[0.06]">
+              <TabsTrigger value="interval" className="text-xs data-[state=active]:text-zinc-900">5 ore</TabsTrigger>
+              <TabsTrigger value="weekly" className="text-xs data-[state=active]:text-zinc-900">Settimanale</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
       <CardContent>
         {data.length < 2 ? (
@@ -185,8 +211,20 @@ export function computeTrend(history: HistoryPoint[], win: "interval" | "weekly"
   return { ratePerHour, exhaustionMs: null, exhaustionAt: null, samples: pts.length, windowMs: last.t - first.t };
 }
 
-/** Pannello statistiche: consumo medio, proiezione esaurimento, rilevamenti. */
-export function StatsPanel({ trend, win }: { trend: TrendStats; win: "interval" | "weekly" }) {
+/** Pannello statistiche: consumo medio, proiezione esaurimento, rilevamenti, verdetto vs reset. */
+export function StatsPanel({
+  trend,
+  win,
+  resetAt = null,
+  remaining = null,
+}: {
+  trend: TrendStats;
+  win: "interval" | "weekly";
+  /** Epoch ms del reset previsto della finestra selezionata (end_time). */
+  resetAt?: number | null;
+  /** Percentuale residua attuale della finestra selezionata. */
+  remaining?: number | null;
+}) {
   const winLabel = win === "interval" ? "5 ore" : "settimanale";
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -239,6 +277,96 @@ export function StatsPanel({ trend, win }: { trend: TrendStats; win: "interval" 
             ? `Su un arco di ${formatCountdown(trend.windowMs)}`
             : "La cronologia è salvata sul tuo dispositivo"}
         </p>
+      </div>
+
+      {/* Verdetto: esaurimento stimato vs orario di reset */}
+      <ProjectionVerdict trend={trend} resetAt={resetAt} remaining={remaining} win={win} />
+    </div>
+  );
+}
+
+/** Riga di verdetto: la quota durerà fino al reset o si esaurirà prima? */
+function ProjectionVerdict({
+  trend,
+  resetAt,
+  remaining,
+  win,
+}: {
+  trend: TrendStats;
+  resetAt: number | null;
+  remaining: number | null;
+  win: "interval" | "weekly";
+}) {
+  const winLabel = win === "interval" ? "di 5 ore" : "settimanale";
+  if (trend.samples < 2 || trend.ratePerHour === null) {
+    return (
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
+        <div className="flex items-start gap-2.5">
+          <Info className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+          <div>
+            <p className="text-xs font-semibold text-zinc-300">Verdetto d’esaurimento</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+              Raccogli almeno due rilevamenti con la finestra «{winLabel}» attiva per stimare se la quota
+              durerà fino al reset o si esaurirà prima.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const exhaustedBeforeReset =
+    trend.exhaustionAt !== null && resetAt !== null && trend.exhaustionAt < resetAt;
+
+  if (exhaustedBeforeReset) {
+    return (
+      <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-4 sm:col-span-3">
+        <div className="flex items-start gap-2.5">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+          <div>
+            <p className="text-xs font-semibold text-amber-200">Rischio esaurimento prima del reset</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-amber-200/70">
+              Al ritmo attuale (+{trend.ratePerHour.toFixed(2)} %/h) la quota {winLabel} ({remaining?.toFixed(1)}%)
+              si esaurirà il <strong>{formatDateTimeRome(trend.exhaustionAt)}</strong>, PRIMA del reset previsto
+              per le <strong>{formatTimeRome(resetAt)}</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (trend.exhaustionAt !== null && resetAt !== null) {
+    return (
+      <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] p-4 sm:col-span-3">
+        <div className="flex items-start gap-2.5">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+          <div>
+            <p className="text-xs font-semibold text-emerald-200">Quota sufficiente fino al reset</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-200/70">
+              Al ritmo attuale (+{trend.ratePerHour.toFixed(2)} %/h) l’esaurimento è previsto solo il{" "}
+              <strong>{formatDateTimeRome(trend.exhaustionAt)}</strong>: la finestra {winLabel} si ricaricherà
+              alle <strong>{formatTimeRome(resetAt)}</strong>, prima di esaurirsi.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Consumo ~zero o negativo: nessun rischio stimato
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
+      <div className="flex items-start gap-2.5">
+        <Info className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+        <div>
+          <p className="text-xs font-semibold text-zinc-300">Nessun esaurimento previsto al ritmo attuale</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+            {trend.ratePerHour > 0
+              ? `Il consumo è quasi nullo (+${trend.ratePerHour.toFixed(2)} %/h): la quota ${winLabel} durerà agevolmente fino al reset${resetAt ? ` delle ${formatTimeRome(resetAt)}` : ""}.`
+              : `Quota stabile o in recupero (reset avvenuto): nessun rischio di esaurimento per la finestra ${winLabel}.`}
+          </p>
+        </div>
       </div>
     </div>
   );

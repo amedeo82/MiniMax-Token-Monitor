@@ -6,7 +6,7 @@
 > ✅ *confermato* (fonte ufficiale o test empirico) · 🔶 *verosimile* (fonte secondaria/
 > open-source) · ❓ *da verificare*.
 >
-> Ultimo aggiornamento: 2026-10-02 · Fonti salvate in `scripts/` (vedi §9).
+> Ultimo aggiornamento: 2026-10-02 (rimozione del contatore token reale — ADR-8) · Fonti salvate in `scripts/` (vedi §9).
 
 ---
 
@@ -107,7 +107,7 @@ Base URL API: `https://api.minimax.io` (server dichiarato negli OpenAPI ufficial
 | # | Endpoint | Metodo | A cosa serve | Informazioni utili restituite |
 |---|----------|--------|--------------|-------------------------------|
 | 5.1 | `/v1/models` | GET | Catalogo modelli (compatibile OpenAI) | `{object:"list", data:[{id:"MiniMax-M3", object:"model", created, owned_by}]}` |
-| 5.2 | `/v1/chat/completions` | POST | Chat/testo (compatibile OpenAI) | **`usage`: {prompt_tokens, completion_tokens, total_tokens, total_characters, prompt_tokens_details.cached_tokens}** → consumo token reale per richiesta |
+| 5.2 | `/v1/chat/completions` | POST | Chat/testo (compatibile OpenAI) | **`usage`: {prompt_tokens, completion_tokens, total_tokens, total_characters, prompt_tokens_details.cached_tokens}** → consumo token reale per richiesta. ⚠️ **NON usata dal dashboard** (ADR-8): con la Subscription Key ogni chiamata consuma la quota del piano che il monitor deve solo OSSERVARE |
 | 5.3 | `/v1/video_generation` | POST | Creazione task video (modelli H3) | `task_id`, stato |
 | 5.4 | `/v1/query/video_generation?task_id=…` | GET | Stato/esito task video | Stato, file risultato |
 
@@ -121,18 +121,25 @@ Nel quota endpoint compaiono come categorie d'uso: `general`, `video`.
 ## 6. Come ottenere il CONSUMO in token ✅
 
 **Il quota endpoint NON espone token assoluti** — espone percentuali (vedi `docs/02` §8).
+
+> **Decisione ADR-8 (2026-10-02)**: il dashboard **NON misura** il consumo in token.
+> L'unico metodo programmatico (`usage` di `/v1/chat/completions`) richiede di invocare
+> un modello, consumando la quota stessa del piano: un monitor che consuma ciò che
+> misura non è accettabile. Il dashboard resta quindi **read-only**: percentuali di
+> `token_plan/remains` + analisi locale dello storico. Le strategie seguenti restano
+> valide per usi MANUALI/esterni al progetto.
+
 Strategie, in ordine di utilità:
 
-1. **`usage` nelle risposte `/v1/chat/completions`** ✅ — ogni risposta che *noi stessi*
-   invochiamo riporta i token esatti: `prompt_tokens`, `completion_tokens`,
-   `total_tokens`, `total_characters`, `prompt_tokens_details.cached_tokens`.
-   **Implementato** nel dashboard come pannello "Consumo token reale"
-   (proxy `/api/minimax/chat` + registro locale, vedi `docs/03` §5.5).
-   ⚠️ **Attenzione**: con la Subscription Key ogni chiamata chat CONSUMA davvero la
-   quota del piano (deduzione al prezzo pay-as-you-go dell'endpoint); con una API Key
-   standard consuma il saldo. I test vanno fatti con prompt brevi.
+1. **`usage` nelle risposte `/v1/chat/completions`** ✅ — ogni risposta riporta i token
+   esatti: `prompt_tokens`, `completion_tokens`, `total_tokens`, `total_characters`,
+   `prompt_tokens_details.cached_tokens`. **Non integrata** (era il pannello "Consumo
+   token reale", rimosso con ADR-8): utile solo per test manuali fuori dal dashboard,
+   con prompt brevi. Nota: con la Subscription Key consuma la quota del piano; con una
+   API Key standard consuma il saldo pay-as-you-go.
 2. **Console ufficiale** ✅ — <https://platform.minimax.io/console/usage> mostra usage bar
-   e analytics ("source of truth" dichiarata dalla FAQ).
+   e analytics ("source of truth" dichiarata dalla FAQ). Metodo consigliato per il
+   dettaglio in token assoluti, senza consumare quota.
 3. **CLI ufficiale** ✅ — `mmx quota` (MiniMax CLI).
 4. ❓ Endpoint di billing/usage history della console web: i plugin (CodexBar) usano
    la via cookie/sessione per ricostruire "30-day token trend, top model breakdown".

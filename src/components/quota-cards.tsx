@@ -120,7 +120,7 @@ function WindowDetails({ title, desc, start, end, now }: WindowDetailsProps) {
  * la finestra "interval" è di 5 ore per i modelli testo/immagine/audio,
  * ma di 24 ore (giornaliera) per il video.
  */
-function windowKindLabel(w: QuotaWindow): string {
+export function windowKindLabel(w: QuotaWindow): string {
   if (w.start !== null && w.end !== null) {
     const dur = w.end - w.start;
     if (dur >= 23 * 3600_000 && dur <= 25 * 3600_000) return "Finestra giornaliera (24h)";
