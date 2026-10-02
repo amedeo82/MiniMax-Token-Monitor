@@ -78,3 +78,21 @@ Work Log:
 Stage Summary:
 - La documentazione persistente copre ricerche (docs/01–02: non andranno mai rifatte), implementazione (docs/03: guida operativa) e avanzamento (docs/04: tracking + protocollo per future sessioni)
 - Prossimo ingresso naturale per il lavoro: fasi F6 (estensioni) e verifiche empiriche V1–V6 elencate in docs/04
+
+---
+Task ID: 4
+Agent: Super Z (main)
+Task: F6a — Contatore token reale (I15): route /api/minimax/chat, lib/token-log.ts, componente TokenTracker
+
+Work Log:
+- Caricata skill fullstack-dev (progetto già inizializzato, dev server automatico su :3000)
+- Creato src/app/api/minimax/chat/route.ts: proxy POST verso https://api.minimax.io|api.minimaxi.com/v1/chat/completions (OpenAI-compatible), estrae content/reasoning_content/usage (prompt_tokens, completion_tokens, total_tokens, total_characters, prompt_tokens_details.cached_tokens), timeout 90s, errori mappati in italiano (401/403 → verifica chiave/regione)
+- Creato src/lib/token-log.ts: registro localStorage "mm-dash-tokenlog-v1" (max 500 record), TokenCallRecord, load/append/clear, aggregateTokenLog (totali + per-modello ordinati per token decrescente)
+- Creato src/components/token-tracker.tsx: pannello "Consumo token reale" — input modello (datalist con MiniMax-M3.1-Flash-Preview/M3/M2.7/M2.5), prompt, invio e misura (o simulazione demo), badge usage ultima chiamata, collapsible risposta, 4 box totali, tabella per-modello, storico (12 più recenti), svuota registro; avviso amber: con Subscription Key la chiamata consuma quota reale del piano
+- Integrato in src/app/page.tsx (sezione tra "Altri modelli" e i pannelli JSON/TechInfo)
+- Verifiche: bun run lint pulito; agent-browser — pannello renderizzato desktop (1280px) e mobile (390px), simulazione demo registrata (prompt 19 + risposta 407 = 426 token, badge demo, orario Roma), storico + svuotamento OK, localStorage confermato, collapsible risposta OK, zero errori console; curl su /api/minimax/chat: {} → 400 missing_key, chiave errata → 401 mappato verso api.minimax.io reale
+- Aggiornati docs/01 §6 (avviso consumo reale), docs/03 (mappa codice, flusso §5.5, layout UI, fasi con F6a completata, roadmap), docs/04 (I15 ✅, nuove attività I19/I20, changelog)
+
+Stage Summary:
+- F6a completata: il dashboard ora misura il consumo token REALE via chat completions, chiudendo il gap "solo percentuali" dell'endpoint quota
+- Nuove attività aperte in docs/04: I19 (persistenza registro token su server), I20 (correlazione token ↔ calo percentuale quota)
