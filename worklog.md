@@ -284,3 +284,22 @@ Stage Summary:
 - Evidenze parziali senza chiave già utili: V4 mostra auth distinte sui due endpoint (indizio, non prova di incompatibilità dati); V6 mostra zero 429 su 54 richieste @10s con chiave invalida
 - RESTA SULL'UTENTE: eseguire le verifiche definitive con la Subscription Key reale seguendo docs/05 §9 (la chiave NON va incollata in chat); l'esito di V4 sblocca I18
 - Prossimi ingressi naturali: I18 (dopo V4), multi-regione (punto 3), PWA (punto 4), valutare backoff nel proxy se V6 con chiave reale mostrasse throttle
+
+---
+Task ID: 7
+Agent: Super Z (main)
+Task: Verifiche empiriche V1–V6 con chiave reale (utente non può usare il terminale; delega completa all'agente)
+
+Work Log:
+- Riletti docs/04 §4 (definizioni V1–V6) e docs/05 (runbook + toolkit verifica.mjs, I29)
+- Verificato ambiente: dev server attivo su :3000; .env senza chiave (solo DATABASE_URL); DB storico con SOLO punti source=demo fino a 08:31 UTC di oggi → il browser dell'anteprima è in MODALITÀ DEMO: zero chiamate a POST /api/minimax/usage nel dev.log → la chiave inserita dall'utente non è mai arrivata al server (vive solo nel localStorage del browser utente, inaccessibile dal workspace)
+- Deciso meccanismo (dichiarato all'utente): cattura TEMPORANEA della chiave nel proxy — blocco marcato in src/app/api/minimax/usage/route.ts che scrive {apiKey, region, ts} su scripts/verifiche/.chiave-sessione (0600, fuori da public/); da rimuovere a fine verifiche
+- Testato meccanismo con chiave finta via curl: cattura OK, risposta 1004 attesa, file di test eliminato
+- Creato e avviato (setsid nohup, pid 1401) scripts/verifiche/watcher-quick.sh: attende il file chiave (timeout 6h) → esporta MM_SUBSCRIPTION_KEY/MM_REGION → esegue prova-parser, V4, V5, V1 --once, V6 (10 min @10s) → log in scripts/verifiche/sessione-quick.log, marker .quick-done; chiave mai stampata nei log
+- Azione richiesta all'utente (l'unica): nell'anteprima → Impostazioni → Connessione → disattivare «Modalità demo» → Salva impostazioni (fetch immediato + polling automatico)
+
+Stage Summary:
+- Setup completato: catena proxy→cattura→watcher→toolkit pronta e collaudata con chiave finta
+- In attesa che l'utente disattivi la demo nell'anteprima; poi V4/V5/V6 automatiche
+- V3 (reset senza uso) e V1/V2 (esaurimento + rolling con uso reale) da programmare dopo gli esiti rapidi: richiedono vincoli comportamentali dell'utente (non usare / usare l'API)
+- Al termine: rimuovere blocco cattura da route.ts, eliminare .chiave-sessione, aggiornare docs/04 §4 + docs/05 §10, decidere I18 dall'esito V4
