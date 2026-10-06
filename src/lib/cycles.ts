@@ -196,7 +196,10 @@ const EN_TO_INDEX: Record<string, number> = {
   Sun: 6,
 };
 
-const IT_LABELS = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+/** Etichette brevi italiane per i giorni della settimana (0 = lunedì). */
+export const WEEKDAY_LABELS = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+
+const IT_LABELS = WEEKDAY_LABELS;
 
 // Formattatori riusabili (la creazione di Intl.DateTimeFormat è costosa)
 const weekdayFmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Rome", weekday: "short" });
@@ -205,6 +208,12 @@ const dateFmt = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
+});
+/** Ora del giorno (0–23) in fuso Europe/Rome (h23: la mezzanotte è "0", non "24"). */
+const hourFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Europe/Rome",
+  hour: "numeric",
+  hourCycle: "h23",
 });
 
 /**
@@ -264,6 +273,77 @@ export function weekdayConsumption(history: HistoryPoint[], win: WindowKey): Wee
 
   for (const s of stats) s.avgPerDay = s.days > 0 ? s.consumed / s.days : 0;
   return stats;
+}
+
+/* ------------------------------------------------------------------ */
+/* Heatmap: consumo per giorno × ora (I32)                             */
+/* ------------------------------------------------------------------ */
+
+/** Griglia di consumo 7×24: righe = giorni (0 = lunedì), colonne = ore 0–23 Europe/Rome. */
+export interface HeatmapGrid {
+  /** Consumo attribuito a ciascuna cella (punti percento, drawdown). */
+  cells: number[][];
+  /** Numero di cali di quota attribuiti a ciascuna cella (diagnostica/tooltip). */
+  events: number[][];
+  /** Somma di tutte le celle (consumo totale attribuito). */
+  total: number;
+  /** Valore massimo di cella (0 se nessun consumo) — serve alla scala di colore. */
+  max: number;
+  /** Celle con almeno un consumo (per le note a fondo pannello). */
+  populated: number;
+}
+
+/**
+ * Consumo per (giorno della settimana × ora del giorno) in fuso Europe/Rome.
+ *
+ * Stessa semantica di `weekdayConsumption` (drawdown del minimo progressivo,
+ * reset riconosciuti con la bicondizione RESET_JUMP/RESET_TARGET e mai contati
+ * come consumo), ma con attribuzione alla CELLA (giorno, ora) del punto medio
+ * tra i due rilevamenti. I giorni/ore senza dati restano a 0.
+ */
+export function heatmapConsumption(history: HistoryPoint[], win: WindowKey): HeatmapGrid {
+  const cells: number[][] = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
+  const events: number[][] = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
+
+  if (history.length < 2) {
+    return { cells, events, total: 0, max: 0, populated: 0 };
+  }
+
+  let ref = valueOf(history[0], win); // minimo progressivo della finestra corrente
+
+  for (let i = 1; i < history.length; i++) {
+    const v = valueOf(history[i], win);
+
+    if (v < ref) {
+      // Discesa sotto il minimo progressivo: consumo reale da attribuire
+      const drop = ref - v;
+      const midT = (history[i - 1].t + history[i].t) / 2;
+      const mid = new Date(midT);
+      const dayIdx = EN_TO_INDEX[weekdayFmt.format(mid)] ?? -1;
+      const hourIdx = Number(hourFmt.format(mid));
+      if (dayIdx >= 0 && Number.isInteger(hourIdx) && hourIdx >= 0 && hourIdx <= 23) {
+        cells[dayIdx][hourIdx] += drop;
+        events[dayIdx][hourIdx] += 1;
+      }
+      ref = v;
+    } else if (v - ref >= RESET_JUMP && v >= RESET_TARGET) {
+      // Reset vero: nuova baseline, nessun consumo
+      ref = v;
+    }
+    // Recupero sotto la soglia di reset (rumore): ref resta al minimo, niente consumo
+  }
+
+  let total = 0;
+  let max = 0;
+  let populated = 0;
+  for (const row of cells) {
+    for (const v of row) {
+      total += v;
+      if (v > max) max = v;
+      if (v > 0) populated += 1;
+    }
+  }
+  return { cells, events, total, max, populated };
 }
 
 /* ------------------------------------------------------------------ */

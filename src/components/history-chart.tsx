@@ -10,14 +10,15 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceArea,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
   ReferenceLine,
 } from "recharts";
-import { formatCountdown, formatDateTimeRome, formatShortRome, formatTimeRome } from "@/lib/time";
-import { movingAverage } from "@/lib/cycles";
+import { formatCountdown, formatDateTimeRome, formatDuration, formatShortRome, formatTimeRome } from "@/lib/time";
+import { detectCycles, movingAverage } from "@/lib/cycles";
 import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
 import { fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import {
@@ -29,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline } from "lucide-react";
+import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline, Layers } from "lucide-react";
 
 export interface HistoryPoint {
   t: number;
@@ -70,6 +71,8 @@ async function exportFullFromServer(format: "csv" | "json"): Promise<void> {
 /** Grafico dell'andamento della quota rimanente nel tempo. */
 export function HistoryChart({ history, window: win, onWindowChange, serverCount = null }: HistoryChartProps) {
   const [showSma, setShowSma] = React.useState(false);
+  /** I32: overlay dei cicli di finestra (fasce alternate + marker dei reset). */
+  const [showCycles, setShowCycles] = React.useState(true);
 
   const data: ChartDatum[] = React.useMemo(
     () =>
@@ -92,6 +95,27 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
     );
     return data.map((d, i) => ({ ...d, sma: sma[i] }));
   }, [data, showSma]);
+
+  /**
+   * I32 — Cicli rilevati sull'intero storico della finestra selezionata, poi
+   * ritagliati sull'arco visibile (ultimi 120 punti). Le fasce alternano lo
+   * sfondo per distinguere i cicli contigui; il marker «reset»compare solo sui
+   * cicli il cui inizio è un reset osservato (il primo è parziale per costruzione).
+   */
+  const bands = React.useMemo(() => {
+    if (!showCycles || history.length < 2 || data.length < 2) return [];
+    const lo = data[0].t;
+    const hi = data[data.length - 1].t;
+    return detectCycles(history, win)
+      .filter((c) => c.endT >= lo && c.startT <= hi)
+      .map((c) => ({
+        index: c.index,
+        x1: Math.max(c.startT, lo),
+        x2: Math.min(c.endT, hi),
+        reset: c.index > 1 && c.startT >= lo && c.startT <= hi ? c.startT : null,
+      }));
+  }, [showCycles, history, win, data]);
+  const showBands = bands.length >= 2; // con un solo ciclo l'alternanza non dice nulla
 
   const domain = React.useMemo<[number, number]>(() => {
     if (data.length === 0) return [0, 100];
@@ -133,6 +157,22 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
           >
             <Spline className="size-3.5" />
             Media mobile
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={showCycles}
+            aria-label="Mostra o nascondi i cicli di finestra sul grafico"
+            onClick={() => setShowCycles((v) => !v)}
+            title="Fasce alternate per ciclo di finestra e marker dei reset rilevati"
+            className={`h-8 gap-1.5 border-white/10 text-xs ${
+              showCycles
+                ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!"
+                : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"
+            }`}
+          >
+            <Layers className="size-3.5" />
+            Cicli
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -207,6 +247,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
             premi «Aggiorna» di tanto in tanto.
           </div>
         ) : (
+          <>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
@@ -221,6 +262,36 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                {/* I32: fasce dei cicli (dietro ai dati) + marker dei reset osservati */}
+                {showBands
+                  ? bands.map((b) => (
+                      <ReferenceArea
+                        key={`band-${b.index}`}
+                        x1={b.x1}
+                        x2={b.x2}
+                        fill="#ffffff"
+                        fillOpacity={b.index % 2 === 0 ? 0.035 : 0.075}
+                        stroke="none"
+                      />
+                    ))
+                  : null}
+                {bands.map((b) =>
+                  b.reset !== null ? (
+                    <ReferenceLine
+                      key={`reset-${b.index}`}
+                      x={b.reset}
+                      stroke="#f43f5e"
+                      strokeDasharray="4 4"
+                      strokeOpacity={0.65}
+                      label={{
+                        value: "reset",
+                        position: "insideTopLeft",
+                        fill: "#fb7185",
+                        fontSize: 9,
+                      }}
+                    />
+                  ) : null,
+                )}
                 <XAxis
                   dataKey="t"
                   type="number"
@@ -284,6 +355,14 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          {showCycles && bands.length > 0 ? (
+            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[11px] text-zinc-600">
+              <Layers className="size-3 shrink-0" />
+              Fasce alternate = cicli di finestra rilevati (I26)
+              {bands.some((b) => b.reset !== null) ? " · linee rosse = reset osservati" : ""}.
+            </p>
+          ) : null}
+          </>
         )}
       </CardContent>
     </Card>
@@ -298,31 +377,120 @@ interface TrendStats {
   exhaustionAt: number | null;
   samples: number;
   windowMs: number;
+  /** I31: epoch ms dell'ultimo rilevamento usato per il trend. */
+  lastT: number | null;
+  /** I31: residuo osservato all'ultimo rilevamento (%). */
+  lastValue: number | null;
 }
 
 /** Statistiche derivate dalla storia: consumo medio e proiezione. */
 export function computeTrend(history: HistoryPoint[], win: "interval" | "weekly"): TrendStats {
   const pts = history.slice(-60);
-  if (pts.length < 2) return { ratePerHour: null, exhaustionMs: null, exhaustionAt: null, samples: pts.length, windowMs: 0 };
+  const key = win === "interval" ? "interval" : "weekly";
+  const last = pts.length > 0 ? pts[pts.length - 1] : null;
+  const base: TrendStats = {
+    ratePerHour: null,
+    exhaustionMs: null,
+    exhaustionAt: null,
+    samples: pts.length,
+    windowMs: last && pts.length > 1 ? last.t - pts[0].t : 0,
+    lastT: last ? last.t : null,
+    lastValue: last ? last[key] : null,
+  };
+  if (pts.length < 2 || !last) return base;
 
   const first = pts[0];
-  const last = pts[pts.length - 1];
   const dtHours = (last.t - first.t) / 3600_000;
-  const dv = first[win === "interval" ? "interval" : "weekly"] - last[win === "interval" ? "interval" : "weekly"];
+  const dv = first[key] - last[key];
   const ratePerHour = dtHours > 0 ? dv / dtHours : null;
 
-  const current = last[win === "interval" ? "interval" : "weekly"];
-  if (ratePerHour !== null && ratePerHour > 0.01 && current > 0) {
-    const hoursLeft = current / ratePerHour;
+  if (ratePerHour !== null && ratePerHour > 0.01 && last[key] > 0) {
+    const hoursLeft = last[key] / ratePerHour;
     return {
+      ...base,
       ratePerHour,
       exhaustionMs: hoursLeft * 3600_000,
       exhaustionAt: last.t + hoursLeft * 3600_000,
-      samples: pts.length,
-      windowMs: last.t - first.t,
     };
   }
-  return { ratePerHour, exhaustionMs: null, exhaustionAt: null, samples: pts.length, windowMs: last.t - first.t };
+  return { ...base, ratePerHour };
+}
+
+/* ------------------------------------------------------------------ */
+/* I31 — Pace e quota sprecata (stesso filone del verdetto I23)        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Confronta il ritmo attuale con quello che servirebbe per sfruttare la
+ * finestra fino all'ultimo, quantificando:
+ * - il **ritmo di pareggio** (%/h che azzererebbe la quota ESATTAMENTE al reset);
+ * - la **quota sprecata**: residuo previsto al reset se il consumo proseguisse
+ *   al ritmo attuale (quota che il piano ricaricherà senza che sia stata usata);
+ * - il **fermo tecnico**: tempo senza quota tra l'esaurimento stimato e il
+ *   reset, quando il ritmo supera quello di pareggio.
+ *
+ * Tutto è calcolato sullo stesso modello lineare di I23 (ancorato all'ultimo
+ * rilevamento), così i numeri restano coerenti con il verdetto mostrato accanto.
+ */
+export interface PaceInfo {
+  /** Ore dall'ultimo rilevamento al reset; null se il reset è ignoto o già passato. */
+  hoursToReset: number | null;
+  /** Ritmo attuale (uguale a trend.ratePerHour), %/h. */
+  currentPace: number | null;
+  /** Ritmo di pareggio per azzerare la quota esattamente al reset, %/h. */
+  breakevenPace: number | null;
+  /** Residuo previsto al reset al ritmo attuale (punti %); 0 se si esaurisce prima. */
+  wastedQuota: number | null;
+  /** Tempo di consumo al ritmo attuale equivalente alla quota sprecata. */
+  wastedForMs: number | null;
+  /** Se la quota si esaurisce prima del reset: tempo «morto» fino al reset. */
+  downtimeMs: number | null;
+}
+
+const EMPTY_PACE: PaceInfo = {
+  hoursToReset: null,
+  currentPace: null,
+  breakevenPace: null,
+  wastedQuota: null,
+  wastedForMs: null,
+  downtimeMs: null,
+};
+
+export function computePace(trend: TrendStats, resetAt: number | null): PaceInfo {
+  if (resetAt === null || trend.lastT === null || trend.lastValue === null) {
+    return { ...EMPTY_PACE, currentPace: trend.ratePerHour };
+  }
+  const hoursToReset = (resetAt - trend.lastT) / 3600_000;
+  if (!isFinite(hoursToReset) || hoursToReset <= 0) {
+    return { ...EMPTY_PACE, currentPace: trend.ratePerHour };
+  }
+
+  const breakevenPace = trend.lastValue / hoursToReset;
+  const pace = trend.ratePerHour;
+
+  // Esaurimento stimato PRIMA del reset: niente quota sprecata, ma fermo tecnico
+  if (trend.exhaustionAt !== null && trend.exhaustionAt < resetAt) {
+    return {
+      hoursToReset,
+      currentPace: pace,
+      breakevenPace,
+      wastedQuota: 0,
+      wastedForMs: 0,
+      downtimeMs: Math.max(0, resetAt - trend.exhaustionAt),
+    };
+  }
+
+  // Residuo previsto al reset sul modello lineare (consumo ~null → residuo = attuale)
+  const residual = pace !== null ? trend.lastValue - pace * hoursToReset : trend.lastValue;
+  const wastedQuota = Math.max(0, residual);
+  return {
+    hoursToReset,
+    currentPace: pace,
+    breakevenPace,
+    wastedQuota,
+    wastedForMs: pace !== null && pace > 0.01 ? (wastedQuota / pace) * 3600_000 : null,
+    downtimeMs: null,
+  };
 }
 
 /** Pannello statistiche: consumo medio, proiezione esaurimento, rilevamenti, verdetto vs reset. */
