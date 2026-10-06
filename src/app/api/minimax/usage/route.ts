@@ -39,23 +39,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ⚠️ BLOCCO TEMPORANEO — Task 7 (verifiche empiriche V1–V6), 2026-10-04
-  // Registra la chiave ricevuta dal browser dell'anteprima in un file protetto
-  // (0600) del workspace, FUORI da public/, per consentire all'agente di eseguire
-  // il toolkit scripts/verifiche/verifica.mjs (V1–V6) al posto dell'utente.
-  // DA RIMUOVERE a fine sessione di verifiche (vedi worklog Task ID 7, docs/04 §4).
-  try {
-    const fs = await import("node:fs");
-    fs.writeFileSync(
-      "/home/z/my-project/scripts/verifiche/.chiave-sessione",
-      JSON.stringify({ apiKey, region, ts: Date.now() }),
-      { mode: 0o600 },
-    );
-  } catch {
-    /* silenzioso: la verifica non deve mai rompere il proxy */
-  }
-  // FINE BLOCCO TEMPORANEO
-
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12_000);

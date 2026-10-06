@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-02 (I27 persistenza registro eventi su DB: API /api/events, replica offline-first, export archivio completo).
+> Ultimo aggiornamento: 2026-10-06 (I30 chiusura campagna verifiche: rimosso il blocco temporaneo di cattura chiave dal proxy — ADR-13/ADR-13-R; stack e mappa codice riallineati: Prisma/SQLite F7/F8, soglie per finestra I28).
 
 ---
 
@@ -55,8 +55,9 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `recharts` | grafico storico percentuali |
 | `lucide-react` | icone |
 | `sonner` | toast (errori/successi import, refresh) |
+| `prisma` + SQLite (`db/custom.db`) | F7/F8 persistenza server-side: storico (UsagePoint, 10.000 punti/90 giorni) e archivio eventi (UsageEventRecord, 5.000/180 giorni) — `bun run db:push` |
 | `Intl.*` nativo | fuso Europe/Rome + locale it-IT (nessuna lib di date necessaria) |
-| `localStorage` | persistenza settings + history (no DB) |
+| `localStorage` | persistenza settings + mirror client di storico/eventi (fonte primaria per la UI, ADR-10/11) |
 
 ---
 
@@ -84,7 +85,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/components/analysis-panel.tsx` | I26 `LongTermAnalysis`: pannello «Analisi di lungo periodo» con 3 tab (Cicli 5 ore / Cicli settimanali / Per giorno) — KPI (cicli, durata media, consumo medio, ritmo %/h), tabella ultimi 8 cicli con ciclo in corso evidenziato, grafico a barre consumo medio per giorno della settimana (5h + settimanale); scarica automaticamente fino a 10.000 punti dal server al mount e li fonde con lo storico locale |
 | `src/components/event-log.tsx` | `EventLog`: timeline del registro eventi raggruppata per giorno (Europe/Rome), badge per tipo, menu Esporta (CSV/JSON locale + archivio COMPLETO dal server I27), svuotamento locale+server |
 | `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
-| `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode, alertsEnabled, alertThresholdWarn, alertThresholdCrit, notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
+| `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode, alertsEnabled, **thresholds** (AlertThresholds {h5,h24,weekly} — I28, matrice 3×2 nel tab «Avvisi» con migrazione legacy ADR-12), notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
 
 ---
 
@@ -295,6 +296,11 @@ etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
 - Nessun logging della chiave; `User-Agent` dedicato (`MiniMax-Usage-Dashboard/1.0`).
 - `cache: "no-store"` + `dynamic = "force-dynamic"`: nessuna risposta quota in cache.
 - Nessun dato utente esce dal dispositivo (storico solo in localStorage).
+- **Cattura chiave rimossa (I30, 2026-10-06)**: durante la campagna verifiche del
+  04–05/10 il proxy scriveva TEMPORANEAMENTE la chiave su un file protetto per
+  delegare le V1–V6 all'agente (ADR-13); il blocco è stato rimosso e il meccanismo
+  chiuso (ADR-13-R): il proxy non scrive più nulla su disco. La procedura per
+  ri-armarla, se mai necessaria, è documentata in `docs/05` §10.
 
 ---
 
@@ -334,7 +340,9 @@ con i calcoli manuali, pannello endpoint, console pulita.
 2. **Fallback automatico** su `coding_plan/remains` se `token_plan/remains` fallisse (V4 in `docs/04`).
    *Toolkit verifiche pronto (I29): `scripts/verifiche/verifica.mjs v4` con runbook `docs/05` §6;
    evidenza parziale senza chiave → entrambi gli endpoint HTTP 200 + 1004 con messaggi di auth diversi
-   (dettagli in `docs/01` §4). L'esito di V4 con chiave reale decide l'implementazione.*
+   (dettagli in `docs/01` §4). La campagna con chiave reale del 04–05/10 è stata interrotta dal
+   riavvio del workspace (I30) e i verdetti non sono recuperabili: **V4 resta l'unico sblocco di I18**
+   (vedi nota in `docs/04` §4 e piano `docs/05` §9).*
 3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
 4. **PWA/offline**: installazione e ultima snapshot cache; notifiche soglia anche a tab
    chiuso via Service Worker (oggi: banner + toast + Notification API solo a tab aperto).
