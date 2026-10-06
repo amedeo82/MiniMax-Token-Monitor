@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-06 (I30 chiusura campagna verifiche: rimosso il blocco temporaneo di cattura chiave dal proxy — ADR-13/ADR-13-R; stack e mappa codice riallineati: Prisma/SQLite F7/F8, soglie per finestra I28).
+> Ultimo aggiornamento: 2026-10-07 (I31 pace + quota sprecata nel StatsPanel, I32 heatmap ore + overlay cicli nel grafico storico — roadmap §11 punti 8–9). Precedente: 2026-10-06 (I30 chiusura campagna verifiche: rimosso il blocco temporaneo di cattura chiave dal proxy — ADR-13/ADR-13-R; stack e mappa codice riallineati: Prisma/SQLite F7/F8, soglie per finestra I28).
 
 ---
 
@@ -71,7 +71,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/export.ts` | Esportazione locale: `historyToCsv()/eventsToCsv()` (CSV «;» + BOM UTF-8, Excel it-IT), `exportHistoryCsv/Json()`, `exportEventsCsv()`, `downloadTextFile()` |
 | `src/lib/server-history.ts` | I16 sync client↔server dello storico: `pushPointToServer()` (fire-and-forget, con callback `onTotal`), `fetchServerHistory()`, `mergeHistories()` (dedup per timestamp, vince il punto locale), `serverPointsToHistory()`, `clearServerHistory()` |
 | `src/lib/server-events.ts` | I27 sync client↔server del registro eventi (stesso schema di I16): `pushEventsToServer()` (fire-and-forget batch), `fetchServerEvents()`, `mergeEvents()` (dedup per id, vince il locale), `serverEventsToEvents()`, `clearServerEvents()` |
-| `src/lib/cycles.ts` | I26 analisi di lungo periodo: `detectCycles()` (segmenta lo storico nei cicli di finestra: reset = salto ≥+15 punti che riporta a ≥85 — `RESET_JUMP`/`RESET_TARGET` — robusto contro sorgenti miste), `summarizeCycles()` (medie sui cicli completati), `weekdayConsumption()` (consumo per giorno Europe/Rome sul calo del minimo progressivo), `movingAverage()` (SMA) |
+| `src/lib/cycles.ts` | I26 analisi di lungo periodo: `detectCycles()` (segmenta lo storico nei cicli di finestra: reset = salto ≥+15 punti che riporta a ≥85 — `RESET_JUMP`/`RESET_TARGET` — robusto contro sorgenti miste), `summarizeCycles()` (medie sui cicli completati), `weekdayConsumption()` (consumo per giorno Europe/Rome sul calo del minimo progressivo), `heatmapConsumption()` (I32: griglia 7×24 giorno × ora, stessa semantica drawdown, attribuzione alla cella del punto medio), `movingAverage()` (SMA) |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
 | `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
 | `prisma/schema.prisma` | Modello `UsagePoint` (t unique, interval, weekly, source, region) — storico server-side, nessun dato sensibile |
@@ -80,9 +80,9 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/app/api/events/route.ts` | I27 persistenza registro eventi (SQLite/Prisma): POST (upsert per `id`, validazione tipo/finestra/messaggio, max 500 eventi/richiesta, pruning a 5.000 eventi + cutoff 180 giorni), GET (`?limit=&since=&kind=`, ordinato per `t`), DELETE (svuota). Nessuna chiave API transita qui |
 | `src/components/quota-cards.tsx` | `ModelCard` (card per modello: due finestre con barre, countdown, badge stato), `MainWindows` (riepilogo finestre general), `CountsRow` (residuo/totale/consumato + nota su percentuali), `windowKindLabel()` (5h vs 24h dinamica) |
 | `src/components/quota-ring.tsx` | `QuotaRing`: anello SVG percentuale |
-| `src/components/history-chart.tsx` | `HistoryChart` (Recharts ComposedChart, switch finestra interval/weekly, toggle «Media mobile» = SMA-10 tratteggiata, dropdown Esporta: storico locale CSV/JSON + storico completo dal server), `computeTrend()`, `StatsPanel` (+ verdetto `ProjectionVerdict`: esaurimento stimato vs orario di reset; contatore punti server), `TrendBadge` |
+| `src/components/history-chart.tsx` | `HistoryChart` (Recharts ComposedChart, switch finestra interval/weekly, toggle «Media mobile» = SMA-10 tratteggiata, **I32 toggle «Cicli»**: fasce alternate per ciclo di finestra + marker rossi dei reset osservati — `detectCycles` ritagliato sull'arco visibile, dropdown Esporta: storico locale CSV/JSON + storico completo dal server), `computeTrend()`, `StatsPanel` (+ verdetto `ProjectionVerdict`: esaurimento stimato vs orario di reset; **I31 `computePace()`/`PaceInfo` + `PacePanel`**: ritmo attuale vs ritmo di pareggio %/h, quota sprecata prevista al reset, fermo tecnico se l'esaurimento anticipa il reset — tre stati visivi viola/ambra/verde; contatore punti server), `TrendBadge` |
 | `src/components/model-table.tsx` | `PanoramicTable`: tabella comparativa di tutte le finestre del piano (modello × finestra: residuo con mini-barra, stato, countdown reset) |
-| `src/components/analysis-panel.tsx` | I26 `LongTermAnalysis`: pannello «Analisi di lungo periodo» con 3 tab (Cicli 5 ore / Cicli settimanali / Per giorno) — KPI (cicli, durata media, consumo medio, ritmo %/h), tabella ultimi 8 cicli con ciclo in corso evidenziato, grafico a barre consumo medio per giorno della settimana (5h + settimanale); scarica automaticamente fino a 10.000 punti dal server al mount e li fonde con lo storico locale |
+| `src/components/analysis-panel.tsx` | I26 `LongTermAnalysis`: pannello «Analisi di lungo periodo» con 4 tab (Cicli 5 ore / Cicli settimanali / Per giorno / **Per ora — I32**) — KPI (cicli, durata media, consumo medio, ritmo %/h), tabella ultimi 8 cicli con ciclo in corso evidenziato, grafico a barre consumo medio per giorno della settimana (5h + settimanale), **heatmap 7×24 (I32)** con selettore finestra, KPI (consumo attribuito, ora di picco, celle attive su 168), scala viola con radice quadrata e tooltip per cella (consumo + n° cali attribuiti); scarica automaticamente fino a 10.000 punti dal server al mount e li fonde con lo storico locale |
 | `src/components/event-log.tsx` | `EventLog`: timeline del registro eventi raggruppata per giorno (Europe/Rome), badge per tipo, menu Esporta (CSV/JSON locale + archivio COMPLETO dal server I27), svuotamento locale+server |
 | `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
 | `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode, alertsEnabled, **thresholds** (AlertThresholds {h5,h24,weekly} — I28, matrice 3×2 nel tab «Avvisi» con migrazione legacy ADR-12), notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
@@ -260,9 +260,11 @@ Stesso schema offline-first del §5.7, applicato agli eventi (reset, soglie, err
 │ Alert errori (autenticazione/HTTP/rete) quando presenti                                            │
 │ Banner avvisi soglia (amber/rose) quando una finestra è sotto la propria soglia                       │
 ├ MainWindows: riepilogo grande delle due finestre del general (QuotaRing + countdown + badge)       │
-├ HistoryChart: andamento % nel tempo (switch interval/weekly) + export CSV/JSON                      │
+├ HistoryChart: andamento % nel tempo (switch interval/weekly) + fasce cicli/reset (I32) + export CSV/JSON  │
 ├ StatsPanel: consumo medio · esaurimento previsto · rilevamenti · VERDETTO esaurimento vs reset     │
+│             · PACE + QUOTA SPRECATA (I31: ritmo vs pareggio, residuo al reset, fermo tecnico)       │
 ├ PanoramicTable: tutte le finestre del piano a confronto (modello × finestra, stato, reset)         │
+├ LongTermAnalysis: cicli · per giorno · heatmap ore × giorno (I32, fino a 10.000 punti server)     │
 ├ Altri modelli: ModelCard dinamica per ogni voce ≠ general                                          │
 ├ TechInfo: regione, modalità, endpoint usato, refresh, ora server dedotta, altri endpoint           │
 ├ RawJsonPanel: JSON grezzo dell'ultima risposta                                                     │
@@ -357,6 +359,20 @@ con i calcoli manuali, pannello endpoint, console pulita.
    diario di 200 voci, ma ogni evento è replicato su SQLite (`/api/events`, upsert per id,
    pruning 5.000 eventi / 180 giorni) con export CSV/JSON dell'archivio completo e filtri
    `kind`/`since` già disponibili lato API.
+8. ~~**Pace di consumo + quota sprecata (I31)**~~ — **implementato (2026-10-07)**: dallo
+   stesso modello lineare del verdetto I23 (`computePace()`/`PaceInfo` in
+   `history-chart.tsx`) si derivano ritmo attuale vs **ritmo di pareggio** (%/h che
+   azzererebbe la quota esattamente al reset), **quota sprecata** (residuo previsto al
+   reset, con equivalenza in ore di consumo) e **fermo tecnico** (quando l'esaurimento
+   anticipa il reset); `PacePanel` nel `StatsPanel` con tre stati visivi (viola =
+   sprecata, ambra = fermo tecnico, verde = pareggio) e KPI affiancati.
+9. ~~**Heatmap ore × giorno + overlay cicli (I32)**~~ — **implementato (2026-10-07)**:
+   heatmap 7×24 (Europe/Rome) con la stessa semantica drawdown di
+   `weekdayConsumption` (`heatmapConsumption()` in `lib/cycles.ts`, tab «Per ora» in
+   `analysis-panel.tsx`: selettore finestra, KPI consumo attribuito/picco/celle
+   attive, scala viola con radice quadrata, tooltip con n° cali, scroll orizzontale
+   su mobile) e overlay dei cicli sul grafico storico (toggle «Cicli»: fasce
+   alternate per ciclo + marker rossi dei reset osservati, sempre attivo di default).
 
 ### Rimosse dalla roadmap
 

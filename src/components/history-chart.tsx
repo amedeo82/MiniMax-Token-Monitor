@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline, Layers } from "lucide-react";
+import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline, Layers, Timer, PiggyBank, Coffee } from "lucide-react";
 
 export interface HistoryPoint {
   t: number;
@@ -568,6 +568,9 @@ export function StatsPanel({
 
       {/* Verdetto: esaurimento stimato vs orario di reset */}
       <ProjectionVerdict trend={trend} resetAt={resetAt} remaining={remaining} win={win} />
+
+      {/* I31 — pace di consumo e quota sprecata (stesso filone del verdetto) */}
+      <PacePanel trend={trend} resetAt={resetAt} remaining={remaining} win={win} />
     </div>
   );
 }
@@ -653,6 +656,145 @@ function ProjectionVerdict({
               ? `Il consumo è quasi nullo (+${trend.ratePerHour.toFixed(2)} %/h): la quota ${winLabel} durerà agevolmente fino al reset${resetAt ? ` delle ${formatTimeRome(resetAt)}` : ""}.`
               : `Quota stabile o in recupero (reset avvenuto): nessun rischio di esaurimento per la finestra ${winLabel}.`}
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I31 — Pannello pace e quota sprecata (stesso filone del verdetto)   */
+/* ------------------------------------------------------------------ */
+
+/** Sotto questa soglia (punti percento) il residuo previsto al reset conta come pareggio. */
+const PACE_EPSILON = 2;
+
+/** Formatta un ritmo %/h con segno esplicito quando positivo. */
+function fmtRate(r: number | null): string {
+  return r === null ? "—" : `${r > 0 ? "+" : ""}${r.toFixed(2)} %/h`;
+}
+
+/**
+ * Riga di sintesi pace: confronta il ritmo attuale con quello di pareggio e
+ * quantifica la quota che resterà inutilizzata al reset (o il fermo tecnico
+ * quando la quota si esaurisce prima del ricaricamento).
+ */
+function PacePanel({
+  trend,
+  resetAt,
+  remaining,
+  win,
+}: {
+  trend: TrendStats;
+  resetAt: number | null;
+  remaining: number | null;
+  win: "interval" | "weekly";
+}) {
+  const winLabel = win === "interval" ? "di 5 ore" : "settimanale";
+  const pace = computePace(trend, resetAt);
+
+  if (trend.samples < 2 || pace.hoursToReset === null || pace.breakevenPace === null) {
+    return (
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
+        <div className="flex items-start gap-2.5">
+          <Timer className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+          <div>
+            <p className="text-xs font-semibold text-zinc-300">Pace e quota sprecata</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+              Con almeno due rilevamenti e una finestra con reset noto il monitor confronta il ritmo attuale
+              con quello di pareggio (%/h che azzererebbe la quota esattamente al reset) e stima quanta
+              quota resterà inutilizzata.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* Captured as const: preserves the null-narrowing of the guard within the kpis closure */
+  const breakevenPace: number = pace.breakevenPace;
+
+  const kpis = (label: string, value: string, valueClass: string) => (
+    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Ritmo attuale</p>
+        <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-100">{fmtRate(pace.currentPace)}</p>
+      </div>
+      <div className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Ritmo di pareggio</p>
+        <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-100">
+          +{breakevenPace.toFixed(2)} %/h
+        </p>
+      </div>
+      <div className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+        <p className={`mt-0.5 font-mono text-sm font-bold tabular-nums ${valueClass}`}>{value}</p>
+      </div>
+    </div>
+  );
+
+  // 1) Fermo tecnico: la quota si esaurisce PRIMA del reset → ore senza quota
+  if (pace.downtimeMs !== null && pace.downtimeMs > 0) {
+    return (
+      <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-4 sm:col-span-3">
+        <div className="flex items-start gap-2.5">
+          <Coffee className="mt-0.5 size-4 shrink-0 text-amber-400" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-amber-200">Fermo tecnico prima del reset</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-amber-200/70">
+              Al ritmo attuale la quota {winLabel} ({remaining?.toFixed(1)}%) si esaurirà PRIMA del reset
+              previsto per le <strong>{formatTimeRome(resetAt)}</strong>: senza quota disponibile per circa{" "}
+              <strong>{formatCountdown(pace.downtimeMs)}</strong>. Per azzerarla esattamente al reset il ritmo
+              dovrebbe scendere a +{breakevenPace.toFixed(2)} %/h.
+            </p>
+            {kpis("Fermo tecnico stimato", formatCountdown(pace.downtimeMs), "text-amber-200")}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2) Quota sprecata: residuo apprezzabile al momento del reset
+  if (pace.wastedQuota !== null && pace.wastedQuota > PACE_EPSILON) {
+    const wasted = pace.wastedQuota.toFixed(1);
+    return (
+      <div className="rounded-xl border border-violet-400/25 bg-violet-400/[0.06] p-4 sm:col-span-3">
+        <div className="flex items-start gap-2.5">
+          <PiggyBank className="mt-0.5 size-4 shrink-0 text-violet-300" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-violet-200">Quota sprecata: ~{wasted}% al reset</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-violet-200/70">
+              {pace.currentPace === null
+                ? "Nessun consumo osservato negli ultimi rilevamenti: alla fine della finestra"
+                : "Al ritmo attuale, alla fine della finestra"}{" "}
+              {winLabel} resterà circa il <strong>{wasted}%</strong> della quota, che il reset delle{" "}
+              <strong>{formatTimeRome(resetAt)}</strong> azzererà senza che sia stata usata
+              {pace.wastedForMs !== null
+                ? ` — l’equivalente di ${formatCountdown(pace.wastedForMs)} di consumo al ritmo attuale`
+                : ""}
+              . Per sfruttarla tutta il ritmo dovrebbe salire a +{breakevenPace.toFixed(2)} %/h.
+            </p>
+            {kpis("Residuo previsto al reset", `~${wasted}%`, "text-violet-200")}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3) Pareggio: residuo trascurabile, la quota si esaurirà vicino al reset
+  const residual = pace.wastedQuota ?? 0;
+  return (
+    <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] p-4 sm:col-span-3">
+      <div className="flex items-start gap-2.5">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-emerald-200">Ritmo quasi di pareggio</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-200/70">
+            Il residuo previsto al reset è ~{residual.toFixed(1)}%: la quota {winLabel} si esaurirà poco prima
+            del ricaricamento previsto per le <strong>{formatTimeRome(resetAt)}</strong> (pareggio a +
+            {breakevenPace.toFixed(2)} %/h, ritmo attuale {fmtRate(pace.currentPace)}).
+          </p>
+          {kpis("Residuo previsto al reset", `~${residual.toFixed(1)}%`, "text-emerald-200")}
         </div>
       </div>
     </div>

@@ -325,3 +325,23 @@ Stage Summary:
 - La campagna verifiche con chiave reale è ufficialmente CHIUSA come "interrotta senza esiti recuperabili": V1–V6 tornano da rieseguire (docs/05 §9), I18 resta bloccata solo su V4
 - Il proxy è tornato allo stato pulito (nessuna scrittura su disco), coercendo la regola di sicurezza del Task 7; ADR-13 registrato e ritirato per tracciabilità completa
 - Tutta la documentazione (README + docs/01–05) è ora allineata al progetto reale: persistenza SQLite, analisi di lungo periodo, soglie per finestra, toolkit verifiche con il suo runbook
+
+---
+Task ID: 14
+Agent: Super Z (main)
+Task: I31 — pace di consumo + quota sprecata (filone I23) · I32 — heatmap ore + overlay cicli (completano I26), con aggiornamento preventivo di documentazione e piani
+
+Work Log:
+- Letti worklog (ultimo Task ID 13), docs/03, docs/04, cycles.ts, time.ts, history-chart.tsx, analysis-panel.tsx, page.tsx: i calcoli I31 (computePace/PaceInfo in history-chart.tsx) e parte di I32 (heatmapConsumption in cycles.ts + overlay cicli nel grafico) erano già presenti in codice, MA non cablati in UI (computePace mai invocato, heatmapConsumption senza componente)
+- Documentazione PRIMA (come richiesto): I31/I32 registrate in docs/04 §2 come 🔄 con nota su cosa mancava, e in docs/03 §11 come punti 8–9 con criteri di accettazione
+- I31 implementata: PacePanel in StatsPanel (history-chart.tsx), reso sm:col-span-3 accanto al verdetto I23 — tre stati coerenti col verdetto: fermo tecnico (ambra, Coffee), quota sprecata (viola, PiggyBank, con equivalenza in ore di consumo), pareggio (verde, ShieldCheck); KPI affiancati ritmo attuale / ritmo di pareggio / terzo indicatore per stato; soglia pareggio PACE_EPSILON=2 punti; guard dato insufficiente (samples<2 o reset ignoto); fix TS: breakevenPace catturato in const per preservare il narrowing dentro la closure kpis
+- I32 implementata: tab «Per ora» in analysis-panel.tsx con HeatmapSection — heatmap 7×24 (lun..dom × 0..23 Europe/Rome) con selettore finestra 5 ore/settimanale (aria-pressed, stato violet come il toggle Cicli), KPI (consumo attribuito, ora di picco, celle attive /168), scala viola rgba(167,139,250) con alpha √-normalizzata sul max, tooltip per cella (consumo + n° cali attribuiti), legenda 0→picco, nota metodologica (drawdown, punto medio, reset non consumati); min-w-[560px] con overflow-x-auto per il mobile; memo di heatInterval/heatWeekly su data; CardDescription aggiornata
+- Verifiche: bunx tsc --noEmit → 0 errori su src/ (restano solo errori preesistenti in examples/skills fuori scope); bun run lint pulito; dev.log senza errori runtime
+- Verifiche agent-browser (screenshot in scripts/verify_i31_*.png e verify_i32_*.png): home con overlay cicli già visibile (fasce alternate + marker «reset» + toggle Cicli); pannello pace coerente col verdetto (fermo tecnico ambra: esaurimento 21:40 vs reset 22:39:51, fermo 58m 58s, KPI +47,73 %/h vs pareggio +21,67 %/h — aggiornato live al polling demo successivo +47,95/+20,44, fermo 1h 01m 57s); tab «Per ora» selezionabile via role, heatmap con consumo 654,5% (picco ven 17:00 — 556,0%, 5/168 celle) e al cambio finestra weekly 33,4% (picco ven 15:00 — 19,7%, 4/168) con legenda rinormalizzata; mobile 390px: docW=innerW=390 (zero overflow pagina, 168 celle in scroll interno), KPI e note leggibili; console con soli log Fast Refresh, zero errori pagina
+- Chiusura documentale: docs/03 (header 2026-10-07, §3 mappa history-chart/cycles/analysis-panel, §7 layout con righe I31/I32, §11 punti 8–9 segnati implementati), docs/04 (I31/I32 → ✅, riga changelog 2026-10-07), README (funzionalità + struttura), questo worklog
+
+Stage Summary:
+- La roadmap docs/03 §11 è esaurita per gli item autonomi: restano solo I18 (fallback coding_plan, bloccata su V4) e le estensioni richiedenti chiave reale o lavoro fuori scope (multi-regione, PWA)
+- I31 dà all'utente la «coscienza del ritmo»: sa in anticipo se sprecherà quota (e quanto vale in ore di consumo) o se resterà a secco prima del reset
+- I32 chiude il cerchio dell'analisi di lungo periodo: oltre al «quanto» (cicli, per giorno) ora anche il «quando» nella giornata (heatmap) e i confini di finestra direttamente sul grafico
+- Verifiche V1–V6 invariate: da rieseguire secondo docs/05 §9 (I18 dipende solo da V4)
