@@ -37,9 +37,11 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - Polling automatico configurabile, import manuale di una risposta JSON, modalità demo
 
 **Analisi di utilizzo**
-- Grafico storico della quota (finestra 5h o settimanale) con consumo medio in %/h e **media mobile** attivabile (SMA-10)
+- Grafico storico della quota (finestra 5h o settimanale) con consumo medio in %/h, **media mobile** attivabile (SMA-10) e **overlay dei cicli** (fasce alternate per finestra + marker dei reset rilevati)
 - **Verdetto di proiezione**: confronto tra esaurimento stimato (al ritmo attuale) e orario di reset — capisci subito se la quota durerà fino al reset o si esaurirà prima
+- **Pace e quota sprecata** (I31): ritmo attuale vs ritmo di pareggio (%/h che azzererebbe la quota al reset), residuo previsto alla ricarica (= quota che andrà sprecata) e fermo tecnico stimato quando l'esaurimento anticipa il reset
 - **Analisi di lungo periodo** (I26): cicli di finestra 5h e settimanali con durata/consumo/ritmo medi, tabella degli ultimi cicli e consumo medio per giorno della settimana (calcolati su fino a 10.000 punti dal server)
+- **Heatmap ore × giorno** (I32): quando si consuma davvero — griglia 7×24 (Europe/Rome) con selettore finestra, ora di picco e intensità proporzionale al consumo
 - **Panoramica modelli**: tabella comparativa di tutte le finestre del piano (residuo, stato, countdown reset)
 - **Export CSV/JSON** dello storico e del registro eventi (locale e archivio completo dal server; formato compatibile Excel it-IT)
 
@@ -118,8 +120,8 @@ src/
 ├── components/
 │   ├── quota-cards.tsx              # ModelCard, MainWindows, badge di stato, windowKindLabel
 │   ├── quota-ring.tsx               # Anello percentuale (QuotaRing)
-│   ├── history-chart.tsx            # HistoryChart (+ media mobile SMA-10, export locale+server), StatsPanel, verdetto proiezione
-│   ├── analysis-panel.tsx           # I26: Analisi di lungo periodo (cicli, per giorno, KPI)
+│   ├── history-chart.tsx            # HistoryChart (+ media mobile SMA-10, fasce cicli/reset, export locale+server), StatsPanel, verdetto proiezione, pace + quota sprecata
+│   ├── analysis-panel.tsx           # I26: Analisi di lungo periodo (cicli, per giorno, heatmap per ora I32, KPI)
 │   ├── model-table.tsx              # PanoramicTable: tutte le finestre a confronto
 │   ├── event-log.tsx                # Registro eventi (timeline, export locale+archivio, svuota)
 │   ├── tech-panels.tsx              # RawJsonPanel, TechInfo (diagnostica, endpoint, ora server)
@@ -131,7 +133,7 @@ src/
     ├── usage-events.ts              # Avvisi soglia per finestra, rilevamento reset, registro eventi
     ├── server-history.ts            # I16: sync storico browser↔server (replica + merge offline-first)
     ├── server-events.ts             # I27: sync registro eventi browser↔server
-    ├── cycles.ts                    # I26: rilevamento cicli, drawdown, per giorno, SMA
+    ├── cycles.ts                    # I26/I32: rilevamento cicli, drawdown, per giorno, heatmap 7×24, SMA
     ├── export.ts                    # Esportazione CSV/JSON di storico ed eventi
     └── demo.ts                      # Generatore dati demo
 prisma/schema.prisma                 # Modelli UsagePoint + UsageEventRecord (SQLite)

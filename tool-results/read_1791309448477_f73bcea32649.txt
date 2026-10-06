@@ -1,0 +1,674 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import * as React from "react";
+     4→     4→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+     5→     5→import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+     6→     6→import { Badge } from "@/components/ui/badge";
+     7→     7→import { Button } from "@/components/ui/button";
+     8→     8→import {
+     9→     9→  Area,
+    10→    10→  CartesianGrid,
+    11→    11→  ComposedChart,
+    12→    12→  Line,
+    13→    13→  ReferenceArea,
+    14→    14→  ResponsiveContainer,
+    15→    15→  Tooltip,
+    16→    16→  XAxis,
+    17→    17→  YAxis,
+    18→    18→  ReferenceLine,
+    19→    19→} from "recharts";
+    20→    20→import { formatCountdown, formatDateTimeRome, formatDuration, formatShortRome, formatTimeRome } from "@/lib/time";
+    21→    21→import { detectCycles, movingAverage } from "@/lib/cycles";
+    22→    22→import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
+    23→    23→import { fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
+    24→    24→import {
+    25→    25→  DropdownMenu,
+    26→    26→  DropdownMenuContent,
+    27→    27→  DropdownMenuItem,
+    28→    28→  DropdownMenuLabel,
+    29→    29→  DropdownMenuSeparator,
+    30→    30→  DropdownMenuTrigger,
+    31→    31→} from "@/components/ui/dropdown-menu";
+    32→    32→import { toast } from "sonner";
+    33→    33→import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline, Layers } from "lucide-react";
+    34→    34→
+    35→    35→export interface HistoryPoint {
+    36→    36→  t: number;
+    37→    37→  interval: number;
+    38→    38→  weekly: number;
+    39→    39→}
+    40→    40→
+    41→    41→/** Ampiezza della media mobile (SMA) sovrapponibile al grafico. */
+    42→    42→const SMA_K = 10;
+    43→    43→
+    44→    44→interface HistoryChartProps {
+    45→    45→  history: HistoryPoint[];
+    46→    46→  window: "interval" | "weekly";
+    47→    47→  onWindowChange: (w: "interval" | "weekly") => void;
+    48→    48→  /** Punti attualmente conservati sul server (I16); null = server non raggiunto. */
+    49→    49→  serverCount?: number | null;
+    50→    50→}
+    51→    51→
+    52→    52→interface ChartDatum {
+    53→    53→  t: number;
+    54→    54→  label: string;
+    55→    55→  value: number;
+    56→    56→}
+    57→    57→
+    58→    58→/** Scarica dal server lo storico completo e lo salva nel formato richiesto. */
+    59→    59→async function exportFullFromServer(format: "csv" | "json"): Promise<void> {
+    60→    60→  const server = await fetchServerHistory(10_000);
+    61→    61→  if (!server || server.points.length === 0) {
+    62→    62→    toast.error("Nessuno storico disponibile sul server");
+    63→    63→    return;
+    64→    64→  }
+    65→    65→  const points = serverPointsToHistory(server.points);
+    66→    66→  if (format === "csv") exportHistoryCsv(points);
+    67→    67→  else exportHistoryJson(points);
+    68→    68→  toast.success(`Esportati ${points.length} punti dallo storico server`);
+    69→    69→}
+    70→    70→
+    71→    71→/** Grafico dell'andamento della quota rimanente nel tempo. */
+    72→    72→export function HistoryChart({ history, window: win, onWindowChange, serverCount = null }: HistoryChartProps) {
+    73→    73→  const [showSma, setShowSma] = React.useState(false);
+    74→    74→  /** I32: overlay dei cicli di finestra (fasce alternate + marker dei reset). */
+    75→    75→  const [showCycles, setShowCycles] = React.useState(true);
+    76→    76→
+    77→    77→  const data: ChartDatum[] = React.useMemo(
+    78→    78→    () =>
+    79→    79→      history
+    80→    80→        .map((h) => ({
+    81→    81→          t: h.t,
+    82→    82→          label: formatShortRome(h.t),
+    83→    83→          value: win === "interval" ? h.interval : h.weekly,
+    84→    84→        }))
+    85→    85→        .slice(-120),
+    86→    86→    [history, win],
+    87→    87→  );
+    88→    88→
+    89→    89→  /** Con media mobile attiva aggiunge il campo `sma` ai punti visibili. */
+    90→    90→  const chartData: (ChartDatum & { sma: number | null })[] = React.useMemo(() => {
+    91→    91→    if (!showSma) return data.map((d) => ({ ...d, sma: null }));
+    92→    92→    const sma = movingAverage(
+    93→    93→      data.map((d) => d.value),
+    94→    94→      SMA_K,
+    95→    95→    );
+    96→    96→    return data.map((d, i) => ({ ...d, sma: sma[i] }));
+    97→    97→  }, [data, showSma]);
+    98→    98→
+    99→    99→  /**
+   100→   100→   * I32 — Cicli rilevati sull'intero storico della finestra selezionata, poi
+   101→   101→   * ritagliati sull'arco visibile (ultimi 120 punti). Le fasce alternano lo
+   102→   102→   * sfondo per distinguere i cicli contigui; il marker «reset»compare solo sui
+   103→   103→   * cicli il cui inizio è un reset osservato (il primo è parziale per costruzione).
+   104→   104→   */
+   105→   105→  const bands = React.useMemo(() => {
+   106→   106→    if (!showCycles || history.length < 2 || data.length < 2) return [];
+   107→   107→    const lo = data[0].t;
+   108→   108→    const hi = data[data.length - 1].t;
+   109→   109→    return detectCycles(history, win)
+   110→   110→      .filter((c) => c.endT >= lo && c.startT <= hi)
+   111→   111→      .map((c) => ({
+   112→   112→        index: c.index,
+   113→   113→        x1: Math.max(c.startT, lo),
+   114→   114→        x2: Math.min(c.endT, hi),
+   115→   115→        reset: c.index > 1 && c.startT >= lo && c.startT <= hi ? c.startT : null,
+   116→   116→      }));
+   117→   117→  }, [showCycles, history, win, data]);
+   118→   118→  const showBands = bands.length >= 2; // con un solo ciclo l'alternanza non dice nulla
+   119→   119→
+   120→   120→  const domain = React.useMemo<[number, number]>(() => {
+   121→   121→    if (data.length === 0) return [0, 100];
+   122→   122→    const values = data.map((d) => d.value).filter((v) => v !== null);
+   123→   123→    const min = Math.min(...values);
+   124→   124→    const max = Math.max(...values);
+   125→   125→    const pad = Math.max(5, (max - min) * 0.15);
+   126→   126→    return [Math.max(0, Math.floor(min - pad)), Math.min(100, Math.ceil(max + pad))];
+   127→   127→  }, [data]);
+   128→   128→
+   129→   129→  return (
+   130→   130→    <Card className="border-white/[0.07] bg-white/[0.04] backdrop-blur">
+   131→   131→      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0 pb-2">
+   132→   132→        <div className="min-w-0 space-y-1">
+   133→   133→          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+   134→   134→            <Activity className="size-4 shrink-0 text-zinc-400" />
+   135→   135→            Andamento quota rimanente
+   136→   136→          </CardTitle>
+   137→   137→          <CardDescription className="break-words text-xs text-zinc-500">
+   138→   138→            Cronologia degli ultimi rilevamenti (orario Europe/Rome)
+   139→   139→            {serverCount !== null && serverCount > 0
+   140→   140→              ? ` · ${serverCount.toLocaleString("it-IT")} punti salvati sul server`
+   141→   141→              : ""}
+   142→   142→          </CardDescription>
+   143→   143→        </div>
+   144→   144→        <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+   145→   145→          <Button
+   146→   146→            variant="outline"
+   147→   147→            size="sm"
+   148→   148→            aria-pressed={showSma}
+   149→   149→            aria-label="Mostra o nascondi la media mobile"
+   150→   150→            onClick={() => setShowSma((v) => !v)}
+   151→   151→            title={`Media mobile semplice su ${SMA_K} rilevamenti`}
+   152→   152→            className={`h-8 gap-1.5 border-white/10 text-xs ${
+   153→   153→              showSma
+   154→   154→                ? "bg-rose-500/15 text-rose-200 hover:bg-rose-500/20!"
+   155→   155→                : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"
+   156→   156→            }`}
+   157→   157→          >
+   158→   158→            <Spline className="size-3.5" />
+   159→   159→            Media mobile
+   160→   160→          </Button>
+   161→   161→          <Button
+   162→   162→            variant="outline"
+   163→   163→            size="sm"
+   164→   164→            aria-pressed={showCycles}
+   165→   165→            aria-label="Mostra o nascondi i cicli di finestra sul grafico"
+   166→   166→            onClick={() => setShowCycles((v) => !v)}
+   167→   167→            title="Fasce alternate per ciclo di finestra e marker dei reset rilevati"
+   168→   168→            className={`h-8 gap-1.5 border-white/10 text-xs ${
+   169→   169→              showCycles
+   170→   170→                ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!"
+   171→   171→                : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"
+   172→   172→            }`}
+   173→   173→          >
+   174→   174→            <Layers className="size-3.5" />
+   175→   175→            Cicli
+   176→   176→          </Button>
+   177→   177→          <DropdownMenu>
+   178→   178→            <DropdownMenuTrigger asChild>
+   179→   179→              <Button
+   180→   180→                variant="outline"
+   181→   181→                size="sm"
+   182→   182→                aria-label="Esporta lo storico"
+   183→   183→                disabled={history.length === 0 && (serverCount === null || serverCount === 0)}
+   184→   184→                className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
+   185→   185→              >
+   186→   186→                <Download className="size-3.5 text-zinc-400" />
+   187→   187→                Esporta
+   188→   188→              </Button>
+   189→   189→            </DropdownMenuTrigger>
+   190→   190→            <DropdownMenuContent align="end" className="border-white/10! bg-zinc-950! text-zinc-100!">
+   191→   191→              <DropdownMenuLabel className="text-[11px]! text-zinc-500!">Storico locale</DropdownMenuLabel>
+   192→   192→              <DropdownMenuItem
+   193→   193→                disabled={history.length === 0}
+   194→   194→                onClick={() => exportHistoryCsv(history)}
+   195→   195→                className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+   196→   196→              >
+   197→   197→                <Download className="size-3.5" />
+   198→   198→                CSV · {history.length} punti in memoria
+   199→   199→              </DropdownMenuItem>
+   200→   200→              <DropdownMenuItem
+   201→   201→                disabled={history.length === 0}
+   202→   202→                onClick={() => exportHistoryJson(history)}
+   203→   203→                className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+   204→   204→              >
+   205→   205→                <Download className="size-3.5" />
+   206→   206→                JSON · {history.length} punti in memoria
+   207→   207→              </DropdownMenuItem>
+   208→   208→              {serverCount !== null ? (
+   209→   209→                <>
+   210→   210→                  <DropdownMenuSeparator className="bg-white/[0.06]!" />
+   211→   211→                  <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px]! text-zinc-500!">
+   212→   212→                    <Database className="size-3" />
+   213→   213→                    Storico server (fino a 10.000 punti)
+   214→   214→                  </DropdownMenuLabel>
+   215→   215→                  <DropdownMenuItem
+   216→   216→                    disabled={serverCount === 0}
+   217→   217→                    onClick={() => void exportFullFromServer("csv")}
+   218→   218→                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+   219→   219→                  >
+   220→   220→                    <Download className="size-3.5" />
+   221→   221→                    CSV completo · {serverCount.toLocaleString("it-IT")} punti
+   222→   222→                  </DropdownMenuItem>
+   223→   223→                  <DropdownMenuItem
+   224→   224→                    disabled={serverCount === 0}
+   225→   225→                    onClick={() => void exportFullFromServer("json")}
+   226→   226→                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+   227→   227→                  >
+   228→   228→                    <Download className="size-3.5" />
+   229→   229→                    JSON completo · {serverCount.toLocaleString("it-IT")} punti
+   230→   230→                  </DropdownMenuItem>
+   231→   231→                </>
+   232→   232→              ) : null}
+   233→   233→            </DropdownMenuContent>
+   234→   234→          </DropdownMenu>
+   235→   235→          <Tabs value={win} onValueChange={(v) => onWindowChange(v as "interval" | "weekly")}>
+   236→   236→            <TabsList className="bg-white/[0.06]">
+   237→   237→              <TabsTrigger value="interval" className="h-7 text-xs text-zinc-400 hover:text-zinc-200 data-[state=inactive]:hover:bg-white/[0.05] data-[state=active]:text-zinc-100">5 ore</TabsTrigger>
+   238→   238→              <TabsTrigger value="weekly" className="h-7 text-xs text-zinc-400 hover:text-zinc-200 data-[state=inactive]:hover:bg-white/[0.05] data-[state=active]:text-zinc-100">Settimanale</TabsTrigger>
+   239→   239→            </TabsList>
+   240→   240→          </Tabs>
+   241→   241→        </div>
+   242→   242→      </CardHeader>
+   243→   243→      <CardContent>
+   244→   244→        {data.length < 2 ? (
+   245→   245→          <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-white/10 text-xs text-zinc-500">
+   246→   246→            Raccogli almeno due rilevamenti per visualizzare il grafico. Attiva l&apos;aggiornamento automatico oppure
+   247→   247→            premi «Aggiorna» di tanto in tanto.
+   248→   248→          </div>
+   249→   249→        ) : (
+   250→   250→          <>
+   251→   251→          <div className="h-56 w-full">
+   252→   252→            <ResponsiveContainer width="100%" height="100%">
+   253→   253→              <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+   254→   254→                <defs>
+   255→   255→                  <linearGradient id="gradInterval" x1="0" y1="0" x2="0" y2="1">
+   256→   256→                    <stop offset="0%" stopColor="#34d399" stopOpacity={0.45} />
+   257→   257→                    <stop offset="100%" stopColor="#34d399" stopOpacity={0.02} />
+   258→   258→                  </linearGradient>
+   259→   259→                  <linearGradient id="gradWeekly" x1="0" y1="0" x2="0" y2="1">
+   260→   260→                    <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.45} />
+   261→   261→                    <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.02} />
+   262→   262→                  </linearGradient>
+   263→   263→                </defs>
+   264→   264→                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+   265→   265→                {/* I32: fasce dei cicli (dietro ai dati) + marker dei reset osservati */}
+   266→   266→                {showBands
+   267→   267→                  ? bands.map((b) => (
+   268→   268→                      <ReferenceArea
+   269→   269→                        key={`band-${b.index}`}
+   270→   270→                        x1={b.x1}
+   271→   271→                        x2={b.x2}
+   272→   272→                        fill="#ffffff"
+   273→   273→                        fillOpacity={b.index % 2 === 0 ? 0.035 : 0.075}
+   274→   274→                        stroke="none"
+   275→   275→                      />
+   276→   276→                    ))
+   277→   277→                  : null}
+   278→   278→                {bands.map((b) =>
+   279→   279→                  b.reset !== null ? (
+   280→   280→                    <ReferenceLine
+   281→   281→                      key={`reset-${b.index}`}
+   282→   282→                      x={b.reset}
+   283→   283→                      stroke="#f43f5e"
+   284→   284→                      strokeDasharray="4 4"
+   285→   285→                      strokeOpacity={0.65}
+   286→   286→                      label={{
+   287→   287→                        value: "reset",
+   288→   288→                        position: "insideTopLeft",
+   289→   289→                        fill: "#fb7185",
+   290→   290→                        fontSize: 9,
+   291→   291→                      }}
+   292→   292→                    />
+   293→   293→                  ) : null,
+   294→   294→                )}
+   295→   295→                <XAxis
+   296→   296→                  dataKey="t"
+   297→   297→                  type="number"
+   298→   298→                  scale="time"
+   299→   299→                  domain={["dataMin", "dataMax"]}
+   300→   300→                  tickFormatter={(t: number) => formatShortRome(t)}
+   301→   301→                  tick={{ fill: "#71717a", fontSize: 10 }}
+   302→   302→                  tickLine={false}
+   303→   303→                  axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+   304→   304→                  minTickGap={48}
+   305→   305→                />
+   306→   306→                <YAxis
+   307→   307→                  domain={domain}
+   308→   308→                  tick={{ fill: "#71717a", fontSize: 10 }}
+   309→   309→                  tickLine={false}
+   310→   310→                  axisLine={false}
+   311→   311→                  tickFormatter={(v: number) => `${Math.round(v)}%`}
+   312→   312→                />
+   313→   313→                <Tooltip
+   314→   314→                  content={({ active, payload }) => {
+   315→   315→                    if (!active || !payload?.length) return null;
+   316→   316→                    const p = payload[0].payload as ChartDatum & { sma: number | null };
+   317→   317→                    return (
+   318→   318→                      <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+   319→   319→                        <p className="font-medium text-zinc-200">{p.label}</p>
+   320→   320→                        <p className="mt-1 font-mono tabular-nums text-emerald-400">
+   321→   321→                          Rimasto: {p.value.toFixed(1)}%
+   322→   322→                        </p>
+   323→   323→                        {p.sma !== null ? (
+   324→   324→                          <p className="font-mono tabular-nums text-rose-300">
+   325→   325→                            Media mobile: {p.sma.toFixed(1)}%
+   326→   326→                          </p>
+   327→   327→                        ) : null}
+   328→   328→                      </div>
+   329→   329→                    );
+   330→   330→                  }}
+   331→   331→                />
+   332→   332→                <ReferenceLine y={10} stroke="rgba(244,63,94,0.4)" strokeDasharray="4 4" />
+   333→   333→                <Area
+   334→   334→                  type="monotone"
+   335→   335→                  dataKey="value"
+   336→   336→                  stroke={win === "interval" ? "#34d399" : "#fbbf24"}
+   337→   337→                  strokeWidth={2}
+   338→   338→                  fill={win === "interval" ? "url(#gradInterval)" : "url(#gradWeekly)"}
+   339→   339→                  isAnimationActive={false}
+   340→   340→                  dot={false}
+   341→   341→                  activeDot={{ r: 3.5, fill: win === "interval" ? "#34d399" : "#fbbf24" }}
+   342→   342→                />
+   343→   343→                {showSma ? (
+   344→   344→                  <Line
+   345→   345→                    type="monotone"
+   346→   346→                    dataKey="sma"
+   347→   347→                    stroke="#f472b6"
+   348→   348→                    strokeWidth={1.8}
+   349→   349→                    strokeDasharray="6 3"
+   350→   350→                    dot={false}
+   351→   351→                    isAnimationActive={false}
+   352→   352→                    connectNulls
+   353→   353→                  />
+   354→   354→                ) : null}
+   355→   355→              </ComposedChart>
+   356→   356→            </ResponsiveContainer>
+   357→   357→          </div>
+   358→   358→          {showCycles && bands.length > 0 ? (
+   359→   359→            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[11px] text-zinc-600">
+   360→   360→              <Layers className="size-3 shrink-0" />
+   361→   361→              Fasce alternate = cicli di finestra rilevati (I26)
+   362→   362→              {bands.some((b) => b.reset !== null) ? " · linee rosse = reset osservati" : ""}.
+   363→   363→            </p>
+   364→   364→          ) : null}
+   365→   365→          </>
+   366→   366→        )}
+   367→   367→      </CardContent>
+   368→   368→    </Card>
+   369→   369→  );
+   370→   370→}
+   371→   371→
+   372→   372→interface TrendStats {
+   373→   373→  /** Velocità media di consumo in punti percento all'ora (positiva = consumo). */
+   374→   374→  ratePerHour: number | null;
+   375→   375→  /** Tempo stimato (ms) fino all'esaurimento, se il consumo prosegue lineare. */
+   376→   376→  exhaustionMs: number | null;
+   377→   377→  exhaustionAt: number | null;
+   378→   378→  samples: number;
+   379→   379→  windowMs: number;
+   380→   380→  /** I31: epoch ms dell'ultimo rilevamento usato per il trend. */
+   381→   381→  lastT: number | null;
+   382→   382→  /** I31: residuo osservato all'ultimo rilevamento (%). */
+   383→   383→  lastValue: number | null;
+   384→   384→}
+   385→   385→
+   386→   386→/** Statistiche derivate dalla storia: consumo medio e proiezione. */
+   387→   387→export function computeTrend(history: HistoryPoint[], win: "interval" | "weekly"): TrendStats {
+   388→   388→  const pts = history.slice(-60);
+   389→   389→  const key = win === "interval" ? "interval" : "weekly";
+   390→   390→  const last = pts.length > 0 ? pts[pts.length - 1] : null;
+   391→   391→  const base: TrendStats = {
+   392→   392→    ratePerHour: null,
+   393→   393→    exhaustionMs: null,
+   394→   394→    exhaustionAt: null,
+   395→   395→    samples: pts.length,
+   396→   396→    windowMs: last && pts.length > 1 ? last.t - pts[0].t : 0,
+   397→   397→    lastT: last ? last.t : null,
+   398→   398→    lastValue: last ? last[key] : null,
+   399→   399→  };
+   400→   400→  if (pts.length < 2 || !last) return base;
+   401→   401→
+   402→   402→  const first = pts[0];
+   403→   403→  const dtHours = (last.t - first.t) / 3600_000;
+   404→   404→  const dv = first[key] - last[key];
+   405→   405→  const ratePerHour = dtHours > 0 ? dv / dtHours : null;
+   406→   406→
+   407→   407→  if (ratePerHour !== null && ratePerHour > 0.01 && last[key] > 0) {
+   408→   408→    const hoursLeft = last[key] / ratePerHour;
+   409→   409→    return {
+   410→   410→      ...base,
+   411→   411→      ratePerHour,
+   412→   412→      exhaustionMs: hoursLeft * 3600_000,
+   413→   413→      exhaustionAt: last.t + hoursLeft * 3600_000,
+   414→   414→    };
+   415→   415→  }
+   416→   416→  return { ...base, ratePerHour };
+   417→   417→}
+   418→   418→
+   419→   419→/* ------------------------------------------------------------------ */
+   420→   420→/* I31 — Pace e quota sprecata (stesso filone del verdetto I23)        */
+   421→   421→/* ------------------------------------------------------------------ */
+   422→   422→
+   423→   423→/**
+   424→   424→ * Confronta il ritmo attuale con quello che servirebbe per sfruttare la
+   425→   425→ * finestra fino all'ultimo, quantificando:
+   426→   426→ * - il **ritmo di pareggio** (%/h che azzererebbe la quota ESATTAMENTE al reset);
+   427→   427→ * - la **quota sprecata**: residuo previsto al reset se il consumo proseguisse
+   428→   428→ *   al ritmo attuale (quota che il piano ricaricherà senza che sia stata usata);
+   429→   429→ * - il **fermo tecnico**: tempo senza quota tra l'esaurimento stimato e il
+   430→   430→ *   reset, quando il ritmo supera quello di pareggio.
+   431→   431→ *
+   432→   432→ * Tutto è calcolato sullo stesso modello lineare di I23 (ancorato all'ultimo
+   433→   433→ * rilevamento), così i numeri restano coerenti con il verdetto mostrato accanto.
+   434→   434→ */
+   435→   435→export interface PaceInfo {
+   436→   436→  /** Ore dall'ultimo rilevamento al reset; null se il reset è ignoto o già passato. */
+   437→   437→  hoursToReset: number | null;
+   438→   438→  /** Ritmo attuale (uguale a trend.ratePerHour), %/h. */
+   439→   439→  currentPace: number | null;
+   440→   440→  /** Ritmo di pareggio per azzerare la quota esattamente al reset, %/h. */
+   441→   441→  breakevenPace: number | null;
+   442→   442→  /** Residuo previsto al reset al ritmo attuale (punti %); 0 se si esaurisce prima. */
+   443→   443→  wastedQuota: number | null;
+   444→   444→  /** Tempo di consumo al ritmo attuale equivalente alla quota sprecata. */
+   445→   445→  wastedForMs: number | null;
+   446→   446→  /** Se la quota si esaurisce prima del reset: tempo «morto» fino al reset. */
+   447→   447→  downtimeMs: number | null;
+   448→   448→}
+   449→   449→
+   450→   450→const EMPTY_PACE: PaceInfo = {
+   451→   451→  hoursToReset: null,
+   452→   452→  currentPace: null,
+   453→   453→  breakevenPace: null,
+   454→   454→  wastedQuota: null,
+   455→   455→  wastedForMs: null,
+   456→   456→  downtimeMs: null,
+   457→   457→};
+   458→   458→
+   459→   459→export function computePace(trend: TrendStats, resetAt: number | null): PaceInfo {
+   460→   460→  if (resetAt === null || trend.lastT === null || trend.lastValue === null) {
+   461→   461→    return { ...EMPTY_PACE, currentPace: trend.ratePerHour };
+   462→   462→  }
+   463→   463→  const hoursToReset = (resetAt - trend.lastT) / 3600_000;
+   464→   464→  if (!isFinite(hoursToReset) || hoursToReset <= 0) {
+   465→   465→    return { ...EMPTY_PACE, currentPace: trend.ratePerHour };
+   466→   466→  }
+   467→   467→
+   468→   468→  const breakevenPace = trend.lastValue / hoursToReset;
+   469→   469→  const pace = trend.ratePerHour;
+   470→   470→
+   471→   471→  // Esaurimento stimato PRIMA del reset: niente quota sprecata, ma fermo tecnico
+   472→   472→  if (trend.exhaustionAt !== null && trend.exhaustionAt < resetAt) {
+   473→   473→    return {
+   474→   474→      hoursToReset,
+   475→   475→      currentPace: pace,
+   476→   476→      breakevenPace,
+   477→   477→      wastedQuota: 0,
+   478→   478→      wastedForMs: 0,
+   479→   479→      downtimeMs: Math.max(0, resetAt - trend.exhaustionAt),
+   480→   480→    };
+   481→   481→  }
+   482→   482→
+   483→   483→  // Residuo previsto al reset sul modello lineare (consumo ~null → residuo = attuale)
+   484→   484→  const residual = pace !== null ? trend.lastValue - pace * hoursToReset : trend.lastValue;
+   485→   485→  const wastedQuota = Math.max(0, residual);
+   486→   486→  return {
+   487→   487→    hoursToReset,
+   488→   488→    currentPace: pace,
+   489→   489→    breakevenPace,
+   490→   490→    wastedQuota,
+   491→   491→    wastedForMs: pace !== null && pace > 0.01 ? (wastedQuota / pace) * 3600_000 : null,
+   492→   492→    downtimeMs: null,
+   493→   493→  };
+   494→   494→}
+   495→   495→
+   496→   496→/** Pannello statistiche: consumo medio, proiezione esaurimento, rilevamenti, verdetto vs reset. */
+   497→   497→export function StatsPanel({
+   498→   498→  trend,
+   499→   499→  win,
+   500→   500→  resetAt = null,
+   501→   501→  remaining = null,
+   502→   502→  serverCount = null,
+   503→   503→}: {
+   504→   504→  trend: TrendStats;
+   505→   505→  win: "interval" | "weekly";
+   506→   506→  /** Epoch ms del reset previsto della finestra selezionata (end_time). */
+   507→   507→  resetAt?: number | null;
+   508→   508→  /** Percentuale residua attuale della finestra selezionata. */
+   509→   509→  remaining?: number | null;
+   510→   510→  /** Punti conservati sul server (I16); null = server non raggiunto. */
+   511→   511→  serverCount?: number | null;
+   512→   512→}) {
+   513→   513→  const winLabel = win === "interval" ? "5 ore" : "settimanale";
+   514→   514→  return (
+   515→   515→    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+   516→   516→      <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4">
+   517→   517→        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+   518→   518→          {trend.ratePerHour !== null && trend.ratePerHour > 0 ? (
+   519→   519→            <TrendingDown className="size-3.5 text-rose-400" />
+   520→   520→          ) : (
+   521→   521→            <TrendingUp className="size-3.5 text-emerald-400" />
+   522→   522→          )}
+   523→   523→          Consumo medio
+   524→   524→        </div>
+   525→   525→        <p className="mt-2 font-mono text-xl font-bold tabular-nums text-zinc-100">
+   526→   526→          {trend.ratePerHour === null
+   527→   527→            ? "N/D"
+   528→   528→            : `${trend.ratePerHour > 0 ? "+" : ""}${trend.ratePerHour.toFixed(2)} %/h`}
+   529→   529→        </p>
+   530→   530→        <p className="mt-1 text-[11px] text-zinc-500">
+   531→   531→          {trend.ratePerHour === null
+   532→   532→            ? "Servono almeno due rilevamenti"
+   533→   533→            : trend.ratePerHour > 0
+   534→   534→              ? `Stai consumando quota ${winLabel}`
+   535→   535→              : "Quota stabile o in recupero (reset)"}
+   536→   536→        </p>
+   537→   537→      </div>
+   538→   538→
+   539→   539→      <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4">
+   540→   540→        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+   541→   541→          <Hourglass className="size-3.5 text-amber-400" />
+   542→   542→          Esaurimento previsto
+   543→   543→        </div>
+   544→   544→        <p className="mt-2 font-mono text-xl font-bold tabular-nums text-zinc-100">
+   545→   545→          {trend.exhaustionMs === null ? "—" : formatCountdown(trend.exhaustionMs)}
+   546→   546→        </p>
+   547→   547→        <p className="mt-1 truncate text-[11px] text-zinc-500">
+   548→   548→          {trend.exhaustionAt === null
+   549→   549→            ? "Nessun esaurimento previsto al ritmo attuale"
+   550→   550→            : `Raggiungibile il ${formatDateTimeRome(trend.exhaustionAt)}`}
+   551→   551→        </p>
+   552→   552→      </div>
+   553→   553→
+   554→   554→      <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4">
+   555→   555→        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+   556→   556→          <Gauge className="size-3.5 text-zinc-400" />
+   557→   557→          Rilevamenti salvati
+   558→   558→        </div>
+   559→   559→        <p className="mt-2 font-mono text-xl font-bold tabular-nums text-zinc-100">{trend.samples}</p>
+   560→   560→        <p className="mt-1 text-[11px] text-zinc-500">
+   561→   561→          {serverCount !== null && serverCount > 0
+   562→   562→            ? `Sul server ${serverCount.toLocaleString("it-IT")} punti totali`
+   563→   563→            : trend.windowMs > 0
+   564→   564→              ? `Su un arco di ${formatCountdown(trend.windowMs)}`
+   565→   565→              : "La cronologia è salvata sul tuo dispositivo"}
+   566→   566→        </p>
+   567→   567→      </div>
+   568→   568→
+   569→   569→      {/* Verdetto: esaurimento stimato vs orario di reset */}
+   570→   570→      <ProjectionVerdict trend={trend} resetAt={resetAt} remaining={remaining} win={win} />
+   571→   571→    </div>
+   572→   572→  );
+   573→   573→}
+   574→   574→
+   575→   575→/** Riga di verdetto: la quota durerà fino al reset o si esaurirà prima? */
+   576→   576→function ProjectionVerdict({
+   577→   577→  trend,
+   578→   578→  resetAt,
+   579→   579→  remaining,
+   580→   580→  win,
+   581→   581→}: {
+   582→   582→  trend: TrendStats;
+   583→   583→  resetAt: number | null;
+   584→   584→  remaining: number | null;
+   585→   585→  win: "interval" | "weekly";
+   586→   586→}) {
+   587→   587→  const winLabel = win === "interval" ? "di 5 ore" : "settimanale";
+   588→   588→  if (trend.samples < 2 || trend.ratePerHour === null) {
+   589→   589→    return (
+   590→   590→      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
+   591→   591→        <div className="flex items-start gap-2.5">
+   592→   592→          <Info className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+   593→   593→          <div>
+   594→   594→            <p className="text-xs font-semibold text-zinc-300">Verdetto d’esaurimento</p>
+   595→   595→            <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+   596→   596→              Raccogli almeno due rilevamenti con la finestra «{winLabel}» attiva per stimare se la quota
+   597→   597→              durerà fino al reset o si esaurirà prima.
+   598→   598→            </p>
+   599→   599→          </div>
+   600→   600→        </div>
+   601→   601→      </div>
+   602→   602→    );
+   603→   603→  }
+   604→   604→
+   605→   605→  const exhaustedBeforeReset =
+   606→   606→    trend.exhaustionAt !== null && resetAt !== null && trend.exhaustionAt < resetAt;
+   607→   607→
+   608→   608→  if (exhaustedBeforeReset) {
+   609→   609→    return (
+   610→   610→      <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-4 sm:col-span-3">
+   611→   611→        <div className="flex items-start gap-2.5">
+   612→   612→          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+   613→   613→          <div>
+   614→   614→            <p className="text-xs font-semibold text-amber-200">Rischio esaurimento prima del reset</p>
+   615→   615→            <p className="mt-0.5 text-[11px] leading-relaxed text-amber-200/70">
+   616→   616→              Al ritmo attuale (+{trend.ratePerHour.toFixed(2)} %/h) la quota {winLabel} ({remaining?.toFixed(1)}%)
+   617→   617→              si esaurirà il <strong>{formatDateTimeRome(trend.exhaustionAt)}</strong>, PRIMA del reset previsto
+   618→   618→              per le <strong>{formatTimeRome(resetAt)}</strong>.
+   619→   619→            </p>
+   620→   620→          </div>
+   621→   621→        </div>
+   622→   622→      </div>
+   623→   623→    );
+   624→   624→  }
+   625→   625→
+   626→   626→  if (trend.exhaustionAt !== null && resetAt !== null) {
+   627→   627→    return (
+   628→   628→      <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] p-4 sm:col-span-3">
+   629→   629→        <div className="flex items-start gap-2.5">
+   630→   630→          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+   631→   631→          <div>
+   632→   632→            <p className="text-xs font-semibold text-emerald-200">Quota sufficiente fino al reset</p>
+   633→   633→            <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-200/70">
+   634→   634→              Al ritmo attuale (+{trend.ratePerHour.toFixed(2)} %/h) l’esaurimento è previsto solo il{" "}
+   635→   635→              <strong>{formatDateTimeRome(trend.exhaustionAt)}</strong>: la finestra {winLabel} si ricaricherà
+   636→   636→              alle <strong>{formatTimeRome(resetAt)}</strong>, prima di esaurirsi.
+   637→   637→            </p>
+   638→   638→          </div>
+   639→   639→        </div>
+   640→   640→      </div>
+   641→   641→    );
+   642→   642→  }
+   643→   643→
+   644→   644→  // Consumo ~zero o negativo: nessun rischio stimato
+   645→   645→  return (
+   646→   646→    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
+   647→   647→      <div className="flex items-start gap-2.5">
+   648→   648→        <Info className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+   649→   649→        <div>
+   650→   650→          <p className="text-xs font-semibold text-zinc-300">Nessun esaurimento previsto al ritmo attuale</p>
+   651→   651→          <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+   652→   652→            {trend.ratePerHour > 0
+   653→   653→              ? `Il consumo è quasi nullo (+${trend.ratePerHour.toFixed(2)} %/h): la quota ${winLabel} durerà agevolmente fino al reset${resetAt ? ` delle ${formatTimeRome(resetAt)}` : ""}.`
+   654→   654→              : `Quota stabile o in recupero (reset avvenuto): nessun rischio di esaurimento per la finestra ${winLabel}.`}
+   655→   655→          </p>
+   656→   656→        </div>
+   657→   657→      </div>
+   658→   658→    </div>
+   659→   659→  );
+   660→   660→}
+   661→   661→
+   662→   662→/** Badge sintetico del trend, per l'header. */
+   663→   663→export function TrendBadge({ trend }: { trend: TrendStats }) {
+   664→   664→  if (trend.ratePerHour === null) return null;
+   665→   665→  const up = trend.ratePerHour > 0;
+   666→   666→  return (
+   667→   667→    <Badge variant="outline" className="gap-1 border-white/10 text-[10px] text-zinc-400">
+   668→   668→      {up ? <TrendingDown className="size-3 text-rose-400" /> : <TrendingUp className="size-3 text-emerald-400" />}
+   669→   669→      {up ? "+" : ""}
+   670→   670→      {trend.ratePerHour.toFixed(2)} %/h
+   671→   671→    </Badge>
+   672→   672→  );
+   673→   673→}
+   674→   674→

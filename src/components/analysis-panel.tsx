@@ -30,15 +30,18 @@ import {
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   detectCycles,
+  heatmapConsumption,
   summarizeCycles,
   weekdayConsumption,
+  WEEKDAY_LABELS,
   type Cycle,
   type CycleSummary,
+  type HeatmapGrid,
 } from "@/lib/cycles";
 import { mergeHistories, fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import { formatDateTimeRome, formatDuration } from "@/lib/time";
 import type { HistoryPoint } from "@/components/history-chart";
-import { CalendarDays, Database, Info, Layers, RefreshCw } from "lucide-react";
+import { CalendarDays, Database, Flame, Info, Layers, RefreshCw } from "lucide-react";
 
 interface LongTermAnalysisProps {
   /** Storico fuso locale+server già presente nella pagina (fonte primaria). */
@@ -83,6 +86,8 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
   const weeklySummary = React.useMemo(() => summarizeCycles(weeklyCycles), [weeklyCycles]);
   const weekdayWeekly = React.useMemo(() => weekdayConsumption(data, "weekly"), [data]);
   const weekdayInterval = React.useMemo(() => weekdayConsumption(data, "interval"), [data]);
+  const heatInterval = React.useMemo(() => heatmapConsumption(data, "interval"), [data]);
+  const heatWeekly = React.useMemo(() => heatmapConsumption(data, "weekly"), [data]);
 
   if (data.length < 2) {
     return (
@@ -117,7 +122,7 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
             Analisi di lungo periodo
           </CardTitle>
           <CardDescription className="text-xs text-zinc-500">
-            Cicli di finestra, consumo medio e statistiche sui dati persistiti · orario Europe/Rome
+            Cicli di finestra, consumo per giorno e per ora, statistiche sui dati persistiti · orario Europe/Rome
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
@@ -151,6 +156,9 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
             <TabsTrigger value="giorni" className="text-xs data-[state=active]:text-zinc-900">
               Per giorno
             </TabsTrigger>
+            <TabsTrigger value="ore" className="text-xs data-[state=active]:text-zinc-900">
+              Per ora
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="cicli-interval" className="mt-0">
@@ -173,6 +181,10 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
 
           <TabsContent value="giorni" className="mt-0">
             <WeekdaySection weekly={weekdayWeekly} interval={weekdayInterval} />
+          </TabsContent>
+
+          <TabsContent value="ore" className="mt-0">
+            <HeatmapSection interval={heatInterval} weekly={heatWeekly} />
           </TabsContent>
         </Tabs>
 
@@ -390,6 +402,167 @@ function WeekdaySection({
         calcolato sul calo del minimo progressivo della quota tra i rilevamenti — i rimbalzi senza reset
         non sono consumo — e normalizzato sui giorni presenti nello storico ({totalDays} giorni osservati).
         I giorni senza consumo registrato compaiono a 0.
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Sezione heatmap: consumo per giorno × ora (I32)                     */
+/* ------------------------------------------------------------------ */
+
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+/**
+ * Heatmap 7×24 del consumo (I32): righe = giorni della settimana, colonne =
+ * ore del giorno (Europe/Rome). L'intensità è proporzionale al consumo
+ * attribuito alla cella (scala con radice quadrata per valorizzare i valori
+ * bassi); il tooltip mostra il valore e il numero di cali attribuiti.
+ */
+function HeatmapSection({ interval, weekly }: { interval: HeatmapGrid; weekly: HeatmapGrid }) {
+  const [hw, setHw] = React.useState<"interval" | "weekly">("interval");
+  const grid = hw === "interval" ? interval : weekly;
+  const winLabel = hw === "interval" ? "finestra di 5 ore" : "finestra settimanale";
+
+  /** Cella con il consumo massimo (picco della griglia corrente). */
+  let peak: { day: number; hour: number; value: number } | null = null;
+  for (let d = 0; d < 7; d++) {
+    for (let h = 0; h < 24; h++) {
+      const v = grid.cells[d][h];
+      if (v > 0 && (!peak || v > peak.value)) peak = { day: d, hour: h, value: v };
+    }
+  }
+
+  if (grid.total <= 0) {
+    return (
+      <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-6 text-center">
+        <Flame className="size-5 text-zinc-600" />
+        <p className="text-xs leading-relaxed text-zinc-500">
+          Nessun consumo attribuibile a un&apos;ora del giorno ({winLabel}): servono rilevamenti in calo
+          nello stesso giorno (Europe/Rome).
+        </p>
+      </div>
+    );
+  }
+
+  const cellColor = (v: number): string | undefined => {
+    if (v <= 0) return undefined;
+    const alpha = 0.08 + 0.82 * Math.sqrt(v / (grid.max || 1));
+    return `rgba(167, 139, 250, ${alpha.toFixed(3)})`;
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Selettore finestra */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Finestra della heatmap">
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={hw === "interval"}
+          onClick={() => setHw("interval")}
+          className={`h-8 border-white/10 text-xs ${
+            hw === "interval"
+              ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!"
+              : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"
+          }`}
+        >
+          5 ore
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={hw === "weekly"}
+          onClick={() => setHw("weekly")}
+          className={`h-8 border-white/10 text-xs ${
+            hw === "weekly"
+              ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!"
+              : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"
+          }`}
+        >
+          Settimanale
+        </Button>
+        <span className="ml-auto text-[10px] text-zinc-600">ore Europe/Rome</span>
+      </div>
+
+      {/* KPI della griglia corrente */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Consumo attribuito</p>
+          <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-zinc-100">
+            {grid.total.toFixed(1)}%
+          </p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">{winLabel}</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Ora di picco</p>
+          <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-zinc-100">
+            {peak ? `${WEEKDAY_LABELS[peak.day]} ${String(peak.hour).padStart(2, "0")}:00` : "—"}
+          </p>
+          <p className="mt-0.5 truncate text-[10px] text-zinc-500">
+            {peak ? `${peak.value.toFixed(1)}% nel blocco orario` : "nessun picco"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Celle attive</p>
+          <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-zinc-100">
+            {grid.populated}
+            <span className="text-sm font-medium text-zinc-500">/168</span>
+          </p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">blocchi giorno × ora con consumo</p>
+        </div>
+      </div>
+
+      {/* Griglia 7×24 */}
+      <div className="overflow-x-auto rounded-xl border border-white/[0.07] p-2">
+        <div className="min-w-[560px] space-y-[3px]">
+          {WEEKDAY_LABELS.map((label, d) => (
+            <div key={label} className="flex items-center gap-[3px]">
+              <span className="w-8 shrink-0 text-right text-[10px] capitalize text-zinc-500">{label}</span>
+              {HOURS.map((h) => {
+                const v = grid.cells[d][h];
+                const n = grid.events[d][h];
+                return (
+                  <div
+                    key={h}
+                    title={`${label} ${String(h).padStart(2, "0")}:00 — consumo ${v.toFixed(1)}% (${n} ${
+                      n === 1 ? "calo" : "cali"
+                    })`}
+                    className="h-6 flex-1 rounded-[3px] border border-white/[0.04]"
+                    style={{ backgroundColor: cellColor(v) }}
+                  />
+                );
+              })}
+            </div>
+          ))}
+          <div className="flex items-center gap-[3px] pt-0.5">
+            <span className="w-8 shrink-0" />
+            {HOURS.map((h) => (
+              <span key={h} className="flex-1 text-center text-[8px] tabular-nums text-zinc-600">
+                {h % 2 === 0 ? h : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Legenda */}
+      <div className="flex flex-wrap items-center gap-2 text-[10px] text-zinc-500">
+        <span>0%</span>
+        <span
+          aria-hidden
+          className="h-2 w-28 rounded-full"
+          style={{
+            background: "linear-gradient(90deg, rgba(167,139,250,0.08), rgba(167,139,250,0.9))",
+          }}
+        />
+        <span>{grid.max.toFixed(1)}% (picco)</span>
+      </div>
+
+      <p className="text-[11px] leading-relaxed text-zinc-500">
+        Consumo per (giorno × ora) in orario Europe/Rome, calcolato sul calo del minimo progressivo della
+        quota tra i rilevamenti — i rimbalzi senza reset non sono consumo — e attribuito al punto medio tra
+        i due rilevamenti. Le celle più intense indicano le fasce orarie in cui il piano si consuma di più;
+        passando con il mouse su una cella si vedono il consumo attribuito e il numero di cali.
       </p>
     </div>
   );
