@@ -303,3 +303,25 @@ Stage Summary:
 - In attesa che l'utente disattivi la demo nell'anteprima; poi V4/V5/V6 automatiche
 - V3 (reset senza uso) e V1/V2 (esaurimento + rolling con uso reale) da programmare dopo gli esiti rapidi: richiedono vincoli comportamentali dell'utente (non usare / usare l'API)
 - Al termine: rimuovere blocco cattura da route.ts, eliminare .chiave-sessione, aggiornare docs/04 §4 + docs/05 §10, decidere I18 dall'esito V4
+
+---
+Task ID: 13
+Agent: Super Z (main)
+Task: I30 — Chiusura campagna verifiche V1–V6 + aggiornamento documentazione (README, docs/03–05, stato avanzamento)
+
+Work Log:
+- Verificato lo stato della catena dopo il riavvio del workspace del 06/10 (04:53 UTC): watcher e processi di verifica terminati; `scripts/verifiche/.chiave-sessione`, `sessione-quick.log` e marker `.quick-done` inesistenti; `esiti/` contiene SOLO i run del 02/10 con chiave non valida → gli esiti della campagna con chiave reale (04–05/10: rapide V4/V5/V1/V6 + lunghe V1/V2 in corsa, controprova V2 sul confine delle 17:00) sono PERDUTI e i verdetti non recuperabili dagli artefatti
+- Zero POST /api/minimax/usage in dev.log da riavvio → nessuna chiave attiva (browser dell'anteprima in demo)
+- Falso allarme scartato: punti DB con "anno 58732" erano un artefatto della mia query diagnostica (coercizione Date*1000 su Prisma DateTime); DB integro: 351 punti (126 api reali del 02/10 + 225 demo fino a oggi), 1 evento
+- CHIUSURA OPERATIVA (checklist Task 7): rimosso il blocco temporaneo di cattura chiave da src/app/api/minimax/usage/route.ts; proxy ritestato con curl (200, nessun file scritto); tsc --noEmit su src/ = 0 errori; bun run lint EXIT=0; toolkit e watcher-quick.sh conservati per future campagne
+- Documentazione aggiornata:
+  · docs/04: I30 ✅ in §3; nota ⚠️ campagna 04–06/10 interrotta in §4; ADR-13 (meccanismo temporaneo di cattura/delega) + ADR-13-R (ritiro) in §5; changelog §8 con righe 2026-10-04 (Task 7 catena) e 2026-10-06 (I30 chiusura + riallineamento doc)
+  · docs/05: §10 registro esecuzioni con 3 nuove righe (04/10 setup+avvio, 04→05/10 perdita esiti, 06/10 chiusura amministrativa) + nota operativa su come ri-armare la catena e lezione appresa (esiti incrementali, --durata brevi)
+  · docs/03: header aggiornato; §2 stack con Prisma/SQLite (F7/F8); §3 mappa settings-dialog allineata a I28 (thresholds {h5,h24,weekly}); §9 sicurezza con nota rimozione cattura; §11 punto 2 con V4 unico sblocco di I18
+  · README.md: riscritto lo "Stato del progetto" (F0–F8 complete, campagne V1–V6 da rieseguire), aggiunte docs/05 all'indice, Prisma/SQLite allo stack, `bun run db:push` all'avvio, funzionalità complete (soglie per finestra I28, analisi di lungo periodo I26, media mobile, persistenza durevole F7/F8), struttura repo con i file mancanti (api/history, api/events, server-history, server-events, cycles, analysis-panel, schema.prisma, db/custom.db) e nuova sezione "Verifiche empiriche (toolkit)"
+- Smoke test finali: GET / = 200; GET /api/history ok (total 351); prova-parser toolkit PASSA; comando `aiuto` verificato
+
+Stage Summary:
+- La campagna verifiche con chiave reale è ufficialmente CHIUSA come "interrotta senza esiti recuperabili": V1–V6 tornano da rieseguire (docs/05 §9), I18 resta bloccata solo su V4
+- Il proxy è tornato allo stato pulito (nessuna scrittura su disco), coercendo la regola di sicurezza del Task 7; ADR-13 registrato e ritirato per tracciabilità completa
+- Tutta la documentazione (README + docs/01–05) è ora allineata al progetto reale: persistenza SQLite, analisi di lungo periodo, soglie per finestra, toolkit verifiche con il suo runbook

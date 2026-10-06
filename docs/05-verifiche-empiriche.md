@@ -289,7 +289,24 @@ vanno poi riportati in `docs/04` §4 (stato della verifica), `docs/01` (semantic
 | 2026-10-02 | V1 `--once` | non valida | Parziale: percorso errore OK (`HTTP 200`, `status_code 1004`) | `esiti/v1-2026-10-02T17-58-16.json` |
 | 2026-10-02 | V5 | non valida | Parziale: percorso errore OK | `esiti/v5-2026-10-02T17-57-31.json` |
 | 2026-10-02 | V6 | non valida | Parziale: **54 richieste in 9 min @10s** (ridotta da 10 min per vincolo di sessione), tutte `HTTP 200` + `1004`, **zero 429**, zero errori di trasporto, latenza 503/588/1076/1202 ms (min/med/p95/max) → nessuna limitazione HTTP osservabile senza chiave; da confermare con chiave reale | `esiti/v6-2026-10-02T18-12-43.json` |
+| 2026-10-04 | Catena automatica (Task 7) | reale (via ADR-13) | ⚠️ **Setup + avvio**: cattura temporanea della chiave nel proxy (`ADR-13`, `docs/04` §5) + watcher `watcher-quick.sh` collaudato con chiave finta; il browser dell'anteprima ha fornito la chiave reale e la campagna è partita (rapide V4/V5/V1 `--once`/V6 + lunghe V1/V2) | nessuno (log di sessione perduto, vedi sotto) |
+| 2026-10-04→05 | V1/V2 lunghe + controprova V2 sul confine delle 17:00 | reale | ⚠️ **IN CORSO AL MOMENTO DELLA PERDITA**: il riavvio del workspace del 06/10 (04:53 UTC) ha terminato i processi e cancellato log, file chiave ed esiti prima della scrittura su `esiti/`; nessun verdetto recuperabile dagli artefatti → le verifiche tornano «da rieseguire» (§9) | nessuno (perduto col riavvio) |
+| 2026-10-06 | Chiusura amministrativa (I30) | — | Meccanismo di cattura RIMOSSO dal proxy (ritiro ADR-13, proxy ritestato 200 e senza scritture); DB controllato (351 punti: 126 api 02/10 + 225 demo, integro); toolkit e watcher restano pronti per una nuova campagna | — |
 
 > Le righe «non valida» servono a validare il toolkit e a raccogliere indizi; il
 > **verdetto definitivo** di ogni verifica richiede la Subscription Key reale (§9).
 > Aggiorna questa tabella a ogni esecuzione reale.
+
+**Nota sulla campagna del 04–05/10 (ADR-13, ora ritirato)**: poiché l'utente non può
+usare il terminale, la campagna è stata eseguita con una catena di delega — cattura
+temporanea della chiave nel proxy (`scripts/verifiche/.chiave-sessione`, 0600) +
+watcher `watcher-quick.sh` che eseguiva il toolkit appena la chiave arrivava dal
+browser dell'anteprima. Il meccanismo è stato **rimosso** a campagna conclusa
+(ritiro ADR-13, `docs/04` §5). Per una nuova campagna delegata: (1) ri-inserire il
+blocco di cattura marcato in `api/minimax/usage/route.ts` (descritto in `worklog.md`,
+Task 7); (2) riavviare `scripts/verifiche/watcher-quick.sh` con `setsid nohup`;
+(3) chiedere all'utente di disattivare la demo nell'anteprima; (4) a fine campagna,
+rimuovere di nuovo il blocco ed eliminare il file chiave. La lezione appresa del
+06/10: far scrivere gli esiti **incrementalmente** (il toolkit li scrive a fine run:
+un riavvio a metà campagna li perde) e lanciare le verifiche lunghe in più spezzoni
+con `--durata` breve.
