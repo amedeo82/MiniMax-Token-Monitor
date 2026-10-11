@@ -178,7 +178,10 @@ const CHECKS = [
   check.simbolo("I32", "src/lib/cycles.ts", "export function heatmapConsumption", "heatmap 7×24"),
   check.simbolo("I32", "src/components/analysis-panel.tsx", "Per ora|Heatmap", "tab heatmap in UI"),
 
-  /* --- Recovery (I50/I51) ------------------------------------------- */
+  /* --- Recovery (I50/I51/I55) --------------------------------------- */
+  check.file("I55", "scripts/verifiche/audit-implementazioni.mjs", "audit tool stesso"),
+  check.simbolo("I55", "scripts/verifiche/audit-implementazioni.mjs", "SCOPERT|coverage check", "coverage check ✅ senza verifiche"),
+  check.simbolo("I55", "scripts/verifiche/audit-implementazioni.mjs", "audit-implementazioni-", "report in esiti/"),
   check.files("I50", ["tests/lib/minimax.test.ts", "tests/lib/time.test.ts", "tests/lib/cycles.test.ts", "tests/lib/usage-events.test.ts", "tests/lib/backoff.test.ts"], "suite test lib core"),
   check.simbolo("I50", "package.json", '"test": "bun test"', "script test"),
   check.file("I50", "tests/bun-env.d.ts", "tipi bun:test per tsc"),
