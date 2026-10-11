@@ -345,3 +345,26 @@ Stage Summary:
 - I31 dà all'utente la «coscienza del ritmo»: sa in anticipo se sprecherà quota (e quanto vale in ore di consumo) o se resterà a secco prima del reset
 - I32 chiude il cerchio dell'analisi di lungo periodo: oltre al «quanto» (cicli, per giorno) ora anche il «quando» nella giornata (heatmap) e i confini di finestra direttamente sul grafico
 - Verifiche V1–V6 invariate: da rieseguire secondo docs/05 §9 (I18 dipende solo da V4)
+
+---
+Task ID: 15
+Agent: Super Z (main)
+Task: Documentazione del secondo rollback del workspace + ri-registrazione onesta di I48–I82 + baseline (richiesta utente: «continua con il prossimo ste e relativo clarify se necessario»)
+
+Work Log:
+- Alla ripresa del lavoro, tentato di leggere docs/07-analisi-miglioramenti-aggiuntivi.md → FILE ASSENTE; indagine immediata: docs/06 e docs/07 assenti, tests/lib/ assente, tutti i moduli delle sessioni 09–11/10 assenti (backoff, rate, health, ring-color, tab-identity, diagnostica-panel, section-nav, rate-chart, pwa-register, sw.js, manifest), scripts/verifiche/audit-implementazioni.mjs e campione-live.jsonl assenti, package.json senza script `test`
+- History git riscritta: SOLO commit UUID di piattaforma + «Initial commit» (d7a8559); reflog mostra commit/amend di piattaforma; gli oggetti dei commit originali (7f8d007 Task 30, 341e0b2, da66837, ae637d3 Task 29, b837876 I52, 0e707c1 batch 3, 80ccfe4 batch 2, 11da9bf batch 1, …) sono garbage-collected (git cat-file = PERSO per tutti)
+- Punto di ripristino identificato: checkpoint del 07/10 post-Task-14 (stato I31/I32) — docs/04 a 182 righe con §3 fino a I32, §4 con V1–V6 in stato pre-campagna, I18 ⬜ «Dipende da V4», worklog con 15 sezioni (ultima Task 14), docs/05 senza §11, esiti/ solo 02/10 con chiave non valida
+- Stesso scenario del PRIMO rollback (del 09/10, documentato nell'ormai persa voce del changelog): ripristino al checkpoint 07/10; la differenza è che ora è persa ANCHE la registrazione del primo rollback e tutto il lavoro fatto dopo (Tasks 15–30)
+- Baseline verificata: tsc src/ 0 errori, lint OK, DB ripristinato (283 api + 241 demo, 5 eventi, primo punto 02/10 13:10 UTC) ma POLLER UTENTE ANCORA ATTIVO (ultimo punto 11/10 10:52 UTC — i punti api reali tornano ad accumularsi sul DB ripristinato); nuovo strumento `scripts/verifiche/conteggio-db.mjs` (ispezione DB in una riga, riusabile)
+- Ri-registrazione CONDENSATA e ONESTA di I48–I82 in docs/04 §3 (35 righe, tutte ⬜, con note che distinguono: implementato-e-perso vs proposto-mai-implementato vs verifica-documentale-persa); numeri e significati IDENTICI a quelli comunicati in chat per continuità (lezione del primo rollback: «ri-registrare senza collidere con la chat» — I33–I47 bruciati, I48–I82 riservati, item nuovi da I83)
+- Note aggiunte a docs/04: §3 (nota di rollback completa), §4 (verdetti del 09/10 privi di artefatti: V4=IDENTICI, V5 N/A, V6 no limit, V2/V3 via V8, V8 blocchi fissi UTC — le righe V tornano «da rieseguire», il transcript chat resta l'unica evidenza non-formale), riga I18 (storia: implementato dopo V4 e perso; serve V4 fresca o accettazione documentale del verdetto), §1 (F7/F8 re-aggiunte: il drift fix di Task 30 era perito col rollback), §8 changelog (riga completa del secondo rollback)
+- Il bug I76 (`e.value != null` non copre undefined in event-log.tsx) è di nuovo NEL CODICE ripristinato: proposta ancora valida con evidenza da ri-produrre
+- Nessun codice sorgente toccato in questa sezione: solo documentazione + 1 script di ispezione DB
+
+Stage Summary:
+- Perdita quantificata e documentata: TUTTO il lavoro delle sessioni 09–11/10 (Tasks 15–30) è perso da docs, codice, test e history; sopravvivono albero Task 14 verde, esiti 02/10, DB ripristinato con poller attivo
+- docs/04 torna il riferimento onesto: I1–I32 ✅ reali, I48–I82 ⬜ ri-registrati con note di storia, verdetti V senza artefatti dichiarati tali
+- Riuso numeri I48–I82 con stessi significati (continuità chat); I33–I47 bruciati; item nuovi da I83
+- Prossimo passo: clarify utente sull'ordine di recovery — raccomandazione: fondamenta prima (I50 test suite + I51 backoff + I55 audit tool), poi verifiche (I49/V8, I18 con V4), poi abbellimenti (rigenerare cataloghi + re-implementare I57–I67), poi il nuovo catalogo I68+
+- Commit: documentazione + conteggio-db.mjs in un commit, DB runtime separato (lezione I30, poller attivo)
