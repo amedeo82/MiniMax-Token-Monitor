@@ -108,6 +108,11 @@ Bottom bar fissa <md come alternativa alla section-nav sticky (I66) su telefono.
 > spaziatore `h-16` dopo il footer per non coprirlo. Vista compatta I73: né nav né
 > barra. Verificato in browser a 390px (barra fissa, top nav assente, click
 > «Eventi» → aria-current + scroll, zero overflow). 3 test componente.
+>
+> **Nota I85 (12/10)**: l'hook condiviso guadagna il **retry dell'osservazione** (250 ms
+> × 120) finché le 8 sezioni sono nel DOM — la barra mobile ereditava lo stesso
+> scrollspy morto di I66 (observer nato sullo skeleton) e ora segue davvero lo scroll
+> (verificato a 390px: «Eventi» attivo a fondo pagina). Dettagli: `docs/03` §5.17.
 
 ## 5.8 I75 — Vista stampa / report settimanale ✅
 Blocco `print` dedicato + voce nel menu Esporta: sintesi settimanale stampabile

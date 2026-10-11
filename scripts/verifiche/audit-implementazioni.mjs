@@ -312,7 +312,7 @@ const CHECKS = [
   check.simbolo("I74", "src/components/bottom-nav.tsx", "useScrollSpySezioni", "stesso scrollspy della nav I66"),
   check.simbolo("I74", "src/components/bottom-nav.tsx", "md:hidden", "visibile solo sotto md"),
   check.simbolo("I74", "src/app/page.tsx", "BottomNav", "wiring barra mobile in page.tsx"),
-  check.simbolo("I74", "src/app/page.tsx", "hidden md:block", "nav superiore nascosta su <md (alternativa)"),
+  check.simbolo("I74", "src/components/section-nav.tsx", "hidden .* md:block", "nav superiore nascosta su <md (alternativa; I85: la classe vive sul componente, nav figlia diretta di main)"),
   check.simbolo("I75", "src/lib/print.ts", "export function stampaReportSettimanale", "flusso di stampa con afterprint"),
   check.simbolo("I75", "src/components/print-report.tsx", "print-report-root", "blocco solo-carta"),
   check.simbolo("I75", "src/components/print-report.tsx", "detectCycles", "cicli nel report"),
@@ -336,6 +336,10 @@ const CHECKS = [
   check.simbolo("I84", "src/app/globals.css", "\\.dark \\.placeholder\\\\:text-zinc-600::placeholder", "famiglia scuro: placeholder leggibile"),
   check.simbolo("I84", "src/app/globals.css", "background-color: #ecfdf5", "tinte forti → toni 50 pieni (strato chiaro)"),
   check.simbolo("I84", "src/app/globals.css", "@layer utilities \\{\\s*\\.dark \\.text-zinc-500\\\\!", "etichette menu text-zinc-500! in famiglia scuro"),
+  /* --- I85 — nav sezioni sempre visibile durante lo scrolling (docs/03 §5.17) --- */
+  check.simbolo("I85", "src/app/page.tsx", "\\{!compact \\? <SectionNav /> : null\\}", "nav figlia DIRETTA di main: contenitore sticky = tutta la pagina"),
+  check.assenza("I85", "src/app/page.tsx", "<div className=\"hidden md:block\">\\s*<SectionNav", "niente wrapper attorno alla nav (limiterebbe la corsa dello sticky)"),
+  check.simbolo("I85", "src/components/section-nav.tsx", "className=\"sticky z-30 hidden .* md:block\"", "sticky + hidden md:block sulla nav stessa (desktop ≥md)"),
 ];
 
 /* ------------------------------------------------------------------ */
