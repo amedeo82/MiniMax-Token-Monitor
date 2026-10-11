@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { emptyHourBucket, hourStartOf, mergeHourBucket, type HourStats } from "@/lib/downsample";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,10 @@ function toEpoch(v: unknown): number | null {
 async function pruneHistory(): Promise<void> {
   const cutoff90d = new Date(Date.now() - 90 * 24 * 3600_000);
   await db.usagePoint.deleteMany({ where: { t: { lt: cutoff90d } } });
+  // I68 — i bucket orari derivati seguono la stessa finestra di conservazione:
+  // oltre i 90 giorni anche la grana oraria perde interesse (il backfill
+  // può ricostruire la tabella dai punti superstiti in qualunque momento).
+  await db.downsampledPoint.deleteMany({ where: { hourStart: { lt: cutoff90d } } });
 
   const count = await db.usagePoint.count();
   if (count <= SERVER_HISTORY_MAX) return;
@@ -60,6 +65,82 @@ async function pruneHistory(): Promise<void> {
   if (oldestKept) {
     await db.usagePoint.deleteMany({ where: { t: { lt: oldestKept } } });
   }
+}
+
+/**
+ * I68 — Aggiorna (incrementalmente) il bucket orario derivato del punto
+ * appena salvato. Errore NON bloccante per il salvataggio del punto grezzo:
+ * il downsample è una comodità e il backfill può ricostruirlo in ogni momento.
+ */
+async function updateHourBucket(
+  t: number,
+  interval: number | null,
+  weekly: number | null,
+  source: string,
+): Promise<void> {
+  const hs = new Date(hourStartOf(t));
+  const key = { hourStart_source: { hourStart: hs, source } };
+  const existing = await db.downsampledPoint.findUnique({ where: key });
+  const bucket = mergeHourBucket(
+    existing
+      ? {
+          hourStart: existing.hourStart.getTime(),
+          source: existing.source,
+          interval: {
+            min: existing.minInterval,
+            max: existing.maxInterval,
+            somma: existing.sumInterval,
+            ultimo: existing.lastInterval,
+          },
+          weekly: {
+            min: existing.minWeekly,
+            max: existing.maxWeekly,
+            somma: existing.sumWeekly,
+            ultimo: existing.lastWeekly,
+          },
+          count: existing.count,
+          lastT: existing.lastT.getTime(),
+        }
+      : emptyHourBucket(hs.getTime(), source),
+    { t, interval, weekly },
+  );
+  const stats = (s: HourStats) => ({
+    min: s.min,
+    max: s.max,
+    somma: s.somma,
+    ultimo: s.ultimo,
+  });
+  const i = stats(bucket.interval);
+  const w = stats(bucket.weekly);
+  await db.downsampledPoint.upsert({
+    where: key,
+    create: {
+      hourStart: hs,
+      source,
+      minInterval: i.min,
+      maxInterval: i.max,
+      sumInterval: i.somma,
+      lastInterval: i.ultimo,
+      minWeekly: w.min,
+      maxWeekly: w.max,
+      sumWeekly: w.somma,
+      lastWeekly: w.ultimo,
+      count: bucket.count,
+      lastT: new Date(bucket.lastT),
+    },
+    update: {
+      minInterval: i.min,
+      maxInterval: i.max,
+      sumInterval: i.somma,
+      lastInterval: i.ultimo,
+      minWeekly: w.min,
+      maxWeekly: w.max,
+      sumWeekly: w.somma,
+      lastWeekly: w.ultimo,
+      count: bucket.count,
+      lastT: new Date(bucket.lastT),
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -97,6 +178,12 @@ export async function POST(req: NextRequest) {
         create: { t: new Date(t), ...data },
         update: data,
       });
+      // I68 — bucket orario derivato: un errore qui NON blocca il punto grezzo
+      try {
+        await updateHourBucket(t, data.interval, data.weekly, data.source);
+      } catch {
+        /* il backfill può ricostruire il bucket in qualunque momento */
+      }
       stored += 1;
     }
 
@@ -118,6 +205,50 @@ export async function GET(req: NextRequest) {
   const limit = isFinite(limitRaw) ? Math.max(1, Math.min(GET_LIMIT_MAX, Math.floor(limitRaw))) : 2000;
   const sinceRaw = url.searchParams.get("since");
   const since = sinceRaw !== null ? toEpoch(sinceRaw) : null;
+
+  // I68 — grana oraria derivata: bucket già aggregati (min/max/media/ultimo
+  // per ora UTC e sorgente), per export leggeri e consumi esterni.
+  if (url.searchParams.get("granularity") === "hour") {
+    const sourceRaw = url.searchParams.get("source");
+    try {
+      const rows = await db.downsampledPoint.findMany({
+        where: {
+          ...(since !== null ? { hourStart: { gte: new Date(since) } } : {}),
+          ...(sourceRaw !== null && sourceRaw !== "" ? { source: sourceRaw.slice(0, 16) } : {}),
+        },
+        orderBy: { hourStart: "asc" },
+        take: limit,
+      });
+      const total = await db.downsampledPoint.count();
+      return NextResponse.json({
+        ok: true,
+        total,
+        hours: rows.map((r) => ({
+          t: r.hourStart.getTime(),
+          source: r.source,
+          count: r.count,
+          interval: {
+            min: r.minInterval,
+            max: r.maxInterval,
+            media: r.count > 0 ? r.sumInterval / r.count : null,
+            ultimo: r.lastInterval,
+          },
+          weekly: {
+            min: r.minWeekly,
+            max: r.maxWeekly,
+            media: r.count > 0 ? r.sumWeekly / r.count : null,
+            ultimo: r.lastWeekly,
+          },
+        })),
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Errore di lettura dal database.";
+      return NextResponse.json(
+        { ok: false, error: { code: "db_read", message } },
+        { status: 500 },
+      );
+    }
+  }
 
   try {
     const rows = await db.usagePoint.findMany({

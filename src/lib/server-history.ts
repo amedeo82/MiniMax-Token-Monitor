@@ -12,6 +12,7 @@
  */
 
 import type { HistoryPoint } from "@/components/history-chart";
+import type { HourStats } from "@/lib/downsample";
 
 export interface ServerPoint {
   t: number;
@@ -19,6 +20,21 @@ export interface ServerPoint {
   weekly: number | null;
   source: string;
   region: string;
+}
+
+/** I68 — un bucket orario derivato come restituito da ?granularity=hour. */
+export interface ServerHourBucket {
+  t: number;
+  source: string;
+  count: number;
+  interval: HourStats;
+  weekly: HourStats;
+}
+
+export interface ServerHourlyResult {
+  ok: boolean;
+  total: number;
+  hours: ServerHourBucket[];
 }
 
 export interface ServerHistoryResult {
@@ -94,6 +110,27 @@ export async function fetchServerHistory(limit = 2000): Promise<ServerHistoryRes
     if (!res.ok) return null;
     const json = (await res.json()) as ServerHistoryResult & { error?: unknown };
     return json.ok ? { ok: true, total: json.total, points: json.points ?? [] } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * I68 — Scarica la grana ORARIA derivata dal server (bucket già aggregati:
+ * min/max/media/ultimo per ora e sorgente). Sorgente opzionale per filtrare.
+ */
+export async function fetchServerHourly(
+  limit = 10_000,
+  source?: string,
+): Promise<ServerHourlyResult | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const qs = new URLSearchParams({ granularity: "hour", limit: String(limit) });
+    if (source) qs.set("source", source);
+    const res = await fetch(`/api/history?${qs.toString()}`);
+    if (!res.ok) return null;
+    const json = (await res.json()) as ServerHourlyResult & { error?: unknown };
+    return json.ok ? { ok: true, total: json.total, hours: json.hours ?? [] } : null;
   } catch {
     return null;
   }

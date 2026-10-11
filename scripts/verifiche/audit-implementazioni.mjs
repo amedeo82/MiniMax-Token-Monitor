@@ -285,6 +285,27 @@ const CHECKS = [
   check.simbolo("I72", "src/components/history-chart.tsx", "non sostitutiva", "badge sperimentale"),
   check.simbolo("I72", "src/app/page.tsx", "ewmaProjection", "wiring ewma in page.tsx"),
   check.simbolo("I72", "tests/lib/ewma.test.ts", "mezza vita", "effetto half-life testato"),
+  /* --- Batch 3 infrastruttura (I80/I81/I68, docs/07) ----------------- */
+  check.file("I80", "src/app/api/summary/route.ts", "endpoint di sintesi read-only"),
+  check.simbolo("I80", "src/app/api/summary/route.ts", "export async function GET", "solo GET, senza chiave"),
+  check.simbolo("I80", "src/app/api/summary/route.ts", "db\\.usagePoint\\.count", "KPI aggregati dal DB"),
+  check.assenza("I80", "src/app/api/summary/route.ts", "\\.(create|upsert|update|deleteMany|delete)\\(", "ADR-8: nessuna scrittura"),
+  check.file("I81", "tests/components/setup-dom.ts", "registrazione happy-dom (GlobalRegistrator)"),
+  check.simbolo("I81", "tests/components/setup-dom.ts", "GlobalRegistrator", "pattern DOM ufficiale di Bun"),
+  check.simbolo("I81", "bunfig.toml", "preload", "DOM registrato prima di testing-library"),
+  check.simbolo("I81", "tests/components/quota-ring.test.tsx", "@testing-library/react", "test QuotaRing"),
+  check.simbolo("I81", "tests/components/event-log.test.tsx", "EventLog", "test EventLog (filtri I77)"),
+  check.simbolo("I81", "tests/components/nav-boundary.test.tsx", "SectionBoundary", "test error boundary + section-nav"),
+  check.simbolo("I68", "prisma/schema.prisma", "model DownsampledPoint", "tabella bucket orari derivati"),
+  check.simbolo("I68", "prisma/schema.prisma", "@@unique\\(\\[hourStart, source\\]\\)", "univocità ora+sorgente (niente mix api/demo)"),
+  check.simbolo("I68", "src/lib/downsample.ts", "export function mergeHourBucket", "merge incrementale puro"),
+  check.simbolo("I68", "src/lib/downsample.ts", "export function hourStartOf", "bucket allineato all'ora UTC"),
+  check.simbolo("I68", "src/app/api/history/route.ts", "updateHourBucket", "manutenzione bucket nella POST"),
+  check.simbolo("I68", "src/app/api/history/route.ts", "granularity", "GET ?granularity=hour"),
+  check.file("I68", "scripts/verifiche/backfill-downsample.mjs", "backfill idempotente dai punti grezzi"),
+  check.simbolo("I68", "src/lib/server-history.ts", "export async function fetchServerHourly", "client grana oraria"),
+  check.simbolo("I68", "src/components/history-chart.tsx", "exportHourlyFromServer", "voci export orario nel menu"),
+  check.simbolo("I68", "tests/lib/downsample.test.ts", "sorgenti diverse", "bucket separati api/demo testati"),
 ];
 
 /* ------------------------------------------------------------------ */

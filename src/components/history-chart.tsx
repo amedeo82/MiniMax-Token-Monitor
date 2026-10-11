@@ -23,7 +23,8 @@ import { detectCycles, movingAverage } from "@/lib/cycles";
 import { rateSeries } from "@/lib/rate";
 import type { EwmaProjection } from "@/lib/ewma";
 import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
-import { fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
+import { fetchServerHistory, fetchServerHourly, serverPointsToHistory } from "@/lib/server-history";
+import { serverHourlyToHistory } from "@/lib/downsample";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,19 @@ async function exportFullFromServer(format: "csv" | "json"): Promise<void> {
   if (format === "csv") exportHistoryCsv(points);
   else exportHistoryJson(points);
   toast.success(`Esportati ${points.length} punti dallo storico server`);
+}
+
+/** I68 — scarica dal server la grana ORARIA derivata e la salva nel formato richiesto. */
+async function exportHourlyFromServer(format: "csv" | "json"): Promise<void> {
+  const server = await fetchServerHourly(10_000);
+  if (!server || server.hours.length === 0) {
+    toast.error("Nessun bucket orario disponibile sul server");
+    return;
+  }
+  const points = serverHourlyToHistory(server.hours);
+  if (format === "csv") exportHistoryCsv(points);
+  else exportHistoryJson(points);
+  toast.success(`Esportate ${points.length} ore dallo storico orario del server`);
 }
 
 /** Grafico dell'andamento della quota rimanente nel tempo. */
@@ -230,6 +244,24 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                   >
                     <Download className="size-3.5" />
                     JSON completo · {serverCount.toLocaleString("it-IT")} punti
+                  </DropdownMenuItem>
+                  <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px]! text-zinc-500!">
+                    <Database className="size-3" />
+                    Storico orario (I68, grana derivata)
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    onClick={() => void exportHourlyFromServer("csv")}
+                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+                  >
+                    <Download className="size-3.5" />
+                    CSV orario · ultimo valore per ora
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => void exportHourlyFromServer("json")}
+                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+                  >
+                    <Download className="size-3.5" />
+                    JSON orario · ultimo valore per ora
                   </DropdownMenuItem>
                 </>
               ) : null}

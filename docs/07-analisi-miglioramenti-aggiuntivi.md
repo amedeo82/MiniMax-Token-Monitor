@@ -6,11 +6,12 @@
 > nel recovery con gli stessi numeri e significati comunicati in chat (tracciamento in
 > `docs/04` §3).
 >
-> Stato: **7 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
+> Stato: **10 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
 > del bug noto, I73) è stato implementato l'11/10 pomeriggio (vedi §5.2, §5.6, §5.9,
 > §5.10 e `docs/04` §3); il **batch 2 analisi** (I70, I71, I72) è stato implementato
-> l'11/10 sera (vedi §5.3, §5.4, §5.5 e `docs/04` §3); le restanti 8 sono ancora ⬜
-> (proposte mai implementate).
+> l'11/10 sera (vedi §5.3, §5.4, §5.5 e `docs/04` §3); il **batch 3 infrastruttura**
+> (I80, I81, I68) è stato implementato l'11/10 notte (vedi §5.13, §5.14, §5.1 e
+> `docs/04` §3); le restanti 5 sono ancora ⬜ (proposte mai implementate).
 
 Contesto della proposta originale: dopo la chiusura dei batch 1–3 (I57–I67) l'analisi
 aveva individuato 15 ulteriori miglioramenti in tre gruppi — analisi avanzata
@@ -21,11 +22,21 @@ compatta).
 
 ---
 
-## 5.1 I68 — Archivio con downsampling orario
+## 5.1 I68 — Archivio con downsampling orario ✅
 Nuova tabella Prisma `DownsampledPoint` (min/max/media/ultimo per ora) per mantenere
 grafici leggibili e leggeri quando lo storico server cresce oltre i 10.000 punti; la
 grana fine resta disponibile per le analisi (I26+), il grafico principale userebbe la
 grana oraria oltre una soglia di zoom.
+
+> **Implementato 11/10** (schema Prisma + `lib/downsample.ts` + manutenzione nella
+> POST di `/api/history` + `GET /api/history?granularity=hour[&source=]` + backfill
+> `scripts/verifiche/backfill-downsample.mjs` + voci «Storico orario» nel menu
+> Esporta; design in `docs/03` §5.13): bucket per ora UTC × source (min/max/somma/
+> ultimo per ciascuna finestra + count), **dato derivato** ricostruibile al 100% —
+> il dato grezzo resta intatto; merge incrementale pura (`mergeHourBucket`) con
+> errore non bloccante per il punto grezzo; stesso pruning a 90 giorni; 11 test.
+> Il passaggio AUTOMATICO del grafico principale alla grana oraria resta candidato:
+> la UI client lavora sui 600 punti locali e le analisi usano il fine grain.
 
 ## 5.2 I69 — Selettore intervallo temporale ✅
 Preset 6h/24h/3g/7g/30g/tutto con filtro client-side sullo storico, applicabile a
@@ -124,13 +135,26 @@ client-side sul registro già caricato.
 Contrasto misurato (WCAG AA), `aria-live` per aggiornamenti polling, focus visibili,
 descrizioni `sr-only` per i grafici (heatmap, calendario, reset clock).
 
-## 5.13 I80 — Endpoint read-only `/api/summary`
+## 5.13 I80 — Endpoint read-only `/api/summary` ✅
 KPI aggregati dal DB per widget esterni (statusline, home assistant, ecc.):
 `GET /api/summary` senza chiave, solo numeri aggregati — ADR-8 (read-only) intoccato.
 
-## 5.14 I81 — Test di componente UI
+> **Implementato 11/10** (`src/app/api/summary/route.ts`; design in `docs/03` §5.13):
+> punti (totale/api/demo/altro), arco, ultimoRilevamento, eventi (totale/perKind/
+> ultimo) e downsample (ore/prima/ultima); SOLO query di lettura (count/groupBy/
+> findFirst) — l'audit porta un check di ASSENZA delle scritture sulla route;
+> verificato con curl sui dati reali.
+
+## 5.14 I81 — Test di componente UI ✅
 `@testing-library/react` + jsdom, `tests/components/`: prima tornata su quota-ring,
 event-log, section-nav (logica pura già coperta dalla suite lib).
+
+> **Implementato 11/10** (`tests/components/` + `bunfig.toml` preload; design in
+> `docs/03` §5.13): **jsdom scartato in favore di happy-dom** — sotto Bun il pattern
+> ufficiale è `@happy-dom/global-registrator`, e jsdom con `act`/React 19 è meno
+> affidabile; il preload registra il DOM PRIMA che testing-library (`screen` si lega
+> a document.body al load). Prima tornata: QuotaRing/MiniBar (6), SectionNav (3),
+> SectionBoundary (2, con figlio che lancia), EventLog (5). 16 test componente.
 
 ## 5.15 I82 — Generalizzazione multi-modello
 Parametrizzazione `model_name` in cicli/storico: oggi le analisi usano «general» come
@@ -145,5 +169,6 @@ pivot; la generalizzazione aprirebbe le analisi anche agli altri modelli del pia
    §5.9/§5.10 e `docs/04` §3).
 2. ~~**Batch 2 analisi**: I70 · I71 · I72.~~ → **IMPLEMENTATO 11/10** (vedi §5.3/§5.4/
    §5.5 e `docs/04` §3).
-3. **Batch 3 infrastruttura/integrazione**: I80 · I81 · I68.
+3. ~~**Batch 3 infrastruttura/integrazione**: I80 · I81 · I68.~~ → **IMPLEMENTATO
+   11/10** (vedi §5.13/§5.14/§5.1 e `docs/04` §3).
 4. **Backlog/qualità**: I74 · I75 · I78 · I79 · I82.

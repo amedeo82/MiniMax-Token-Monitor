@@ -1,0 +1,6 @@
+# I81 — i test di componente (@testing-library/react) richiedono il DOM
+# PRIMA che i moduli di testing-library vengano valutati (il loro `screen`
+# si lega a document.body al load): il preload registra happy-dom prima
+# di ogni file di test. Guarded, quindi è un no-op per i test senza DOM.
+[test]
+preload = ["./tests/components/setup-dom.ts"]

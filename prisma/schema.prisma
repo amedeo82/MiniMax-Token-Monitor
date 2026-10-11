@@ -44,6 +44,49 @@ model UsagePoint {
 }
 
 /**
+ * I68 — Bucket orario derivato dello storico (downsampling).
+ *
+ * PER ORA UTC E ORIGINE aggrega i punti grezzi (UsagePoint) in
+ * min/max/somma/ultimo per ciascuna finestra (interval/weekly) + conteggio:
+ * la media dell'ora è somma/count. Serve a mantenere grafici ed export
+ * leggeri quando l'archivio cresce (10.000 punti → ~417 ore per sorgente),
+ * restando DISPONIBILE la grana fine per le analisi (I26+).
+ *
+ * È un DATO DERIVATO e ricostruibile al 100% dai punti grezzi (backfill
+ * `scripts/verifiche/backfill-downsample.mjs`): viene mantenuto
+ * incrementalmente dalla stessa POST di /api/history che salva il punto e
+ * ripulito dallo stesso pruning a 90 giorni. Il dato GREZZO resta intatto.
+ */
+model DownsampledPoint {
+  id        Int      @id @default(autoincrement())
+  /** Inizio dell'ora UTC coperta dal bucket (es. 13:00:00.000Z). */
+  hourStart DateTime
+  /** Origine dei punti aggregati: "api" | "demo" | "import" (stessa di UsagePoint). */
+  source    String   @default("api")
+
+  /** Statistiche della finestra 5 ore nell'ora (null = nessun valore osservato). */
+  minInterval  Float?
+  maxInterval  Float?
+  sumInterval  Float   @default(0)
+  lastInterval Float?
+  /** Statistiche della finestra settimanale nell'ora. */
+  minWeekly  Float?
+  maxWeekly  Float?
+  sumWeekly  Float  @default(0)
+  lastWeekly Float?
+
+  /** Punti grezzi contribuiti al bucket (con almeno un valore non null). */
+  count Int @default(0)
+  /** Timestamp dell'ultimo punto contribuito (merge cronologico). */
+  lastT DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([hourStart, source])
+  @@index([hourStart])
+}
+
+/**
  * Un evento del registro della dashboard (reset rilevato, soglia superata,
  * errore di rilevamento, nota informativa): replica server-side del registro
  * del browser (I27), che resta limitato a 200 voci in localStorage. Il server

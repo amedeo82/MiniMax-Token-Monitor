@@ -59,14 +59,17 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Proiezione EWMA (A/B)** (I72): secondo parere esponenzialmente pesato (mezza vita 2h) affiancato al verdetto lineare — mostra quanto il ritmo recente si discosta dalla media della finestra
 - **Panoramica modelli**: tabella comparativa di tutte le finestre del piano (residuo, stato, countdown reset)
 - **Export CSV/JSON** dello storico e del registro eventi (locale e archivio completo dal server; formato compatibile Excel it-IT)
+- **Export orario** (I68): storico aggregato per ora (ultimo valore per ora, grana derivata) dal server
+- **API di sintesi** (I80): `GET /api/summary` read-only senza chiave — KPI aggregati (punti, ultimo rilevamento, eventi, bucket orari) per statusline, home assistant e widget esterni
 
 **Persistenza durevole** (F7/F8, offline-first)
 - Storico replicato su **SQLite server-side** (fino a 10.000 punti / 90 giorni): sopravvive a cache svuotate e cambio dispositivo, con merge automatico all'avvio
 - **Archivio eventi** oltre il diario locale di 200 voci (fino a 5.000 eventi / 180 giorni), stesso schema di sincronizzazione
+- **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 212 test / 654 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **filtri intervallo/eventi, modalità compatta (batch 1 docs/07)**, **anomalie/campionamento/EWMA (batch 2 docs/07)**, **fallback endpoint (I18)** e **parità TS↔Service Worker**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 163 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 239 test / 731 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, anomalie/campionamento/EWMA, fallback endpoint, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 183 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 
 ---
 
