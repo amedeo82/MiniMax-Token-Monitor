@@ -1,0 +1,277 @@
+#!/usr/bin/env node
+/**
+ * I55 — Audit di riconciliazione codice ↔ documentazione.
+ *
+ * Per OGNI item marcato ✅ in docs/04 §3 lo strumento verifica che esistano
+ * artefatti REALI nel repository: file, simboli esportati, costanti, wiring
+ * (import/uso) e assenze richieste (item rimossi 🚫 che non devono tornare).
+ *
+ * - Zero dipendenze (Node ≥ 18), eseguibile: `node scripts/verifiche/audit-implementazioni.mjs [--strict]`
+ * - Con --strict exit 1 al primo fallimento; default: riporta tutto ed esce 1 se ci sono FAIL.
+ * - Report in scripts/verifiche/esiti/audit-implementazioni-<timestamp>.md
+ * - La chiave API non viene MAI letta o stampata (il tool non tocca .env né richieste di rete).
+ *
+ * Il registro CHECKS è dichiarativo: a ogni nuovo item ✅ si aggiungono le
+ * proprie verifiche (file/simbolo/costante/wiring/assenza). Ogni riga ✅ di
+ * docs/04 SENZA check viene segnalata come SCOPERTA (coverage check), così
+ * l'audit non può invecchiare silenziosamente.
+ */
+
+import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+const ROOT = resolve(import.meta.dirname, "..", "..");
+const DOCS04 = join(ROOT, "docs", "04-stato-avanzamento.md");
+const ESITI_DIR = join(ROOT, "scripts", "verifiche", "esiti");
+const STRICT = process.argv.includes("--strict");
+
+/* ------------------------------------------------------------------ */
+/* Helper di verifica                                                  */
+/* ------------------------------------------------------------------ */
+
+let fileCache = new Map();
+function read(rel) {
+  const p = join(ROOT, rel);
+  if (!fileCache.has(p)) {
+    fileCache.set(p, existsSync(p) ? readFileSync(p, "utf8") : null);
+  }
+  return fileCache.get(p);
+}
+
+const check = {
+  /** Il file esiste. */
+  file: (item, rel, what) => ({ item, what, kind: "file", run: () => (existsSync(join(ROOT, rel)) ? null : `file assente: ${rel}`) }),
+  /** Il file contiene il simbolo/pattern (regex multiline). */
+  simbolo: (item, rel, pattern, what) => ({
+    item,
+    what: `${what} (${rel})`,
+    kind: "simbolo",
+    run: () => {
+      const c = read(rel);
+      if (c === null) return `file assente: ${rel}`;
+      return new RegExp(pattern, "m").test(c) ? null : `simbolo/pattern non trovato in ${rel}: /${pattern}/`;
+    },
+  }),
+  /** Il file NON contiene il pattern (per item rimossi 🚫). Su directory fa una ricerca ricorsiva. */
+  assenza: (item, rel, pattern, what) => ({
+    item,
+    what: `${what} — assenza richiesta (${rel})`,
+    kind: "assenza",
+    run: () => {
+      const p = join(ROOT, rel);
+      if (!existsSync(p)) return null; // assente del tutto: ok
+      const rx = new RegExp(pattern, "m");
+      if (statSync(p).isDirectory()) {
+        const SKIP = /node_modules|\.next|^\./;
+        const walk = (dir) =>
+          readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+            if (SKIP.test(d.name)) return [];
+            const full = join(dir, d.name);
+            return d.isDirectory() ? walk(full) : [full];
+          });
+        for (const f of walk(p)) {
+          if (rx.test(readFileSync(f, "utf8"))) return `trovato pattern che doveva essere assente in ${f}: /${pattern}/`;
+        }
+        return null;
+      }
+      return rx.test(read(p)) ? `trovato pattern che doveva essere assente in ${rel}: /${pattern}/` : null;
+    },
+  }),
+  /** Nessun file corrispondente al glob esiste. */
+  nessunFile: (item, dir, pattern, what) => ({
+    item,
+    what: `${what} — nessun file deve esistere`,
+    kind: "assenza",
+    run: () => {
+      if (!existsSync(join(ROOT, dir))) return null;
+      const rx = new RegExp(pattern);
+      const hit = readdirSync(join(ROOT, dir)).filter((f) => rx.test(f));
+      return hit.length > 0 ? `trovati file inattesi in ${dir}: ${hit.join(", ")}` : null;
+    },
+  }),
+  /** Più file insieme (tutti devono esistere). */
+  files: (item, rels, what) => ({
+    item,
+    what,
+    kind: "file",
+    run: () => {
+      const missing = rels.filter((r) => !existsSync(join(ROOT, r)));
+      return missing.length === 0 ? null : `file assenti: ${missing.join(", ")}`;
+    },
+  }),
+};
+
+/* ------------------------------------------------------------------ */
+/* Registro delle verifiche (un blocco per item, chiavi = ID)          */
+/* ------------------------------------------------------------------ */
+
+const CHECKS = [
+  /* --- F0–F5 (I1–I14) ---------------------------------------------- */
+  ...[
+    { item: "I12", what: "screenshot verifiche agent-browser (scripts/*.png ≥ 1)", kind: "file", run: () => (readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".png")).length > 0 ? null : "nessuno screenshot in scripts/") },
+    check.simbolo("I1", "package.json", '"next"|"react"|"tailwindcss"', "dipendenze Next/React/Tailwind"),
+    check.file("I1", "src/components/ui", "componenti shadcn/ui"),
+    check.simbolo("I2", "src/lib/minimax.ts", "export function parseUsageResponse", "parser principale"),
+    check.simbolo("I2", "src/lib/minimax.ts", "export const REGION_ENDPOINTS", "endpoint regionali"),
+    check.simbolo("I3", "src/app/api/minimax/usage/route.ts", "export async function POST", "handler proxy"),
+    check.simbolo("I3", "src/app/api/minimax/usage/route.ts", "12_000|12\\\\,000|12\\\\000", "timeout 12s"),
+    check.simbolo("I4", "src/lib/time.ts", 'export const TZ_ROME = "Europe/Rome"', "fuso Rome"),
+    check.simbolo("I4", "src/lib/time.ts", "export function formatCountdown", "countdown"),
+    check.simbolo("I4", "src/lib/time.ts", "export function windowProgress", "progresso finestra"),
+    check.simbolo("I5", "src/components/quota-cards.tsx", "export function ModelCard", "ModelCard"),
+    check.simbolo("I5", "src/components/quota-cards.tsx", "export function MainWindows", "MainWindows"),
+    check.simbolo("I5", "src/components/quota-ring.tsx", "export function QuotaRing|export const QuotaRing", "QuotaRing"),
+    check.simbolo("I6", "src/app/page.tsx", "setInterval\\(\\(\\) => setNow\\(Date.now\\(\\)\\), 1000\\)", "tick 1s"),
+    check.simbolo("I6", "src/lib/minimax.ts", "export function inferServerTime", "ora server dedotta"),
+    check.simbolo("I7", "src/app/page.tsx", '"mm-dash-history-v1"', "chiave storico locale"),
+    check.simbolo("I7", "src/components/history-chart.tsx", "export function HistoryChart", "HistoryChart"),
+    check.simbolo("I7", "src/components/history-chart.tsx", "export function computeTrend", "computeTrend"),
+    check.simbolo("I8", "src/components/settings-dialog.tsx", "export function SettingsDialog", "SettingsDialog"),
+    check.simbolo("I8", "src/components/settings-dialog.tsx", "DEFAULT_SETTINGS", "default persistiti"),
+    check.simbolo("I9", "src/app/page.tsx", "handleImportJson", "import JSON manuale"),
+    check.simbolo("I10", "src/lib/demo.ts", "export function makeDemoSnapshot", "snapshot demo"),
+    check.simbolo("I10", "src/lib/demo.ts", "export function makeDemoHistory", "storia demo"),
+    check.simbolo("I11", "src/components/tech-panels.tsx", "export function RawJsonPanel", "RawJsonPanel"),
+    check.simbolo("I11", "src/components/tech-panels.tsx", "export function TechInfo", "TechInfo"),
+    check.simbolo("I13", "src/lib/demo.ts", "videoDayStart", "bugfix I13 presente"),
+    check.files("I14", ["docs/01-api-minimax-ricerca.md", "docs/02-analisi-json-quota.md", "docs/03-piano-implementazione.md", "docs/04-stato-avanzamento.md", "README.md"], "documentazione di progetto"),
+  ],
+
+  /* --- Rimosse (I15/I19/I20 🚫): assenze ---------------------------- */
+  check.nessunFile("I15", "src/app/api/minimax", "chat", "nessun proxy chat (ADR-8)"),
+  check.assenza("I15", "src/lib", "token-log", "nessun token-log.ts (ADR-8)"),
+  check.assenza("I15", "src", "TokenTracker", "nessun TokenTracker (ADR-8)"),
+  check.assenza("I19", "src", "token-log|TokenLog", "nessuna persistenza registro token"),
+  check.assenza("I20", "src", "correla.*token.*calo|tokenVsQuota", "nessuna correlazione token↔quota"),
+
+  /* --- F6b/F7/F8 (I16–I32) ------------------------------------------ */
+  check.simbolo("I16", "prisma/schema.prisma", "model UsagePoint", "modello UsagePoint"),
+  check.file("I16", "src/app/api/history/route.ts", "endpoint api/history"),
+  check.simbolo("I16", "src/lib/server-history.ts", "export function pushPointToServer", "replica punti"),
+  check.simbolo("I16", "src/lib/server-history.ts", "export function mergeHistories", "merge storici"),
+  check.simbolo("I17", "src/lib/usage-events.ts", "export function deriveBanner", "banner soglie"),
+  check.simbolo("I17", "src/lib/usage-events.ts", "export function evaluateTransitions", "transizioni toast/notifiche"),
+  check.simbolo("I21", "src/lib/usage-events.ts", '"mm-dash-events-v1"', "chiave registro eventi"),
+  check.simbolo("I21", "src/components/event-log.tsx", "export function EventLog", "EventLog UI"),
+  check.simbolo("I22", "src/lib/export.ts", "csv|CSV", "export CSV"),
+  check.simbolo("I22", "src/lib/export.ts", "FEFF|BOM|bom", "BOM per Excel it-IT"),
+  check.simbolo("I23", "src/components/history-chart.tsx", "ProjectionVerdict|verdetto", "verdetto esaurimento vs reset"),
+  check.simbolo("I24", "src/components/model-table.tsx", "export function PanoramicTable", "vista panoramica"),
+  check.simbolo("I25", "src/components/settings-dialog.tsx", "Connessione", "tab Connessione"),
+  check.simbolo("I25", "src/components/settings-dialog.tsx", "Avvisi", "tab Avvisi"),
+  check.simbolo("I25", "src/components/settings-dialog.tsx", "Dati", "tab Dati"),
+  check.simbolo("I26", "src/lib/cycles.ts", "export const RESET_JUMP = 15", "soglia reset"),
+  check.simbolo("I26", "src/lib/cycles.ts", "export function detectCycles", "cicli di finestra"),
+  check.simbolo("I26", "src/lib/cycles.ts", "export function weekdayConsumption", "consumo per giorno"),
+  check.simbolo("I26", "src/components/analysis-panel.tsx", "export function LongTermAnalysis|export const LongTermAnalysis", "pannello analisi"),
+  check.simbolo("I27", "prisma/schema.prisma", "model UsageEventRecord", "modello eventi server"),
+  check.file("I27", "src/app/api/events/route.ts", "endpoint api/events"),
+  check.simbolo("I27", "src/lib/server-events.ts", "export function pushEventsToServer", "replica eventi"),
+  check.simbolo("I27", "src/lib/server-events.ts", "export function mergeEvents", "merge eventi per id"),
+  check.simbolo("I28", "src/lib/usage-events.ts", "export function windowThresholdKey", "chiavi soglia per finestra"),
+  check.simbolo("I28", "src/lib/usage-events.ts", "export function migrateLegacyThresholds", "migrazione soglie legacy"),
+  check.simbolo("I28", "src/components/settings-dialog.tsx", "AlertThresholds|thresholds", "matrice soglie nelle impostazioni"),
+  check.file("I29", "scripts/verifiche/verifica.mjs", "toolkit verifiche V1–V6"),
+  check.file("I29", "docs/05-verifiche-empiriche.md", "runbook verifiche"),
+  check.assenza("I30", "src/app/api/minimax/usage/route.ts", "writeFile|appendFile|createWriteStream", "proxy senza cattura chiave (I30)"),
+  check.simbolo("I31", "src/components/history-chart.tsx", "computePace|PacePanel", "pace di consumo"),
+  check.simbolo("I32", "src/lib/cycles.ts", "export function heatmapConsumption", "heatmap 7×24"),
+  check.simbolo("I32", "src/components/analysis-panel.tsx", "Per ora|Heatmap", "tab heatmap in UI"),
+
+  /* --- Recovery (I50/I51) ------------------------------------------- */
+  check.files("I50", ["tests/lib/minimax.test.ts", "tests/lib/time.test.ts", "tests/lib/cycles.test.ts", "tests/lib/usage-events.test.ts", "tests/lib/backoff.test.ts"], "suite test lib core"),
+  check.simbolo("I50", "package.json", '"test": "bun test"', "script test"),
+  check.file("I50", "tests/bun-env.d.ts", "tipi bun:test per tsc"),
+  check.simbolo("I51", "src/lib/backoff.ts", "export function nextBackoffMs", "backoff con jitter"),
+  check.simbolo("I51", "src/lib/backoff.ts", "export function parseRetryAfterMs", "parsing Retry-After"),
+  check.simbolo("I51", "src/lib/backoff.ts", "export function delayAfterFailure", "decisione client"),
+  check.simbolo("I51", "src/app/page.tsx", "delayAfterFailure", "wiring scheduler client"),
+  check.simbolo("I51", "src/app/api/minimax/usage/route.ts", "parseRetryAfterMs|retryAfterMs", "wiring retry transitorio proxy"),
+  check.simbolo("I51", "src/app/api/minimax/usage/route.ts", "TRANSIENT_HTTP", "classificazione errori transitori"),
+];
+
+/* ------------------------------------------------------------------ */
+/* Esecuzione                                                          */
+/* ------------------------------------------------------------------ */
+
+function parseItemStatoDaDocs() {
+  if (!existsSync(DOCS04)) return { mappa: null, errore: "docs/04-stato-avanzamento.md assente" };
+  const testo = readFileSync(DOCS04, "utf8");
+  const mappa = new Map();
+  const rx = /^\| (I\d+) \|.*?\| (⬜|🔄|✅|⏸|🚫|❓) \|/gm;
+  let m;
+  while ((m = rx.exec(testo)) !== null) mappa.set(m[1], m[2]);
+  return { mappa, errore: null };
+}
+
+function eseguiAudit() {
+  const esiti = [];
+  let pass = 0;
+  let fail = 0;
+
+  for (const c of CHECKS) {
+    let errore = null;
+    try {
+      errore = c.run();
+    } catch (e) {
+      errore = `eccezione nel check: ${e.message}`;
+    }
+    if (errore === null) pass++;
+    else fail++;
+    esiti.push({ ...c, esito: errore === null ? "PASS" : "FAIL", errore });
+  }
+
+  const { mappa, errore } = parseItemStatoDaDocs();
+  const scoperte = [];
+  const discordanze = [];
+  if (mappa) {
+    const itemsConCheck = new Set(CHECKS.map((c) => c.item));
+    for (const [id, stato] of mappa) {
+      if (stato === "✅" && !itemsConCheck.has(id)) {
+        scoperte.push(id);
+      }
+      if (stato === "🚫" && itemsConCheck.has(id)) {
+        const haAssenza = CHECKS.some((c) => c.item === id && c.kind === "assenza");
+        if (!haAssenza) discordanze.push(`${id}: 🚫 senza check di assenza`);
+      }
+    }
+  }
+
+  return { esiti, pass, fail, scoperte, discordanze, docsError: errore };
+}
+
+function reportMarkdown({ esiti, pass, fail, scoperte, discordanze, docsError }) {
+  const ora = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const righe = [];
+  righe.push(`# Audit implementazioni — ${new Date().toISOString()}`);
+  righe.push("");
+  righe.push(`- Verifiche totali: **${esiti.length}** · PASS: **${pass}** · FAIL: **${fail}**`);
+  righe.push(`- Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): ${scoperte.length === 0 ? "nessuno" : scoperte.join(", ")}`);
+  if (discordanze.length > 0) righe.push(`- Discordanze 🚫: ${discordanze.join("; ")}`);
+  if (docsError) righe.push(`- ⚠️ docs/04 non leggibile: ${docsError}`);
+  righe.push("");
+  righe.push("| Item | Verifica | Tipo | Esito | Dettaglio |");
+  righe.push("|------|----------|------|-------|-----------|");
+  for (const e of esiti) {
+    righe.push(`| ${e.item} | ${e.what} | ${e.kind} | ${e.esito} | ${e.errore ?? "—"} |`);
+  }
+  if (scoperte.length > 0) {
+    righe.push("");
+    righe.push("## Item ✅ privi di verifiche (aggiungerle al registro CHECKS)");
+    for (const id of scoperte) righe.push(`- ${id}`);
+  }
+  righe.push("");
+  righe.push(`Verdetto: **${fail === 0 && scoperte.length === 0 ? "PASS" : "FAIL"}** (${pass} pass, ${fail} fail, ${scoperte.length} scoperte)`);
+  return righe.join("\n");
+}
+
+const risultato = eseguiAudit();
+const md = reportMarkdown(risultato);
+mkdirSync(ESITI_DIR, { recursive: true });
+const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+const outPath = join(ESITI_DIR, `audit-implementazioni-${stamp}.md`);
+writeFileSync(outPath, md, "utf8");
+
+console.log(md);
+console.log(`\nReport salvato: ${outPath}`);
+process.exit(risultato.fail === 0 && risultato.scoperte.length === 0 ? 0 : 1);

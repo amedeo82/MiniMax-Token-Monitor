@@ -93,6 +93,10 @@ export interface ApiError {
   httpStatus?: number;
   /** Eventuale status_code di business MiniMax. */
   statusCode?: number;
+  /** I51 — attesa minima consigliata (ms) per errori transitori (dal Retry-After upstream). */
+  retryAfterMs?: number;
+  /** I51 — true se l'errore è transitorio (429/5xx/rete/timeout: ritentare ha senso). */
+  transient?: boolean;
 }
 
 /* ------------------------------------------------------------------ */

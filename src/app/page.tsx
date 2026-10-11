@@ -26,6 +26,7 @@ import {
   type BannerInfo,
 } from "@/lib/usage-events";
 import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
+import { delayAfterFailure } from "@/lib/backoff";
 import { makeDemoSnapshot, makeDemoHistory } from "@/lib/demo";
 import {
   pushPointToServer,
@@ -116,6 +117,15 @@ export default function DashboardPage() {
   /* Riferimenti per il confronto tra rilevamenti consecutivi (transizioni) */
   const prevSnapRef = React.useRef<UsageSnapshot | null>(null);
   const prevOkRef = React.useRef<boolean | null>(null);
+
+  /* I51 — stato dello scheduler con backoff: tentativi consecutivi falliti,
+     ultimo Retry-After ricevuto e ritardo attualmente programmato. */
+  const pollTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollAttemptRef = React.useRef(0);
+  const lastRetryAfterRef = React.useRef<number | null>(null);
+  const pollDelayRef = React.useRef<number | null>(null);
+  /** Mirror sincrono delle impostazioni per scheduler/fetch senza re-trigger. */
+  const settingsRef = React.useRef(settings);
 
   /* ----------------------------- init ----------------------------- */
   React.useEffect(() => {
@@ -229,10 +239,10 @@ export default function DashboardPage() {
   }, []);
 
   const fetchData = React.useCallback(
-    async (s: DashboardSettings, silent = false) => {
+    async (s: DashboardSettings, silent = false): Promise<boolean> => {
       if (!s.demoMode && !s.apiKey) {
         setSettingsOpen(true);
-        return;
+        return false;
       }
       if (!silent) setLoading(true);
       setError(null);
@@ -286,7 +296,7 @@ export default function DashboardPage() {
           // Registra anche i rilevamenti demo nello storico (locale + replica server, source "demo")
           pushHistory(snap);
           if (!silent) setLoading(false);
-          return;
+          return true;
         }
 
         const res = await fetch("/api/minimax/usage", {
@@ -305,6 +315,7 @@ export default function DashboardPage() {
 
         setLastEndpoint(json.endpoint ?? "");
         setLastFetch(json.fetchedAt ?? Date.now());
+        lastRetryAfterRef.current = json.ok ? null : json.error?.retryAfterMs ?? null;
 
         if (json.ok && json.data) {
           try {
@@ -317,6 +328,8 @@ export default function DashboardPage() {
             setRawJson(json.data);
             markOk();
             pushHistory(snap);
+            if (!silent) setLoading(false);
+            return true;
           } catch (e) {
             // Errore di business dell'API (es. status_code 1004) o parsing
             setRawJson(json.data);
@@ -326,6 +339,8 @@ export default function DashboardPage() {
               code: err.statusCode ? `api_${err.statusCode}` : "parse",
               message: err.message,
             });
+            if (!silent) setLoading(false);
+            return false;
           }
         } else {
           const message = json.error?.message ?? "Errore sconosciuto durante la sincronizzazione.";
@@ -337,6 +352,8 @@ export default function DashboardPage() {
               message,
             },
           );
+          if (!silent) setLoading(false);
+          return false;
         }
       } catch (e) {
         const message = e instanceof Error ? e.message : "Errore imprevisto lato client.";
@@ -345,6 +362,8 @@ export default function DashboardPage() {
           code: "client",
           message,
         });
+        if (!silent) setLoading(false);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -352,18 +371,59 @@ export default function DashboardPage() {
     [pushHistory, markError, markOk],
   );
 
-  /* Prima sincronizzazione al mount */
+  /* I51 — prima sincronizzazione e ri-sync SOLO quando cambia la CONNESSIONE
+     (chiave/regione/demo). Il vecchio effetto dipendeva dall'oggetto settings:
+     ogni salvataggio (anche solo soglie o refresh) faceva un doppio fetch. */
+  React.useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  const lastConnKeyRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!mounted) return;
-    if (settings.demoMode || settings.apiKey) void fetchData(settings);
-  }, [mounted, settings.demoMode, settings.apiKey, settings.region, fetchData, settings]);
+    const connKey = settings.demoMode ? "demo" : `${settings.apiKey}|${settings.region}`;
+    if (lastConnKeyRef.current === connKey) return;
+    lastConnKeyRef.current = connKey;
+    void fetchData(settingsRef.current);
+  }, [mounted, settings.demoMode, settings.apiKey, settings.region, fetchData]);
 
-  /* Aggiornamento automatico */
+  /* I51 — Aggiornamento automatico con backoff: al successo si torna
+     all'intervallo scelto dall'utente; a ogni fallimento il ritardo cresce
+     esponenzialmente con jitter (base 2s, cap 10 min, floor 1s) e non scende
+     mai sotto il Retry-After dichiarato dal proxy. */
   React.useEffect(() => {
     if (!mounted || settings.refreshSeconds === 0) return;
-    const id = setInterval(() => void fetchData(settings, true), settings.refreshSeconds * 1000);
-    return () => clearInterval(id);
-  }, [mounted, settings, fetchData]);
+    if (!settings.demoMode && !settings.apiKey) return;
+
+    let cancelled = false;
+    const schedule = (ms: number) => {
+      pollDelayRef.current = ms;
+      pollTimerRef.current = setTimeout(() => {
+        if (!cancelled) void tick();
+      }, ms);
+    };
+    const tick = async () => {
+      const s = settingsRef.current;
+      const ok = await fetchData(s, true);
+      if (cancelled) return;
+      if (ok) {
+        pollAttemptRef.current = 0;
+        lastRetryAfterRef.current = null;
+        schedule(Math.max(5, s.refreshSeconds) * 1000);
+      } else {
+        const delay = delayAfterFailure(pollAttemptRef.current, lastRetryAfterRef.current);
+        pollAttemptRef.current += 1;
+        schedule(delay);
+      }
+    };
+    schedule(Math.max(5, settings.refreshSeconds) * 1000);
+
+    return () => {
+      cancelled = true;
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      pollDelayRef.current = null;
+    };
+  }, [mounted, settings.demoMode, settings.apiKey, settings.refreshSeconds, fetchData]);
 
   /* Transizioni tra snapshot: toast + notifiche browser + eventi nel registro */
   React.useEffect(() => {
@@ -392,15 +452,23 @@ export default function DashboardPage() {
   }, [snapshot, settings, addEvents]);
 
   const handleSaveSettings = (s: DashboardSettings) => {
+    /* I51 — la connessione è cambiata solo se chiave/regione/demo differiscono:
+       in quel caso lo stato va azzerato e l'effetto connKey rifà il fetch
+       UNA volta sola; per le altre impostazioni (soglie, refresh, avvisi) non
+       serve alcun rifetch immediato, lo scheduler si adatta da solo. */
+    const connChanged =
+      s.demoMode !== settings.demoMode ||
+      (!s.demoMode && (s.apiKey !== settings.apiKey || s.region !== settings.region));
     setSettings(s);
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
     } catch {
       /* noop */
     }
-    setSnapshot(null);
-    setError(null);
-    void fetchData(s);
+    if (connChanged) {
+      setSnapshot(null);
+      setError(null);
+    }
   };
 
   /** Importa una risposta JSON incollata manualmente (senza chiamare l'API). */
@@ -454,7 +522,7 @@ export default function DashboardPage() {
         : lastEndpoint;
   const nextRefreshIn =
     settings.refreshSeconds > 0 && lastFetch && !settings.demoMode
-      ? msUntil(lastFetch + settings.refreshSeconds * 1000, now)
+      ? msUntil(lastFetch + (pollDelayRef.current ?? settings.refreshSeconds * 1000), now)
       : null;
 
   const needsSetup = !settings.demoMode && !settings.apiKey;
