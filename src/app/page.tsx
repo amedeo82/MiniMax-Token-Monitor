@@ -12,6 +12,10 @@ import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
 import { EventLog } from "@/components/event-log";
 import { PanoramicTable } from "@/components/model-table";
 import { LongTermAnalysis } from "@/components/analysis-panel";
+import { DiagnosticaPanel } from "@/components/diagnostica-panel";
+import { SectionNav } from "@/components/section-nav";
+import { TabIdentity } from "@/lib/tab-identity";
+import { RateChart } from "@/components/history-chart";
 import {
   deriveBanner,
   evaluateTransitions,
@@ -530,6 +534,9 @@ export default function DashboardPage() {
 
   const needsSetup = !settings.demoMode && !settings.apiKey;
 
+  /* I67 — identità del tab: residuo 5h nel titolo + favicon dinamica */
+  const residuoPerTab = general?.interval?.remainingPercent ?? null;
+
   /* Banner quota bassa (deriva solo dallo snapshot corrente) */
   const banner = React.useMemo<BannerInfo | null>(() => deriveBanner(snapshot, settings), [snapshot, settings]);
 
@@ -552,6 +559,8 @@ export default function DashboardPage() {
       />
 
       <div className="relative flex min-h-screen flex-col">
+        {/* I67 — titolo e favicon dinamici */}
+        <TabIdentity remainingPercent={residuoPerTab} demo={settings.demoMode} />
         {/* ------------------------------ Header ------------------------------ */}
         <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
@@ -652,6 +661,9 @@ export default function DashboardPage() {
 
         {/* ------------------------------ Main ------------------------------ */}
         <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
+          {/* I66 — navigazione interna sticky con scrollspy */}
+          <SectionNav />
+
           {/* Errore */}
           {error ? (
             <Alert variant="destructive" className="border-rose-500/30 bg-rose-950/40 text-rose-100">
@@ -743,7 +755,9 @@ export default function DashboardPage() {
               ) : null}
 
               {/* Anelli principali */}
-              <MainWindows general={general} now={now} />
+              <div id="quota" className="mm-anchor">
+                <MainWindows general={general} now={now} />
+              </div>
 
               {/* Data odierna a Roma */}
               <p className="text-center text-xs text-zinc-500">
@@ -751,12 +765,14 @@ export default function DashboardPage() {
               </p>
 
               {/* Grafico + statistiche */}
-              <HistoryChart
-                history={history}
-                window={chartWindow}
-                onWindowChange={setChartWindow}
-                serverCount={serverCount}
-              />
+              <div id="grafico" className="mm-anchor">
+                <HistoryChart
+                  history={history}
+                  window={chartWindow}
+                  onWindowChange={setChartWindow}
+                  serverCount={serverCount}
+                />
+              </div>
               <StatsPanel
                 trend={trend}
                 win={chartWindow}
@@ -765,11 +781,30 @@ export default function DashboardPage() {
                 serverCount={serverCount}
               />
 
-              {/* Vista panoramica: tutte le finestre del piano a confronto */}
-              <PanoramicTable models={snapshot.models} now={now} />
+              {/* I59 — ritmo di consumo %/h sotto il grafico */}
+              <div id="ritmo" className="mm-anchor">
+                <RateChart history={history} window={chartWindow} />
+              </div>
 
-              {/* Analisi di lungo periodo: cicli di finestra, medie, giorni della settimana (I26) */}
-              <LongTermAnalysis history={history} />
+              {/* Vista panoramica: tutte le finestre del piano a confronto */}
+              <div id="panoramica" className="mm-anchor">
+                <PanoramicTable models={snapshot.models} now={now} />
+              </div>
+
+              {/* Analisi di lungo periodo: cicli, calendario, distribuzione, heatmap (I26 + batch abbellimenti) */}
+              <div id="analisi" className="mm-anchor">
+                <LongTermAnalysis history={history} />
+              </div>
+
+              {/* I60/I62 — diagnostica: orologio dei reset + salute del monitor */}
+              <div id="diagnostica" className="mm-anchor">
+                <DiagnosticaPanel
+                  history={history}
+                  events={events}
+                  backoffAttivo={lastOk === false}
+                  backoffDelayMs={pollDelayRef.current}
+                />
+              </div>
 
               {/* Altri modelli */}
               {otherModels.length > 0 ? (
@@ -791,7 +826,7 @@ export default function DashboardPage() {
 
               {/* JSON + dettagli tecnici (min-w-0: permette alle card di restringersi
                   sotto il min-content del <pre> JSON, evitando overflow orizzontale) */}
-              <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+              <div id="tecnici" className="mm-anchor grid min-w-0 gap-4 lg:grid-cols-2">
                 <RawJsonPanel rawJson={rawJson} fetchedAt={lastFetch} endpoint={lastEndpoint} ok={lastOk} />
                 <TechInfo
                   region={settings.region as Region}
@@ -804,7 +839,9 @@ export default function DashboardPage() {
               </div>
 
               {/* Registro eventi: reset, soglie, errori (archivio server I27) */}
-              <EventLog events={events} onClear={handleClearEvents} serverCount={serverEventsCount} />
+              <div id="eventi" className="mm-anchor">
+                <EventLog events={events} onClear={handleClearEvents} serverCount={serverEventsCount} />
+              </div>
             </>
           ) : loading ? (
             <div className="flex h-64 items-center justify-center text-sm text-zinc-500">

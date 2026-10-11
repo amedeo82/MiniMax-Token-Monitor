@@ -249,6 +249,7 @@ export function MainWindows({ general, now }: MainWindowsProps) {
       <div className="flex items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.04] p-5 backdrop-blur lg:col-span-1">
         <div className="text-center">
           <QuotaRing
+            continuous
             value={interval?.remainingPercent ?? null}
             color={colorFor(interval?.remainingPercent ?? null)}
             gradientId="ring-5h"
@@ -271,6 +272,7 @@ export function MainWindows({ general, now }: MainWindowsProps) {
         <div className="text-center">
           <QuotaRing
             value={weekly?.remainingPercent ?? null}
+            continuous
             color={colorFor(weekly?.remainingPercent ?? null)}
             gradientId="ring-weekly"
             label="rimanente"

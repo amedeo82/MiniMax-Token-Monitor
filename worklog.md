@@ -447,3 +447,25 @@ Stage Summary:
 - FASE 2 COMPLETATA: la dashboard è di nuovo PWA installabile con cache offline e notifiche a tab chiuso, con la stessa architettura ADR-14 (segreti solo in IndexedDB) e i 14 test di parità che impediscono divergenze TS↔SW
 - Il SW consulta il PROXY (mai MiniMax direttamente): la chiave resta nel perimetro della pagina; il proxy non registra nulla (I30 rispettato)
 - Prossimo: fase 3 — rigenerare docs/06 e re-implementare I57–I67 (batch 1–3 abbellimenti); a campagna: I49/I56 campionatore passivo + V8 se il traffico reale prosegue
+
+---
+Task ID: 20
+Agent: Super Z (main)
+Task: Recovery fase 3 — abbellimenti I57–I67 ri-creati (batch 1–3), docs/06 rigenerato, verifica browser reale
+
+Work Log:
+- **docs/06 ri-creato** (docs-first): catalogo con le specifiche delle 11 voci §5.1–§5.11 (stessi numeri e significati comunicati in chat, storia del rollback dichiarata in header)
+- **Funzioni pure nuove in `lib/cycles.ts`**: `sprecoPerCiclo` (I57: WasteStats media/mediana/max/clean<5 sui cicli completati), `prevedibilitaCicli` (I63: σ popolazione, CV, indice 0–100, null <3 cicli), `consumoGiornaliero` (I58: per giorno di calendario DST-safe via date stringhe en-CA, griglia lun→dom con settimana corrente = ultima riga COMPLETATA con celle null, deterministica fino all'ultimo giorno osservato), `oggiVsMedia` (I64: oggi vs media stessi weekday ultime 5 settimane, oggi escluso), `distribuzioneResiduo` (I61: 10 fasce con ceil, BAND_COLORS)
+- **Moduli lib nuovi**: `lib/rate.ts` (I59: rateSeries con gap>30min→null, reset/rise→null, SMA-3 con buffer azzerato sui null, opzioni iniettabili), `lib/health.ts` (I62: saluteMonitor con episodi <15min = stesso guasto, ultimo errore, più frequente), `lib/ring-color.ts` (I65: coloreContinuo con fermi 0/10/30/60/100 = soglie quotaLevel, glowStyle, AnimatedPercent count-up rAF con prefers-reduced-motion), `lib/tab-identity.ts` (I67: formatTabTitle, drawFaviconDataUrl canvas 64×64, TabIdentity con MutationObserver anti re-asserzione)
+- **UI**: `analysis-panel.tsx` — 2 tab nuovi (Calendario, Distribuzione), CycleWaste + PrevedibilitaStrip nei tab Cicli, TodayComparison nel tab Per giorno, TabsList wrappabile (fix overflow mobile a 6 tab); `diagnostica-panel.tsx` NUOVO (I60 ResetClock: dot plot SVG 3 corsie asse UTC con blocchi teorici 00/05/10/15/20 e tooltip Roma/UTC; I62 MonitorHealth: episodi + badge backoff I51); `history-chart.tsx` + RateChart esportato; `quota-ring.tsx` prop `continuous` (colore HSL + glow + count-up) SOLO sui 2 anelli principali; `section-nav.tsx` NUOVO (I66: sticky, 8 ancore, IntersectionObserver scrollspy, --nav-offset = header+56 misurata, .mm-anchor in globals.css); `page.tsx` wiring (nav, sezioni id, RateChart, DiagnosticaPanel, TabIdentity)
+- **Lezione operativa appresa**: scrivere file via bash heredoc/cat ha CORROTTO il contenuto 2 volte (rate.test.ts, append history-chart) — da ora SOLO strumenti Write/Edit; anche gli output grep di bash hanno mostrato testo mangled mentre il file reale era corretto (verificato con od): fidarsi solo di Read
+- Correzioni in itinere: alias dayKeyFmt in TDZ, fixture con gap 1h > default 30min (rate), bordo ceil 10→0–10, media I63 (2+7+6)/3, settimana corrente da completare, max calendario 20 (2 discese di lunedì), TabsList overflow
+- **Protocollo**: tsc 0 fuori baseline · lint EXIT=0 · bun test **146/146 (463 asserzioni)** · audit **PASS 116/116** (30 check nuovi I57–I67)
+- **Verifica browser reale** (write-pipes /api/history+/api/events bloccati con body {} dall'inizio; il POST 200 visto in dev.log è del poller REALE dell'utente, non della sessione): nav con 8 ancore ✓, scrollspy, title «demo · MiniMax Token Monitor» ✓, 8 sezioni ancorate ✓, tab Calendario 14 celle ✓, Distribuzione 10 fasce ✓, RateChart SVG ✓, Diagnostica ResetClock+«Scheduler regolare» ✓, anelli con glow (drop-shadow) ✓, favicon dinamica assente in demo (by design) ✓, console senza errori correnti ✓, **mobile 390px zero overflow dopo fix TabsList** ✓; screenshot `verify_i57-67_home.png`, `verify_i60-62_diagnostica.png`, `verify_i57-67_mobile390.png`
+- Documentazione: docs/04 §3 I57–I67 → ✅ (11 righe), §8 changelog +1 riga fase 3; docs/06 ri-creato; audit aggiornato; questo worklog
+
+Stage Summary:
+- FASE 3 COMPLETATA: il catalogo abbellimenti I57–I67 è di nuovo interamente implementato, testato e verificato in browser — docs/04 ora mostra I1–I32 ✅ (originali) + I50/I51/I52/I55/I57–I67 ✅ (recovery)
+- **Ricostruito il 100% del lavoro perito ri-implementabile** (I18 resta ⬜ per la condizione V4; I48/I49/I54/I56 sono verifiche da ri-eseguire, non codice; I53 e I68–I82 erano proposte mai implementate)
+- Restano da fare: I18 (fallback, attende V4 fresca o accettazione documentale del verdetto V4=IDENTICI nel transcript), eventuale nuova campagna campionatore I49+V8+I56 (richiede chiave reale nel polling), rigenerazione docs/07 (proposte I68–I82), README aggiornato
+- Scoperta operativa: esiste una copia piattaforma STALE in /tmp/my-project (da ignorare: il progetto vero è /home/z/my-project, ora con remote GitHub come unica copia sicura)

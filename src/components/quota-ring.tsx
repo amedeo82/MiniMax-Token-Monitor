@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { coloreContinuo, glowStyle, AnimatedPercent } from "@/lib/ring-color";
 
 /** Colori disponibili per l'anello, mappati a gradienti SVG. */
 export type RingColor = "ok" | "good" | "warn" | "crit";
@@ -38,6 +39,8 @@ interface QuotaRingProps {
   bigValue?: string;
   className?: string;
   gradientId: string;
+  /** I65 — colore continuo HSL + glow dinamico + count-up (solo anelli principali). */
+  continuous?: boolean;
 }
 
 /**
@@ -54,20 +57,25 @@ export function QuotaRing({
   bigValue,
   className,
   gradientId,
+  continuous = false,
 }: QuotaRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const pct = value === null ? 0 : Math.min(100, Math.max(0, value));
   const offset = circumference * (1 - pct / 100);
   const grad = RING_GRADIENTS[color];
+  const tinta = coloreContinuo(value);
 
   return (
-    <div className={cn("relative inline-flex items-center justify-center", className)} style={{ width: size, height: size }}>
+    <div
+      className={cn("relative inline-flex items-center justify-center", className)}
+      style={{ width: size, height: size, ...(continuous ? glowStyle(value) : {}) }}
+    >
       <svg width={size} height={size} className="-rotate-90" role="img" aria-label={`${label ?? "Quota"}: ${bigValue ?? ""}`}>
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={grad.from} />
-            <stop offset="100%" stopColor={grad.to} />
+            <stop offset="0%" stopColor={continuous ? tinta : grad.from} />
+            <stop offset="100%" stopColor={continuous ? tinta : grad.to} />
           </linearGradient>
         </defs>
         <circle
@@ -76,7 +84,7 @@ export function QuotaRing({
           r={radius}
           fill="none"
           strokeWidth={strokeWidth}
-          className={RING_TRACK_CLASS[color]}
+          className={continuous ? "stroke-white/[0.06]" : RING_TRACK_CLASS[color]}
         />
         <circle
           cx={size / 2}
@@ -92,9 +100,16 @@ export function QuotaRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-        <span className={cn("font-mono text-3xl font-bold tabular-nums tracking-tight", RING_TEXT_CLASS[color])}>
-          {bigValue ?? (value === null ? "—" : `${Math.round(value)}%`)}
-        </span>
+        {continuous ? (
+          <AnimatedPercent
+            value={value}
+            className={cn("font-mono text-3xl font-bold tabular-nums tracking-tight")}
+          />
+        ) : (
+          <span className={cn("font-mono text-3xl font-bold tabular-nums tracking-tight", RING_TEXT_CLASS[color])}>
+            {bigValue ?? (value === null ? "—" : `${Math.round(value)}%`)}
+          </span>
+        )}
         {label ? <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">{label}</span> : null}
         {sublabel ? <span className="text-[10px] text-zinc-500">{sublabel}</span> : null}
       </div>

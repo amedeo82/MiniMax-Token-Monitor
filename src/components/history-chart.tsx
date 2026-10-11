@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Area,
+  AreaChart,
   CartesianGrid,
   ComposedChart,
   Line,
@@ -19,6 +20,7 @@ import {
 } from "recharts";
 import { formatCountdown, formatDateTimeRome, formatDuration, formatShortRome, formatTimeRome } from "@/lib/time";
 import { detectCycles, movingAverage } from "@/lib/cycles";
+import { rateSeries } from "@/lib/rate";
 import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
 import { fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import {
@@ -811,5 +813,72 @@ export function TrendBadge({ trend }: { trend: TrendStats }) {
       {up ? "+" : ""}
       {trend.ratePerHour.toFixed(2)} %/h
     </Badge>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I59 — RateChart: ritmo di consumo %/h sotto il grafico               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Grafico del ritmo istantaneo di consumo (%/h) calcolato con `rateSeries`
+ * (gap > 30 min e reset → null, SMA-3 sui valori validi). Le interruzioni
+ * della linea sono informative: corrispondono a buchi di campionamento o
+ * reset, non sono dati mancanti da riempire.
+ */
+export function RateChart({ history, window: win }: { history: HistoryPoint[]; window: "interval" | "weekly" }) {
+  const rate = React.useMemo(() => rateSeries(history, win), [history, win]);
+  const winLabel = win === "interval" ? "finestra 5 ore" : "finestra settimanale";
+
+  const dati = React.useMemo(
+    () =>
+      history.map((p, i) => ({
+        t: p.t,
+        ritmo: rate.series[i],
+      })),
+    [history, rate],
+  );
+
+  const maxScale = Math.max(5, Math.ceil((rate.max * 1.15) / 5) * 5);
+
+  return (
+    <div className="space-y-1.5" aria-label="Ritmo di consumo">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+          <Gauge className="size-3.5 text-zinc-500" />
+          Ritmo di consumo (%/h) — {winLabel}
+        </p>
+        <span className="ml-auto font-mono text-[11px] tabular-nums text-zinc-500">
+          media {rate.media.toFixed(2)} %/h · picco {rate.max.toFixed(2)} %/h · {rate.validi} campioni
+        </span>
+      </div>
+      <div className="h-28 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={dati} margin={{ top: 4, right: 8, bottom: 0, left: -14 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} tickFormatter={(t: number) => formatShortRome(t)} tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} minTickGap={48} />
+            <YAxis tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, maxScale]} tickFormatter={(v: number) => `${v}`} />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const p = payload[0].payload as { t: number; ritmo: number | null };
+                if (p.ritmo === null) return null;
+                return (
+                  <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+                    <p className="text-zinc-400">{formatDateTimeRome(p.t)}</p>
+                    <p className="mt-0.5 font-mono tabular-nums text-sky-300">{p.ritmo.toFixed(2)} %/h</p>
+                  </div>
+                );
+              }}
+            />
+            <Area type="monotone" dataKey="ritmo" stroke="#38bdf8" strokeWidth={1.8} fill="rgba(56,189,248,0.10)" connectNulls={false} isAnimationActive={false} dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="text-[11px] leading-relaxed text-zinc-600">
+        Pendenza locale della quota (drawdown/ora): le interruzioni corrispondono a buchi &gt; 30 min o reset
+        (non sono consumo). Valori smorzati con media mobile a 3 campioni.
+      </p>
+    </div>
   );
 }
