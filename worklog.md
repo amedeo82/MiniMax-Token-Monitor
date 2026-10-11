@@ -368,3 +368,21 @@ Stage Summary:
 - Riuso numeri I48–I82 con stessi significati (continuità chat); I33–I47 bruciati; item nuovi da I83
 - Prossimo passo: clarify utente sull'ordine di recovery — raccomandazione: fondamenta prima (I50 test suite + I51 backoff + I55 audit tool), poi verifiche (I49/V8, I18 con V4), poi abbellimenti (rigenerare cataloghi + re-implementare I57–I67), poi il nuovo catalogo I68+
 - Commit: documentazione + conteggio-db.mjs in un commit, DB runtime separato (lezione I30, poller attivo)
+
+---
+Task ID: 16
+Agent: Super Z (main)
+Task: Risposta alla richiesta utente «come recuperare o ricreare il lavoro committato in locale il 09/10/2026?» — chiusura forense definitiva, conferma piano di ricreazione, messa in sicurezza (snapshot DB + audit pre-push + istruzioni remote)
+
+Work Log:
+- Forense git definitiva: `git fsck --lost-found` → 6 commit dangling TUTTI ≤ 06/10 (snapshot piattaforma pre-rollback: 2f007c7/46d9de8/c92be6c/e94c5ad/2cf75cd/cf07c4b, ispezionati uno per uno con data e contenuto) — NESSUNO contiene lo stato 09–10/10; `git log --all` su docs/06*/docs/07* → assenti da ogni oggetto accessibile; stash vuoto; unico ref = refs/heads/main; reflog con soli commit/amend UUID piattaforma
+- Inventario sopravvissuti confermato: src/lib/ ferma ai moduli Task 14 (cycles, db, demo, export, minimax, server-events, server-history, time, usage-events, utils) — mancano backoff.ts, rate.ts, health.ts, ring-color.ts; public/ solo logo.svg+robots.txt (niente manifest, sw.js, icone); docs/ solo 01–05; scripts/verifiche/ senza audit-implementazioni.mjs né campione-live.jsonl; tests/lib/ vuota
+- Security audit pre-push remoto: .env tracciato ma contiene SOLO DATABASE_URL (nessuna chiave MiniMax — nessun leak); grep anti-key → stringhe JWT-simili in scripts/issue88.html/json + issue99.html/json (pagine GitHub + risposte API salvate durante le verifiche sull'endpoint coding_plan/remains) → da rimuovere/untrackare PRIMA di ogni push; db/custom.db tracciato con dati d'uso reali → il remote DEVE essere privato
+- Messa in sicurezza DB: snapshot runtime committata separatamente (lezione I30) — 315 punti api (poller utente ancora attivo, ultimo punto 11/10 13:27 UTC, +32 da quando il DB è stato ripristinato al checkpoint) + 241 demo + 5 eventi
+- Piano di ricreazione confermato (predisposto in Task 15, docs/04 §3 con 35 righe I48–I82 ⬜ ri-registrate coi significati identici alla chat): fase 1 fondamenta (I50 test suite, I51 backoff, I55 audit tool) → fase 2 verifiche (I49 campionatore+V8, V2–V8 da rieseguire, I18 con V4 fresca) → fase 3 abbellimenti (rigenerare docs/06 + re-implementare I57–I67 batch 1–3) → fase 4 nuovo catalogo docs/07 (I68+ da clarify)
+- Istruzioni push remote preparate e consegnate in chat: repo privato → sanificazione pre-push (untrack .env, rm scripts/issue88-99) → remote add + push -u origin main; la chat resta fonte non-formale, le istruzioni ora anche in questo worklog
+
+Stage Summary:
+- VERDETTO FINALE: il lavoro committato il 09/10 è IRRIPRIBILILE dai bit — forense esaurita (dangling tutti ≤ 06/10, commit originali garbage-collected, nessuno stash/ref secondario, nessuna copia fuori dal workspace); l'unica via è la RICREAZIONE secondo il piano in 4 fasi, usando la chat come fonte delle specifiche e docs/04 §3 come tracciamento
+- Unica protezione reale contro un terzo rollback: REMOTE GIT fuori dal workspace — qualsiasi copia dentro /home/z/my-project (bundle, tar, download/) morirebbe col workspace stesso; fino al primo push ogni sessione riparte potenzialmente da zero
+- In attesa dall'utente: URL repository privato + Personal Access Token per configurare origin ed eseguire il push (oppure esecuzione autonoma coi comandi consegnati); la sanificazione pre-push è pronta ma NON eseguita in attesa di conferma
