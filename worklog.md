@@ -427,3 +427,23 @@ Stage Summary:
 - La suite test ora protegge OGNI futura ricreazione: da qui in poi ogni modulo ri-creato entra con i suoi test prima del commit
 - L'audit I55 è il verificatore del recovery stesso: a ogni item ri-creato si aggiungono i suoi check (coverage check impedisce che l'audit invecchi)
 - Prossimo: fase 2 — I52 PWA/offline (sw.js + sw-shared + manifest + pwa-register + 14 test parità) e campagna campionatore I49/I56 se il traffico reale lo permette
+
+---
+Task ID: 19
+Agent: Super Z (main)
+Task: Recovery fase 2 — I52 PWA/offline + notifiche a tab chiuso (ADR-14), con verifica browser reale
+
+Work Log:
+- **I52**: ricreati tutti gli artefatti — `public/sw-shared.js` (fonte unica in JS puro per il SW: parseUsagePayload specchio di parseUsageResponse, quotaKeyFor specchio di windowThresholdKey, evaluate specchio di evaluateTransitions, con gestione base_resp radice O dentro data); `public/sw.js` (install shell + skipWaiting, activate con pulizia cache, fetch: POST /api/minimax/usage pass-through con cache MANUALE solo su ok:true — fix «1004 cachato» — e GET rete-prima con fallback cache per navigazioni/_next/static/api/history + ultimo snapshot; messaggi SECRETS/CHECK_NOW/SKIP_WAITING; checkNow() che legge i segreti da IndexedDB, chiama il PROXY, valuta con la logica condivisa e notifica warn/crit/reset; periodicsync tag mm-check); `src/app/manifest.ts`; icone 192/512/apple-180 generate da `scripts/genera-icone-pwa.mjs` (sharp, gradiente rosa→arancio con fulmine identità dashboard); `src/components/pwa-register.tsx` (registrazione SW, postMessage segreti dal localStorage, re-invio su evento custom mm-dash-settings-updated e al focus/visibilità, SKIP_WAITING al nuovo SW)
+- **ADR-14**: la chiave NON tocca mai Cache Storage/codice/log: solo IndexedDB (db mm-dash-sw, store secrets+state); demo mode o chiave rimossa → SECRETS con apiKey null → SW cancella segreto e stato
+- Wiring: layout.tsx monta <PwaRegister/> e icona locale sostituisce il CDN; page.tsx handleSaveSettings dispatcha `mm-dash-settings-updated`
+- **14 test di parità** (tests/lib/sw-parity.test.ts): stesse fixture su TS (minimax/usage-events) e JS (sw-shared): risposta piatta/annidata, base_resp annidato (BUG coperto), 1004 (ok:false su entrambi — il SW non cachera mai un errore), epoch s→ms, remains s→ms, status numerico→stringa, alias titolo/crediti, quotaKeyFor durate reali + fallback video, evaluate reset/crit/warn con esiti identici — suite totale ora **116/116 (354 asserzioni)**
+- Correzioni in itinere: import path del JS nei test (../../public/), windowThresholdKey importato da usage-events (non minimax), rimozione @ts-expect-error non necessario (allowJs), fixture senza chiavi duplicate nell'oggetto (tsc TS1117)
+- **Verifica browser reale (agent-browser, con network route body {} su /api/history e /api/events dal primo step — nessuna scrittura demo sul DB)**: SW registrato e ATTIVO (scope /, active:true); link manifest → /manifest.webmanifest servito; favicon locale icon-192.png; cache mm-dash-v1 con shell esatta (/, manifest, 3 icone, /api/history); flusso messaggi: CHECK_NOW → CHECK_DONE ok=false (corretto senza segreti, nessun crash), SECRETS apiKey null senza errori; zero errori pagina; screenshot `scripts/verify_i52_home.png` e `verify_i52_sw_flusso.png`
+- Protocollo: tsc 0 errori fuori baseline; lint EXIT=0; bun test 116/116; audit I55 aggiornato con 11 check I52 → **PASS 86/86**
+- Documentazione: docs/03 §5.10 ri-creata (design completo PWA/ADR-14); docs/04 §3 I52 → ✅ con nota recovery; §8 changelog +1 riga; questo worklog
+
+Stage Summary:
+- FASE 2 COMPLETATA: la dashboard è di nuovo PWA installabile con cache offline e notifiche a tab chiuso, con la stessa architettura ADR-14 (segreti solo in IndexedDB) e i 14 test di parità che impediscono divergenze TS↔SW
+- Il SW consulta il PROXY (mai MiniMax direttamente): la chiave resta nel perimetro della pagina; il proxy non registra nulla (I30 rispettato)
+- Prossimo: fase 3 — rigenerare docs/06 e re-implementare I57–I67 (batch 1–3 abbellimenti); a campagna: I49/I56 campionatore passivo + V8 se il traffico reale prosegue

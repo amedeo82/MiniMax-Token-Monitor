@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaRegister } from "@/components/pwa-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,7 +20,11 @@ export const metadata: Metadata = {
     "Dashboard interattiva per monitorare l'utilizzo del Token Plan MiniMax in Europa: quota rimanente, finestre di reset, statistiche e orario Europe/Rome.",
   keywords: ["MiniMax", "Token Plan", "monitoraggio", "quota", "dashboard", "API"],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icon-180.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     title: "MiniMax Token Monitor",
@@ -43,6 +48,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
+        <PwaRegister />
         <Toaster position="top-right" richColors closeButton theme="dark" />
       </body>
     </html>

@@ -238,6 +238,43 @@ Stesso schema offline-first del §5.7, applicato agli eventi (reset, soglie, err
 - **Privacy**: su DB arrivano solo timestamp, tipo, messaggio e % residua dell'evento;
   nessuna chiave API transita su `/api/events`.
 
+### 5.10 PWA / offline e notifiche a tab chiuso (I52, ADR-14)
+I52 rende la dashboard **installabile** e capace di avvisare anche a tab chiuso, senza
+mai esporre la Subscription Key né consumare chiamate extra fuori dai polling richiesti:
+
+- **Componenti**: `public/sw.js` (Service Worker) + `public/sw-shared.js` (fonte unica
+  della logica condivisa, vedi sotto) + `src/app/manifest.ts` (manifest webmanifest) +
+  icone PNG generate da `scripts/genera-icone-pwa.mjs` (sharp: 192/512 + apple 180) +
+  `src/components/pwa-register.tsx` (registrazione + passaggio segreti);
+- **ADR-14 — passaggio segreti via postMessage → IndexedDB**: la Subscription Key resta
+  nel localStorage della pagina; `pwa-register.tsx` la invia al SW via `postMessage`
+  (messaggio `SECRETS`, insieme a regione, soglie e flag avvisi) e il SW la conserva
+  SOLO in IndexedDB (db `mm-dash-sw`, store `secrets`) — mai in Cache Storage, mai nel
+  codice del SW, mai nei log; in demo mode o chiave rimossa il messaggio porta
+  `apiKey: null` e il SW cancella segreto e stato;
+- **sw-shared.js — fonte unica testata**: il SW (classico script, `importScripts`)
+  non può importare i moduli TS, quindi `sw-shared.js` duplica in JS puro la logica
+  essenziale: `parseUsagePayload` (specchio di `parseUsageResponse`), `quotaKeyFor`
+  (specchio di `windowThresholdKey`), `evaluate` (specchio di `evaluateTransitions`);
+  la garanzia di equivalenza sono i **test di parità** (`tests/lib/sw-parity.test.ts`,
+  14 test): le stesse fixture passano da entrambe le implementazioni e gli output
+  vengono confrontati;
+- **Notifiche a tab chiuso**: messaggio `CHECK_NOW` (al focus/visibilità della pagina)
+  o evento `periodicsync` (tag `mm-check`, dove il browser lo supporta) → il SW legge i
+  segreti da IndexedDB, chiama il PROXY (stessa rotta della pagina: la chiave non tocca
+  MiniMax direttamente da terze parti), parsa lo snapshot con la logica condivisa,
+  confronta con lo stato precedente (store `state`) e notifica warn/crit/reset con
+  `registration.showNotification` (tag univoco per modello+finestra, `renotify`);
+- **Cache offline**: shell (`/`, manifest, icone) in cache all'installazione; GET
+  rete-prima con fallback cache per navigazioni, `/_next/static` e `GET /api/history`;
+  POST `/api/minimax/usage` passa attraverso e viene cachato MANUALMENTE **solo se
+  `ok: true`** (BUG CORRETTO «1004 cachato»: un errore di autenticazione non deve mai
+  diventare l'«ultimo dato noto» offline); BUG CORRETTO «base_resp annidato» coperto
+  dal parser condiviso (base_resp letto a radice o dentro `data`);
+- **Ciclo di vita**: `skipWaiting` a installazione, pulizia cache vecchie a attivazione,
+  messaggio `SKIP_WAITING` dal nuovo SW quando la pagina ne rileva uno in attesa
+  (aggiornamento immediato senza aspettare la chiusura di tutti i tab).
+
 ---
 
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro
