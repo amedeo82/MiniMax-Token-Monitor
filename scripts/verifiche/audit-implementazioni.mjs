@@ -191,6 +191,16 @@ const CHECKS = [
   check.simbolo("I51", "src/app/page.tsx", "delayAfterFailure", "wiring scheduler client"),
   check.simbolo("I51", "src/app/api/minimax/usage/route.ts", "parseRetryAfterMs|retryAfterMs", "wiring retry transitorio proxy"),
   check.simbolo("I51", "src/app/api/minimax/usage/route.ts", "TRANSIENT_HTTP", "classificazione errori transitori"),
+  check.files("I52", ["public/sw.js", "public/sw-shared.js", "src/app/manifest.ts", "src/components/pwa-register.tsx", "public/icon-192.png", "public/icon-512.png", "public/icon-180.png"], "artefatti PWA"),
+  check.simbolo("I52", "public/sw.js", "importScripts\\(\"/sw-shared.js\"\\)", "SW usa la fonte unica"),
+  check.simbolo("I52", "public/sw.js", "indexedDB", "segreti solo in IndexedDB (ADR-14)"),
+  check.simbolo("I52", "public/sw.js", "ok === true", "cache snapshot solo su ok:true (fix 1004 cachato)"),
+  check.simbolo("I52", "public/sw-shared.js", "parseUsagePayload", "parser condiviso"),
+  check.simbolo("I52", "public/sw-shared.js", "quotaKeyFor", "chiavi soglia condivise"),
+  check.simbolo("I52", "public/sw-shared.js", "function evaluate", "transizioni condivise"),
+  check.simbolo("I52", "src/app/layout.tsx", "PwaRegister", "wiring registro SW nel layout"),
+  check.simbolo("I52", "src/app/page.tsx", "mm-dash-settings-updated", "dispatch cambio impostazioni → SW"),
+  check.file("I52", "tests/lib/sw-parity.test.ts", "test di parità TS↔SW"),
 ];
 
 /* ------------------------------------------------------------------ */

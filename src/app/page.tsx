@@ -462,6 +462,9 @@ export default function DashboardPage() {
     setSettings(s);
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+      // I52 — il Service Worker legge i segreti dal localStorage solo via
+      // postMessage: avvisalo che le impostazioni sono cambiate.
+      window.dispatchEvent(new Event("mm-dash-settings-updated"));
     } catch {
       /* noop */
     }
