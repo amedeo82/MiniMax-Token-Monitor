@@ -442,6 +442,83 @@ punti grezzi:
   in `docs/07` §5.1): la UI client lavora sui 600 punti locali e le analisi
   scaricano il fine grain — cambiare quel comportamento non era parte del batch.
 
+### 5.14 Batch 4 UX: navigazione mobile, vista stampa, tema chiaro (I74/I75/I78)
+Tre miglioramenti **client-only** dal backlog di `docs/07` (§5.7, §5.8, §5.11) —
+proxy, DB e protocollo di polling intoccati; nessuna dipendenza nuova (`next-themes`
+è già presente ma inutilizzato):
+
+- **I74 — Navigazione inferiore su mobile**: nuova `BottomNav` (`components/bottom-nav.tsx`)
+  fissa al fondo (`fixed inset-x-0 bottom-0 z-40 md:hidden`, safe-area iOS gestita con
+  `pb-[env(safe-area-inset-bottom)]`) come ALTERNATIVA alla nav sticky I66 su telefono:
+  su <md la nav sticky superiore è nascosta (`hidden md:block` nel wrapper di page.tsx) e
+  la barra inferiore mostra le stesse 8 ancore di `SEZIONI` con target touch più grandi
+  (`px-3 py-2 text-xs`), scroll orizzontale come la superiore e lo stesso scrollspy
+  (IntersectionObserver con la medesima radice di rootMargin). `--nav-offset` NON cambia:
+  il salto alle ancore resta header+56px anche su mobile (respiro volontario, la barra
+  sta sul fondo). Per evitare che il footer resti coperto dalla barra: spaziatore
+  `h-16 md:hidden` dopo il footer (solo fuori dalla vista compatta I73 — il widget non
+  ha né nav né barra). Aria: `aria-label="Navigazione sezioni (mobile)"`, `aria-current`
+  come la nav superiore;
+- **I75 — Vista stampa / report settimanale**: due livelli.
+  (1) **Foglio di stampa generico** (`@media print` in globals.css): pagina su bianco
+  (testo scuro, niente sfondi decorativi né glow), nascosti header/footer/nav superiore/
+  inferiore/banner azioni/bottoni, `break-inside: avoid` sulle card — Ctrl+P produce
+  comunque un documento leggibile.
+  (2) **Report settimanale dedicato**: `components/print-report.tsx` — blocco
+  `hidden print:block` composto SOLO per la carta con: intestazione (titolo, data/ora
+  Roma, arco dati), verdetto lineare + EWMA (I23/I72), riepilogo cicli (detectCycles +
+  summarizeCycles), spreco per ciclo (sprecoPerCiclo — I57), consumo per giorno della
+  settimana (weekdayConsumption) e calendario consumo ultime settimane
+  (consumoGiornaliero — I58) in tabelle testuali. Lancio: voce «Stampa report
+  settimanale» in cima al menu Esporta del grafico (prop `onStampaReport` opzionale —
+  in vista compatta il menu non c'è e la voce non esiste); il flusso usa
+  `lib/print.ts` → `stampaReportSettimanale()`: aggiunge `print-report` a `<body>`,
+  chiama `window.print()` e rimuove la classe su `afterprint` (regole print:
+  `body.print-report` nasconde TUTTO il main tranne il blocco report, così la stampa
+  contiene SOLO il report);
+- **I78 — Tema chiaro opzionale**: `next-themes` (già dipendenza) con strategia
+  `class`, `defaultTheme="dark"` e `enableSystem={true}`: nessun cambiamento per gli
+  utenti esistenti (senza preferenza salvata resta il dark; il localStorage `theme`
+  di next-themes decide solo dopo una scelta esplicita). `layout.tsx` avvolge l'app
+  nel `ThemeProvider` (già `suppressHydrationWarning` su `<html>`); il Toaster usa il
+  wrapper shadcn che già legge `useTheme` (rimossa la forzatura `theme="dark"`).
+  Scelta tema in DUE punti: toggle icona nel header
+  (`components/theme-toggle.tsx`, Sun/Moon — se `theme` è esplicito alterna chiaro/scuro)
+  e Select «Tema» (Sistema/Chiaro/Scuro) nel NUOVO tab «Aspetto» delle impostazioni
+  (grid-cols-3 → grid-cols-4). La palette chiara NON tocca i componenti: nuovo strato
+  di override in globals.css sotto `html:not(.dark)` (stessa tecnica già usata per gli
+  hover dark: regole unlayered con specificità maggiore) che ri-mappa le superfici
+  hardcoded — `bg-[#09090b]`→bianco, `text-zinc-100/200/300`→toni scuri,
+  `text-zinc-500/600`→grigi medi, `border-white/[0.06..0.10]`→`black/8..12`,
+  `bg-white/[0.02..0.10]`→`black/3..8`, `bg-zinc-950`→bianco, badge/scritte
+  `-300`→`-600/700` leggibili su bianco, più `color-scheme: light` per scroll e form.
+  I grafici recharts e gli SVG usano colori espliciti scelti per il dark: le griglie
+  `rgba(255,255,255,0.06)` e i tick `#71717a` restano leggibili su bianco (grigio su
+  grigio chiaro), i colori serie (emerald/amber/sky/rose) sono saturi e leggibili su
+  entrambi i fondi — nessun intervento richiesto, nota onesta in `docs/07` §5.11.
+  Favicon e ring (I65/I67) sono canvas/SVG colorati: invariati per costruzione.
+
+> **Implementato 11/10** con due lezioni emerse in itinere:
+> 1. **I75**: l'header del report era un `<header>` e la regola print generica
+>    (`header { display: none }`) lo nascondeva ANCHE lui — il PDF di prova iniziava
+>    direttamente dal verdetto. Corretto: l'header del report è un `<div>` (nota nel
+>    componente). La verifica del flusso di stampa è stata fatta con un PDF REALE
+>    (`Page.printToPDF`, media print): con `print-report` attivo il foglio contiene
+>    SOLO il report, intestazione inclusa; in headless `afterprint` è emesso subito,
+>    quindi la classe viene rimossa da sola (flusso di `lib/print.ts` confermato).
+> 2. **I74**: `getComputedStyle(nav).display` su un discendente di un wrapper
+>    `display:none` restituisce comunque `block` — la nascosta effettiva della nav
+>    superiore su mobile va verificata con `offsetParent === null` (e per la barra
+>    fissa, che per `position:fixed` ha SEMPRE offsetParent null, con il rect:
+>    bottom = altezza viewport).
+> Esiti: tsc 0 errori su src/+tests/ (4 baseline esterne), lint OK, suite
+> 249/249 (761 asserzioni, +10), audit 203/203 PASS (183→203, +20 check);
+> browser: tema chiaro leggibile (screenshot `scripts/verify-batch4-tema-chiaro.png`),
+> tab Aspetto funziona (light→dark), voce stampa nel menu con classe transitoria,
+> PDF report `scripts/verify-batch4-report.pdf`, mobile 390 con barra fissa e top
+> nav assente (`verify-batch4-mobile390.png`), desktop dark intatto
+> (`verify-batch4-desktop-dark.png`), zero overflow 1280/390, console pulita.
+
 ---
 
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro

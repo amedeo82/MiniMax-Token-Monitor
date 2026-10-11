@@ -306,6 +306,27 @@ const CHECKS = [
   check.simbolo("I68", "src/lib/server-history.ts", "export async function fetchServerHourly", "client grana oraria"),
   check.simbolo("I68", "src/components/history-chart.tsx", "exportHourlyFromServer", "voci export orario nel menu"),
   check.simbolo("I68", "tests/lib/downsample.test.ts", "sorgenti diverse", "bucket separati api/demo testati"),
+  /* --- Batch 4 UX (I74/I75/I78, docs/07) ------------------------------ */
+  check.file("I74", "src/components/bottom-nav.tsx", "barra di navigazione inferiore mobile"),
+  check.simbolo("I74", "src/components/section-nav.tsx", "export function useScrollSpySezioni", "scrollspy estratto in hook condiviso"),
+  check.simbolo("I74", "src/components/bottom-nav.tsx", "useScrollSpySezioni", "stesso scrollspy della nav I66"),
+  check.simbolo("I74", "src/components/bottom-nav.tsx", "md:hidden", "visibile solo sotto md"),
+  check.simbolo("I74", "src/app/page.tsx", "BottomNav", "wiring barra mobile in page.tsx"),
+  check.simbolo("I74", "src/app/page.tsx", "hidden md:block", "nav superiore nascosta su <md (alternativa)"),
+  check.simbolo("I75", "src/lib/print.ts", "export function stampaReportSettimanale", "flusso di stampa con afterprint"),
+  check.simbolo("I75", "src/components/print-report.tsx", "print-report-root", "blocco solo-carta"),
+  check.simbolo("I75", "src/components/print-report.tsx", "detectCycles", "cicli nel report"),
+  check.simbolo("I75", "src/components/print-report.tsx", "sprecoPerCiclo", "spreco per ciclo (I57) nel report"),
+  check.simbolo("I75", "src/components/print-report.tsx", "consumoGiornaliero", "calendario (I58) nel report"),
+  check.simbolo("I75", "src/components/history-chart.tsx", "Stampa report settimanale", "voce nel menu Esporta"),
+  check.simbolo("I75", "src/app/globals.css", "@media print", "regole di stampa generiche"),
+  check.simbolo("I75", "src/app/globals.css", "body\\.print-report", "modalità report-only nel CSS"),
+  check.simbolo("I78", "src/components/theme-toggle.tsx", "useTheme", "toggle tema next-themes"),
+  check.simbolo("I78", "src/app/layout.tsx", "ThemeProvider", "provider temi in layout"),
+  check.simbolo("I78", "src/app/layout.tsx", 'defaultTheme="dark"', "default scuro (comportamento invariato)"),
+  check.simbolo("I78", "src/app/globals.css", "html:not\\(\\.dark\\)", "strato chiaro: rimappatura superfici hardcoded"),
+  check.simbolo("I78", "src/components/settings-dialog.tsx", '"aspetto"', "tab Aspetto nelle impostazioni"),
+  check.simbolo("I78", "tests/components/theme-toggle.test.tsx", "localStorage", "persistenza tema testata"),
 ];
 
 /* ------------------------------------------------------------------ */
