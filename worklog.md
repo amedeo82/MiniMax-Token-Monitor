@@ -469,3 +469,21 @@ Stage Summary:
 - **Ricostruito il 100% del lavoro perito ri-implementabile** (I18 resta ⬜ per la condizione V4; I48/I49/I54/I56 sono verifiche da ri-eseguire, non codice; I53 e I68–I82 erano proposte mai implementate)
 - Restano da fare: I18 (fallback, attende V4 fresca o accettazione documentale del verdetto V4=IDENTICI nel transcript), eventuale nuova campagna campionatore I49+V8+I56 (richiede chiave reale nel polling), rigenerazione docs/07 (proposte I68–I82), README aggiornato
 - Scoperta operativa: esiste una copia piattaforma STALE in /tmp/my-project (da ignorare: il progetto vero è /home/z/my-project, ora con remote GitHub come unica copia sicura)
+
+---
+Task ID: 21
+Agent: Super Z (main)
+Task: Chiusura del recovery — docs/07 rigenerato, README aggiornato, protocollo finale e push conclusivo
+
+Work Log:
+- **docs/07 ri-creato**: le 15 proposte I68–I82 in §5.1–§5.15 con gli stessi numeri/significati comunicati in chat (tutte ⬜, onesto: mai implementate), contesto della proposta originale (batch 1 client-only consigliato: I69/I77/I76/I73) e priorità suggerite; il bug noto di I76 (`e.value != null` non copre undefined in event-log.tsx) è dichiarato ANCORA presente nel codice ripristinato
+- **README aggiornato**: funzionalità ri-crete documentate (ring continui+glow, notifiche a tab chiuso, backoff, PWA, tab identity, nav scrollspy, spreco/prevedibilità/calendario/ritmo/istogramma/oggi-vs-media/diagnostica) + sezione Qualità (146 test/463 asserzioni, audit 116 verifiche)
+- docs/04: nota §1 aggiornata (cataloghi docs/06+07 rigenerati l'11/10), changelog +1 riga chiusura
+- Protocollo finale: tsc 0 errori fuori baseline · lint EXIT=0 · bun test 146/146 (463 asserzioni) · audit PASS 116/116 · verifica browser delle fasi 2–3 già eseguita (SW attivo, tab, zero overflow mobile, zero errori console)
+- Commit e push a ogni milestone (fase 1, fase 2, fase 3, chiusura) come richiesto dall'utente; snapshot DB runtime separate a ogni chiusura (lezione I30)
+
+Stage Summary:
+- RECOVERY COMPLETATO: tutto il lavoro perito ri-implementabile è di nuovo nel repo e su GitHub — I50/I51/I52/I55 (fondamenta+PWA) e I57–I67 (abbellimenti), con test, audit, documentazione e worklog sincronizzati
+- Mapping finale degli item persi: I18 ⬜ (attende V4 fresca o accettazione documentale del verdetto V4=IDENTICI), I48/I49/I54/I56 ⬜ (verifiche da ri-eseguire, non codice; I49/I56 richiedono una nuova campagna con chiave reale nel polling), I53 + I68–I82 ⬜ (proposte mai implementate, catalogo docs/07 rigenerato)
+- Lo stato dichiarato in docs/04 è di nuovo allineato alla realtà del codice (audit come garanzia continua)
+- Suggerimenti per la prossima sessione: (1) docs/07 batch 1 client-only (I69/I77/I76+fix bug/I73) con clarify §10; (2) nuova campagna campionatore I49+V8+I56 quando l'utente conferma il polling con chiave reale; (3) I18 se l'utente accetta documentalmente il verdetto V4=IDENTICI registrato nel transcript chat

@@ -33,8 +33,9 @@ F7 persistenza storico server (I16) · F8 persistenza eventi (I27).
 | F8 | Persistenza registro eventi (I27): `UsageEventRecord`, `api/events`, replica fire-and-forget + merge | ✅ | 2026-10-02 |
 
 > Le attività successive a F8 usano etichette di filone (Verifiche / Robustezza / Estensioni / UX);
-> i cataloghi dedicati (già `docs/06` e `docs/07`) sono **persi col secondo rollback del 11/10**
-> e vanno rigenerati alla re-proposta.
+> i cataloghi dedicati `docs/06` e `docs/07`, **persi col secondo rollback del 11/10**, sono
+> stati **rigenerati l'11/10 stesso nel recovery** (docs/06 con I57–I67 ri-implementati ✅,
+> docs/07 con le proposte I68–I82 ⬜).
 
 ---
 
@@ -228,6 +229,7 @@ F7 persistenza storico server (I16) · F8 persistenza eventi (I27).
 
 | Data | File | Cambiamento |
 |------|------|-------------|
+| 2026-10-11 | `docs/07-analisi-miglioramenti-aggiuntivi.md` (ri-creato), `README.md` | **Chiusura recovery**: docs/07 ri-generato con le 15 proposte I68–I82 ⬜ (§5.1–5.15 + priorità suggerite, bug I76 notato ancora presente); README aggiornato con le funzionalità ri-crete (PWA, backoff, abbellimenti, qualità) |
 | 2026-10-11 | `docs/06-abbellimenti-dashboard.md` (ri-creato), `src/lib/cycles.ts` (+5 funzioni), `src/lib/rate.ts`+`health.ts`+`ring-color.ts`+`tab-identity.ts` (nuovi), `analysis-panel.tsx` (2 tab nuovi + CycleWaste/Prevedibilità/OggiVsMedia), `diagnostica-panel.tsx` (nuovo), `section-nav.tsx` (nuovo), `history-chart.tsx` (+RateChart), `quota-ring.tsx`+`quota-cards.tsx` (continuous), `page.tsx` (nav+sezioni+TabIdentity), `globals.css`, `tests/lib/` (+4 file) | **Fase 3 recovery — I57–I67 ri-creati (batch 1–3 abbellimenti)**: spreco per ciclo, calendario GitHub-style, ritmo %/h, orologio reset, istogramma residuo, salute monitor, prevedibilità cicli, oggi vs media, ring continui+glow+count-up, nav sticky scrollspy, tab identity; suite 146/146; browser verificato (3 ancore, tab, zero overflow 390px) |
 | 2026-10-11 | `public/sw.js` + `public/sw-shared.js` (nuovi), `src/app/manifest.ts` (nuovo), `src/components/pwa-register.tsx` (nuovo), `src/app/layout.tsx`, `src/app/page.tsx`, `public/icon-*.png`, `scripts/genera-icone-pwa.mjs` (nuovo), `docs/03` §5.10 (ri-creata), `tests/lib/sw-parity.test.ts` (nuovo) | **I52 ri-creato (recovery)**: PWA installabile + offline + notifiche a tab chiuso (ADR-14: segreti postMessage → IndexedDB, cache solo su ok:true); 14 test di parità TS↔SW; suite 116/116 |
 | 2026-10-11 | `src/lib/backoff.ts` (nuovo), `src/app/api/minimax/usage/route.ts`, `src/app/page.tsx`, `src/lib/minimax.ts` | **I51 ri-creato (recovery)**: backoff esponenziale con jitter puro (base 2s, cap 10 min, floor 1s, Retry-After floor client); proxy con retry transitori (429/5xx/rete/timeout) e `retryAfterMs` nel payload d'errore; scheduler client con backoff al posto del setInterval; fix doppio fetch al salvataggio; `ApiError.retryAfterMs/transient` |
