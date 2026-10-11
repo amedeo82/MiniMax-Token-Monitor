@@ -44,6 +44,16 @@ describe("I81 componenti: SectionNav", () => {
     expect(diagnostica.getAttribute("aria-current")).toBe("true");
     expect(screen.getByRole("link", { name: "Quota" }).getAttribute("aria-current")).toBeNull();
   });
+
+  test("I85: la nav è sticky e nascosta su <md (hidden md:block) — figlia diretta di main, sempre visibile nello scroll desktop", () => {
+    render(<SectionNav />);
+    const nav = screen.getByRole("navigation", { name: "Sezioni della dashboard" });
+    // sticky: resta fissa in alto durante lo scrolling (contenitore = <main>)
+    expect(nav.className).toContain("sticky");
+    // hidden md:block: su <md scompare (subentra la barra fissa I74)
+    expect(nav.className).toContain("hidden");
+    expect(nav.className).toContain("md:block");
+  });
 });
 
 function Bomba(): React.JSX.Element {

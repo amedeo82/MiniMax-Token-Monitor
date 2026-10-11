@@ -758,13 +758,12 @@ export default function DashboardPage() {
 
         {/* ------------------------------ Main ------------------------------ */}
         <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
-        {/* I66 — navigazione sticky con scrollspy (I74: su <md la sostituisce la barra inferiore;
-            entrambe assenti in modalità compatta) */}
-        {!compact ? (
-          <div className="hidden md:block">
-            <SectionNav />
-          </div>
-        ) : null}
+        {/* I85 — navigazione sempre visibile durante lo scrolling: la nav è
+            figlia DIRETTA di <main>, così il suo contenitore sticky è tutta la
+            pagina. Un wrapper alto quanto la barra non le darebbe corsa e
+            sfilerebbe. (I66 scrollspy; I74: su <md la sostituisce la barra
+            inferiore; entrambe assenti in modalità compatta) */}
+        {!compact ? <SectionNav /> : null}
 
           {/* Errore */}
           {error ? (

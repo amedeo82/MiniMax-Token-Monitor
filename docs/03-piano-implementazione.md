@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-12 (§5.16 due famiglie di colore — I84: token `--mm-muted` chiaro/scuro, famiglia scuro revisionata al probe WCAG, accent chiaro su toni 700/800 con tinte 50 piene; 0 FAIL su 74 campioni in entrambi i temi). Precedente: 2026-10-12 (§5.15 correzione leggibilità tema chiaro — I83: varianti opacità, toni 400→600 per testo/icone, stati attivi tab/chips con blocco layered, hover scuri).
+> Ultimo aggiornamento: 2026-10-12 (§5.17 nav sezioni sempre visibile durante lo scrolling — I85: nav figlia diretta di `<main>` per dare corsa allo sticky + fix scrollspy morto con retry dell'osservazione fino al primo snapshot). Precedente: 2026-10-12 (§5.16 due famiglie di colore — I84: token `--mm-muted` chiaro/scuro, famiglia scuro revisionata al probe WCAG, accent chiaro su toni 700/800 con tinte 50 piene; 0 FAIL su 74 campioni in entrambi i temi).
 
 ---
 
@@ -661,6 +661,64 @@ famiglia: nomi di CLASSE diversi non raggiunti dai selettori esistenti):**
 > `verify-i84-full-light.png`, `verify-i84-full-dark.png`. Suite: tsc 0 errori su
 > src/+tests/, lint OK, 249/249 (761 asserzioni, fix solo CSS), audit 211/211 PASS
 > 0 scoperte (era 203, +8 check I83/I84).
+
+### 5.17 Nav sezioni sempre visibile durante lo scrolling (I85) — 12/10
+
+Richiesta utente: il menù di navigazione delle sezioni (Quota, Grafico, Ritmo,
+Panoramica, Analisi, Diagnostica, Tecnici, Eventi) deve restare **sempre visibile
+durante lo scrolling**, fissato in alto.
+
+**Causa del difetto**: la nav di I66 era già `position: sticky` con `top` corretto
+(= altezza header), ma in `page.tsx` era avvolta da un `<div className="hidden
+md:block">` contenente SOLO la barra. Un elemento sticky scorre dentro il proprio
+**contenitore** (il parent nel box tree): un wrapper alto esattamente quanto la
+barra non le dà alcuna corsa — la nav «sfila» col wrapper appena si supera la sua
+posizione naturale. Nessun antenato ha `overflow` che blocca lo sticky, quindi la
+cura è puramente strutturale.
+
+**Cure**:
+- `page.tsx`: la nav è **figlia diretta di `<main>`** (niente wrapper) — il suo
+  contenitore sticky diventa tutta la pagina e la barra resta inchiodata sotto
+  l'header per tutto lo scroll.
+- `section-nav.tsx`: la classe `hidden md:block` (prima sul wrapper) si sposta
+  **sulla nav stessa** — comportamento identico su <md (subentra la barra fissa
+  I74), nessuna superfice toccata in modo diverso.
+
+**Scoperta collaterale (bug pre-esistente I66, mai esploso prima)**: durante la
+verifica il **scrollspy risultava morto** — `aria-current` inchiodato su «Quota»
+per qualunque scroll. Diagnosi al browser: le 8 sezioni ancorate montano SOLO
+quando arriva il primo snapshot (prima c'è lo skeleton), ma l'effect dell'
+`IntersectionObserver` gira all'attivazione del componente — quando
+`getElementById` trova **zero elementi**: l'observer nasce vuoto e non osserverà
+mai più nulla (nessun re-observe quando le sezioni compaiono). Le verifiche
+precedenti avevano sempre testato il **click** (che usa il `setAttiva` manuale),
+mai la prosecuzione dello scroll — per questo non era mai emerso. Cure: l'
+osservazione **riprova** finché le 8 sezioni non sono tutte nel DOM (250 ms × 120
+= 30 s massimo; oltre: pagina senza sezioni, es. setup, si rinuncia in silenzio).
+Il fix è nell'hook condiviso `useScrollSpySezioni`, quindi cura anche la barra
+mobile I74. Verifica che il probe IO standalone FUNZIONAVA nell'ambiente: il
+problema era esclusivamente l'ordine di montaggio, non l'API.
+
+**Verifiche browser reali** (rotte `/api/history` + `/api/events` bloccate con
+body `{}` — nessuna scrittura sul DB; scroll con `scrollIntoView` passo-passo):
+desktop 1280 scuro — a riposo nav a 130px sotto header; a fondo pagina (scrollY
+6071) nav **inchiodata a 106px = bordo inferiore header**, 8 ancore visibili;
+scrollspy segue tutte le 7 transizioni (grafico→Grafico … eventi→Eventi); click
+su «Diagnostica» → `aria-current` immediato e sezione a 162px **mai sotto il
+chrome sticky**. Tema chiaro — nav `rgba(250,250,250,0.9)` (rimappa I78 attiva
+anche sticky), link attivo `rgb(24,24,27)`, stesso comportamento sticky/spy.
+Mobile 390 — nav superiore `display:none`, barra fissa I74 visibile a fondo
+pagina con scrollspy vivo («Eventi»). Compact — nessuna delle due nav. Zero
+overflow orizzontale (1280 e 390), console senza errori. Screenshot
+`scripts/verify-i85-desktop-light.png`, `verify-i85-desktop-dark.png`,
+`verify-i85-desktop-dark-scroll.png`.
+
+**Lezione di verifica**: uno scrollspy va provato con lo **scorrimento reale**
+(sequenza di scroll + lettura `aria-current`), non solo col click sul link — il
+click bypassa tutta la catena observer→callback→state e maschera un observer
+vuoto. Suite: tsc 0 errori su src/+tests/, lint OK, 250/250 (764 asserzioni,
++1 test I85 sul componente), audit 214/214 PASS 0 scoperte (+3 check I85, check
+I74 aggiornato al nuovo domicilio della classe `hidden md:block`).
 
 ---
 

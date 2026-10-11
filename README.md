@@ -37,7 +37,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - Polling automatico configurabile con **backoff esponenziale con jitter** (I51: su errore il ritardo cresce fino a 10 min e rispetta il Retry-After dell'API; il proxy ritenta gli errori transitori), **fallback automatico sull'endpoint alternativo `coding_plan/remains`** (I18: se il primario sparisce — 404/405/410/501 o risposta non-JSON — il rilevamento continua senza intervento, con evento nel registro), import manuale di una risposta JSON, modalità demo
 - **PWA installabile con cache offline** (I52): manifest, icone, shell e ultimo snapshot validi in cache; il Service Worker conserva la chiave SOLO in IndexedDB (mai in cache/log)
 - **Titolo e favicon dinamici** (I67): residuo 5h nel titolo del tab e mini-ring colorato come favicon
-- **Navigazione interna sticky con scrollspy** (I66): 8 sezioni ancorate con evidenza della sezione visibile; **su telefono diventa barra fissa in basso** (I74) con gli stessi target e la stessa sezione attiva
+- **Navigazione interna sempre visibile** (I66/I85): 8 sezioni ancorate con evidenza della sezione visibile (scrollspy), barra **fissata in alto sotto l'header durante tutto lo scrolling**; **su telefono diventa barra fissa in basso** (I74) con gli stessi target e la stessa sezione attiva
 - **Selettore intervallo temporale** (I69): preset 6h/24h/3g/7g/30g/tutto che restringono grafico, statistiche, ritmo e analisi (la diagnostica resta sull'intero storico)
 - **Error boundary per sezione** (I76): un crash in un pannello non porta più giù la pagina — skeleton di fallback con «Riprova» per ogni sezione
 - **Modalità compatta / widget** (I73): apri `/?compact=1` per solo anelli + countdown + ritmo (schermi secondari, compatibile con la PWA)

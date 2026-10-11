@@ -102,6 +102,17 @@ visibile), offset calcolato con la variabile CSS `--nav-offset` = header + 56px;
 `scroll-margin-top` sulle sezioni (classe `.mm-anchor` in `globals.css`) per il salto
 preciso; nascosta su mobile molto stretto (scroll orizzontale).
 
+> **Nota implementazione I85 (12/10)** — richiesta «nav sempre visibile durante lo
+> scrolling»: la barra era già `sticky top` ma un wrapper `hidden md:block` alto quanto
+> la barra stessa ne bloccava la corsa (lo sticky scorre solo dentro il proprio
+> contenitore). Ora la nav è **figlia diretta di `<main>`** e porta essa stessa
+> `hidden md:block` — resta inchiodata sotto l'header per tutto lo scroll della pagina.
+> Nella stessa sede è emerso e corretto un bug di I66 rimasto silenzioso: l'observer
+> nasceva sullo skeleton (sezioni non ancora nel DOM → `getElementById` null) e non
+> osservava mai nulla; `useScrollSpySezioni` ora riprova (250 ms × 120) finché le 8
+> sezioni sono montate — cura anche la barra mobile I74. Dettagli e verifiche:
+> `docs/03` §5.17.
+
 ## 5.11 I67 — Identità del tab: titolo e favicon dinamici
 `src/lib/tab-identity.ts` (nuovo modulo): `formatTabTitle(...)` (residuo finestra 5h nel
 titolo, es. «84% · MiniMax Token Monitor») e `drawFaviconDataUrl(percent)` (canvas 64×64:
