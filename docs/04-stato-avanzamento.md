@@ -12,7 +12,8 @@
 > 6. Aggiorna il changelog in §8 di questo file.
 
 Legenda fasi (definizione in `docs/03` §10): F0 setup · F1 dati · F2 UI quota ·
-F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
+F3 tempo Roma · F4 storico · F5 robustezza · F6a rimossa (ADR-8) · F6b estensioni ·
+F7 persistenza storico server (I16) · F8 persistenza eventi (I27).
 
 ---
 
@@ -28,6 +29,12 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | F5 | Robustezza: import JSON, demo, pannelli tecnici, verifiche browser | ✅ | 2026-10-02 |
 | F6a | ~~Contatore token reale (chat completions + campo usage)~~ — **rimossa (ADR-8): consumava la quota del piano** | 🚫 | 2026-10-02 |
 | F6b | Estensioni analisi/monitoraggio: avvisi soglia, registro eventi, export CSV/JSON, verdetto esaurimento vs reset, panoramica modelli | ✅ | 2026-10-02 |
+| F7 | Persistenza storico server-side (I16): Prisma/SQLite `UsagePoint`, `api/history`, sync offline-first | ✅ | 2026-10-02 |
+| F8 | Persistenza registro eventi (I27): `UsageEventRecord`, `api/events`, replica fire-and-forget + merge | ✅ | 2026-10-02 |
+
+> Le attività successive a F8 usano etichette di filone (Verifiche / Robustezza / Estensioni / UX);
+> i cataloghi dedicati (già `docs/06` e `docs/07`) sono **persi col secondo rollback del 11/10**
+> e vanno rigenerati alla re-proposta.
 
 ---
 
@@ -70,7 +77,7 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I15 | ~~Contatore token reale via `/v1/chat/completions`~~ | F6a | 🚫 | **Rimossa 2026-10-02 (ADR-8)**: con la Subscription Key ogni chiamata consumava la quota del piano; rimossi `api/minimax/chat`, `lib/token-log.ts`, `TokenTracker` |
 | I16 | Persistenza storica server-side (Prisma/SQLite) | F7 | ✅ | Modello `UsagePoint`, `api/history` (POST upsert/pruning, GET, DELETE), `lib/server-history.ts` (sync offline-first), merge all'avvio, export completo dal server — 2026-10-02 |
 | I17 | Notifiche soglie (<10/25% o reset) | F6b | ✅ | `lib/usage-events.ts` (banner + toast + Notification API, soglie configurabili) — 2026-10-02 |
-| I18 | Fallback automatico su `coding_plan/remains` | F6b | ⬜ | Dipende da V4 |
+| I18 | Fallback automatico su `coding_plan/remains` | F6b | ⬜ | Dipende da V4. *Storia: implementato il 09/10 dopo il verdetto V4 = IDENTICI (chiave reale, campagna Task 23) e **perso col secondo rollback dell'11/10** — gli esiti V4 sono persi: per re-implementare serve una V4 fresca con chiave reale, oppure l'accettazione documentale del verdetto registrato nel transcript chat (unica evidenza superstite).* |
 | I19 | ~~Persistenza del registro token su server~~ | F6b | 🚫 | **Rimossa**: dipendeva da I15 (ADR-8) |
 | I20 | ~~Correlazione token ↔ calo percentuale quota~~ | F6b | 🚫 | **Rimossa**: dipendeva da I15 (ADR-8) |
 | I21 | Registro eventi persistente + timeline UI | F6b | ✅ | `mm-dash-events-v1` (max 200) + `EventLog` (per giorno Roma, badge, svuota) — 2026-10-02 |
@@ -85,6 +92,58 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | I30 | Chiusura campagna verifiche con chiave reale (Task 7): rimozione cattura chiave dal proxy, pulizia tracce, riconciliazione stato | Verifiche | ✅ | Blocco temporaneo di cattura rimosso da `api/minimax/usage/route.ts` (proxy ritestato 200, zero file scritti); verificata integrità DB (351 punti: 126 api 02/10 + 225 demo, 1 evento); la campagna 04–05/10 è stata **interrotta dal riavvio del workspace** e nessun esito strutturato è sopravvissuto (vedi nota in §4) — 2026-10-06 |
 | I31 | Pace di consumo + quota sprecata (stesso filone di I23) | F6b | ✅ | `computePace()`/`PaceInfo` + `PacePanel` in `StatsPanel` (`history-chart.tsx`): ritmo attuale vs **ritmo di pareggio** (%/h che azzererebbe la quota ESATTAMENTE al reset), **quota sprecata** (residuo previsto al reset, con equivalenza in ore di consumo al ritmo attuale) e **fermo tecnico** (quando l'esaurimento anticipa il reset); tre stati visivi coerenti col verdetto accanto (viola = sprecata, ambra = fermo, verde = pareggio) + KPI; steso modello lineare di I23 ancorato all'ultimo rilevamento — 2026-10-07 |
 | I32 | Heatmap ore × giorno + overlay cicli (completano I26) | F7 | ✅ | Tab «**Per ora**» in `analysis-panel.tsx`: heatmap 7×24 (Europe/Rome) con `heatmapConsumption()` (`lib/cycles.ts`, stessa semantica drawdown di `weekdayConsumption`), selettore finestra 5 ore/settimanale, KPI (consumo attribuito, ora di picco, celle attive /168), scala viola √-normalizzata, tooltip per cella con n° cali, scroll orizzontale su mobile; **overlay cicli** sul grafico storico (toggle «Cicli», attivo di default): fasce alternate per ciclo + marker rossi dei reset osservati — 2026-10-07 |
+
+> **⚠️⚠️ SECONDO ROLLBACK DEL WORKSPACE (scoperto l'11/10/2026)**: l'albero è stato ripristinato
+> al checkpoint del 07/10 (stato Task 14: I31/I32, ultima riga della tabella qui sopra) e la
+> history git riscritta con soli commit UUID di piattaforma (oggetti dei commit originali
+> garbage-collected). Sono persi documenti, codice e artefatti delle sessioni 08–11/10:
+> gli item **I33–I47** (assegnati nella sessione 08/10, già persi col primo rollback del 09/10
+> e mai riproposti — numeri **bruciati**, mai riutilizzabili) e **I48–I82** (registrati e in
+> parte implementati nelle sessioni 09–11/10: verifiche I48/I54/I55/I56, campionatore I49 +
+> campagna V8, suite test I50, backoff I51, PWA I52, fallback I18, cataloghi `docs/06` e
+> `docs/07` con i batch 1–3 implementati, audit di coerenza Task 30). Le righe I48–I82
+> ri-registrate qui sotto in forma CONDENSATA mantengono gli stessi numeri e significati
+> comunicati in chat (continuità di numerazione); sono tutte ⬜ in senso onesto: dove c'era
+> un'implementazione questa è **persa insieme ai file**. I dettagli completi delle
+> realizzazioni perdute (file creati, test, esiti, lezioni) erano nel changelog §8 e nel
+> worklog (voci Task 15–30, perse anch'esse) e nel transcript chat. Item nuovi: numerazione
+> da **I83**.
+
+| I48 | Verifica «demo ↔ API ufficiale» (matrice campo per campo; era `docs/01` §11.2) | Verifiche | ⬜ | Eseguita 09/10 con esito «demo fedele al 100% sui campi osservati» — verifica pura senza codice; matrice e nota **perse col rollback**: da ri-eseguire documentalmente se riproposta |
+| I49 | Campionatore passivo (ADR-13-R2: payload risposte valide su `campione-live.jsonl`) + analizzatore fuso reset | Verifiche | ⬜ | Implementato e rimosso a campagna chiusa il 09/10 (procedura in `docs/05` §11, persa); artefatti (115+ campioni, `analisi-reset-timezone.mjs`) **persi col rollback**: da ri-proporre per una nuova campagna V8 |
+| I50 | Test suite automatica librerie core: `tests/lib/` (minimax/time/cycles/usage-events) con `bun test` | Robustezza | ⬜ | 73 test / 238 asserzioni implementati 09/10; **persi col rollback** (assenti `tests/lib/` e script `test` in package.json) — prima priorità di re-implementazione: rete di sicurezza per ogni recovery |
+| I51 | Backoff esponenziale con jitter: `lib/backoff.ts` puro + scheduler client + retry transitorio proxy + `retryAfterMs` | Robustezza | ⬜ | Implementato 09/10 (12 test deterministici: ×2 per errore, cap 10 min, jitter ±25%, floor 1s, Retry-After come floor del client, fix doppio fetch al salvataggio); **perso col rollback** — file assenti |
+| I52 | PWA/offline + notifiche a tab chiuso via Service Worker (ADR-14: chiave via postMessage → IndexedDB) | Estensioni | ⬜ | Implementato 09/10: `public/sw.js` + `sw-shared.js` (fonte unica testata) + `manifest.ts` + icone + `pwa-register.tsx` + 14 test di parità (suite 150/150); 2 bug corretti in verifica (1004 cachato, `base_resp` annidato); **perso col rollback** — tutti i file assenti |
+| I53 | Multi-regione simultanea (query parallela eu+cn, settings multi-chiave) | Estensioni | ⬜ | Proposta mai implementata (invariata dal rollback) |
+| I54 | Verifica coerenza inversa «live ↔ demo» (matrice 23 dimensioni; era `docs/03` §5.9) | Verifiche | ⬜ | Eseguita 09/10 con esito «live ⊇ demo su tutte le dimensioni»; sezione `docs/03` §5.9 **persa col rollback**: da ri-documentare se riproposta |
+| I55 | Audit di riconciliazione codice ↔ documentazione: `scripts/verifiche/audit-implementazioni.mjs` | Verifiche | ⬜ | Strumento rieseguibile (126 verifiche a fine vita) **perso col rollback** — alta priorità: è lo strumento stesso per verificare il recovery (ogni item ✅ deve avere artefatti reali: file, simboli, costanti, wiring) |
+| I56 | Chiusura campagna V8 + smontaggio campionatore | Verifiche | ⬜ | Conclusa 09/10 con verdetto positivo; esiti e dati **persi col rollback**: il verdetto («blocchi fissi UTC», offset 0 ms, 115 campioni) è superstite solo nel transcript chat → nuova campagna per un verdetto formale |
+| I57 | Spreco per ciclo: `sprecoPerCiclo()` (WasteStats: media/mediana/max/clean <5%) + `CycleWaste` nel tab Cicli | Estensioni | ⬜ | Catalogo `docs/06` §5.1 (**documento perso col rollback**), batch 1; implementato 10/10 e **perso col rollback** |
+| I58 | Calendario consumo stile GitHub: `consumoGiornaliero()` (griglia N settimane lun→dom, DST-safe via date stringhe) + `CalendarSection` | Estensioni | ⬜ | `docs/06` §5.2, batch 1; implementato e **perso col rollback** (convenzione corretta: settimana corrente = ULTIMA colonna) |
+| I59 | Ritmo di consumo %/h: `rateSeries()` in `lib/rate.ts` (gap >30 min → null, reset → null, SMA) + `RateChart` sotto il grafico | Estensioni | ⬜ | `docs/06` §5.3, batch 2; implementato e **perso col rollback** |
+| I60 | Orologio dei reset: `ResetClock` dot plot SVG 24h con asse UTC (blocchi teorici 00/05/10/15/20, 3 corsie, tooltip Roma/UTC) | Estensioni | ⬜ | `docs/06` §5.4, batch 2 (nuovo `diagnostica-panel.tsx`); implementato e **perso col rollback** |
+| I61 | Istogramma del residuo: `distribuzioneResiduo()` (10 fasce con assegnazione ceil, BAND_COLORS) + `DistributionSection` | Estensioni | ⬜ | `docs/06` §5.5, batch 1 (tab «Distribuzione»); implementato e **perso col rollback** |
+| I62 | Salute del monitor: `saluteMonitor()` in `lib/health.ts` (episodi errore 7 giorni Roma, ultimo, più frequente) + `MonitorHealth` | Estensioni | ⬜ | `docs/06` §5.6, batch 2 (Diagnostica; stessi events del registro, coerenza 1:1, badge backoff I51); implementato e **perso col rollback** |
+| I63 | Prevedibilità dei cicli: `prevedibilitaCicli()` (σ popolazione, CV, indice regolarità 0–100, null <3) + striscia nei tab Cicli | Estensioni | ⬜ | `docs/06` §5.7, batch 2; implementato e **perso col rollback** |
+| I64 | Oggi vs media: `oggiVsMedia()` (5 settimane, stessi weekday, oggi escluso dalla media) + `TodayComparison` nel tab «Per giorno» | Estensioni | ⬜ | `docs/06` §5.8, batch 2 (riusa l'aggregazione di I58); implementato e **perso col rollback** |
+| I65 | Ring: glow dinamico + colore continuo HSL (`coloreContinuo` con soglie `quotaLevel` come casi limite) + count-up (`AnimatedPercent`, reduced-motion) | Estensioni | ⬜ | `docs/06` §5.9, batch 3 (`lib/ring-color.ts`, prop `continuous` solo anelli principali); implementato e **perso col rollback** |
+| I66 | Navigazione interna sticky con scrollspy: `section-nav.tsx` (IntersectionObserver, `--nav-offset` = header+56px, 8 ancore, aria-current) | Estensioni | ⬜ | `docs/06` §5.10, batch 3; implementato e **perso col rollback** |
+| I67 | Favicon dinamica + title: `formatTabTitle` / `drawFaviconDataUrl` (`lib/tab-identity.ts`) + `<TabIdentity>` (guard anti re-asserzione title Next/React 19) | Estensioni | ⬜ | `docs/06` §5.11, batch 3; implementato e **perso col rollback** |
+| I68 | Archivio con downsampling orario (tabella `DownsampledPoint`: min/max/media/ultimo/ora) | Estensioni | ⬜ | Proposta `docs/07` §5.1 (**documento perso col rollback**), mai implementata |
+| I69 | Selettore intervallo temporale (preset 6h/24h/3g/7g/30g/tutto, filtro client-side) | Estensioni | ⬜ | Proposta `docs/07` §5.2, mai implementata |
+| I70 | Anomalie del ritmo: z-score robusto (mediana+MAD) su `rateSeries` | Estensioni | ⬜ | Proposta `docs/07` §5.3, mai implementata |
+| I71 | Qualità del campionamento (copertura attesa/osservata per giorno + gap > 15 min) | Estensioni | ⬜ | Proposta `docs/07` §5.4, mai implementata |
+| I72 | Proiezione con regressione esponenzialmente pesata (confronto A/B con il verdetto lineare I23) | Estensioni | ⬜ | Proposta `docs/07` §5.5 (backlog), mai implementata |
+| I73 | Modalità compatta / widget `?compact=1` (solo anelli + countdown + ritmo) | Estensioni | ⬜ | Proposta `docs/07` §5.6, mai implementata |
+| I74 | Navigazione inferiore su mobile (bottom bar fissa <md) | Estensioni | ⬜ | Proposta `docs/07` §5.7, mai implementata |
+| I75 | Vista stampa / report settimanale (blocco `print` + voce nel menu Esporta) | Estensioni | ⬜ | Proposta `docs/07` §5.8, mai implementata |
+| I76 | Error boundary per sezione + skeleton (+ fix `e.value != null` → `!= undefined` in event-log) | Robustezza | ⬜ | Proposta `docs/07` §5.9 con evidenza empirica (evento senza `value` → crash dell'intera pagina); **il bug di fondo è ANCORA presente nel codice ripristinato** (`event-log.tsx` ~203) |
+| I77 | Filtri del registro eventi (chips kind + testo + periodo, client-side) | Estensioni | ⬜ | Proposta `docs/07` §5.10, mai implementata |
+| I78 | Tema chiaro opzionale (next-themes presente ma inutilizzato) | Estensioni | ⬜ | Proposta `docs/07` §5.11 (backlog), mai implementata |
+| I79 | Audit di accessibilità sistematico (contrasto misurato, aria-live, focus, sr-only per grafici) | Robustezza | ⬜ | Proposta `docs/07` §5.12, mai implementata |
+| I80 | Endpoint read-only `/api/summary` (KPI aggregati dal DB per widget esterni, ADR-8 intoccabile) | Estensioni | ⬜ | Proposta `docs/07` §5.13, mai implementata |
+| I81 | Test di componente UI (@testing-library/react + jsdom, `tests/components/`) | Robustezza | ⬜ | Proposta `docs/07` §5.14, mai implementata |
+| I82 | Generalizzazione multi-modello (parametrizzazione model_name di cicli/storico) | Estensioni | ⬜ | Proposta `docs/07` §5.15 (backlog), mai implementata |
 
 ---
 
@@ -111,6 +170,16 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 > dagli artefatti: le V1–V6 tornano quindi «da rieseguire» secondo il piano `docs/05` §9.
 > Il meccanismo di cattura è stato RIMOSSO (chiusura ADR-13); per rieseguire, ri-armarlo
 > come da runbook.
+>
+> **⚠️⚠️ Verdetti del 09/10 privi di artefatti (secondo rollback dell'11/10)**: la campagna del
+> 09/10 con chiave reale aveva prodotto — **V4 = IDENTICI** (unico sblocco di I18) · V5 non
+> applicabile a questa chiave (M Plan senza conteggi, esito valido) · V6 nessun rate limit
+> (48/48 @10s) · V2/V3 risolte dall'evidenza V8 · **V8 «blocchi fissi UTC» con offset 0 ms**
+> (115 campioni, transizione completa delle 12:00 Roma osservata, start pre-armata non
+> riancorata dall'uso). Gli esiti (`esiti/v*.json|md`, `analisi-reset-*.md`,
+> `campione-live.jsonl`) sono **persi col rollback**: le righe V sopra tornano «da rieseguire»
+> e i nuovi verdetti richiedono campagne fresche; il transcript chat resta l'unica evidenza
+> superstite (non citabile come artefatto formale).
 
 ---
 
@@ -179,3 +248,4 @@ F3 tempo Roma · F4 storico · F5 robustezza · F6 estensioni.
 | 2026-10-04 | `api/minimax/usage/route.ts` (blocco temporaneo di cattura), `scripts/verifiche/watcher-quick.sh`, questo file (ADR-13, §8), `worklog.md` (Task 7) | **Task 7 — catena di verifica con chiave reale (delega completa all'agente)**: l'utente non può usare il terminale, quindi la chiave fornita via browser all'anteprima viene catturata TEMPORANEAMENTE dal proxy su `scripts/verifiche/.chiave-sessione` (0600, fuori da public/) e il watcher esegue in sequenza prova-parser → V4 → V5 → V1 `--once` → V6 (10 min @10s), poi le lunghe V1/V2; meccanismo collaudato con chiave finta; richiesta all'utente: disattivare la demo nell'anteprima. ADR-13 |
 | 2026-10-06 | `api/minimax/usage/route.ts` (rimozione blocco), questo file (I30, §4 nota campagna, ADR-13-R, §8), `docs/05` §10, `docs/03` (§2/§3/§9/§11, header), `README.md`, `worklog.md` | **I30 — chiusura della campagna verifiche**: il riavvio del workspace del 06/10 (04:53 UTC) ha terminato watcher e processi e ha perduto log, file chiave e gli esiti della campagna 04–05/10 (V1/V2 in corsa, controprova V2 sul confine delle 17:00) — nessun verdetto recuperabile dagli artefatti; rimossa la cattura della chiave dal proxy (proxy ritestato 200, zero scritture, tsc+lint puliti), verificata l'integrità del DB (351 punti: 126 api reali del 02/10 + 225 demo, 1 evento — nessuna anomalia di unità: un falso allarme era un artefatto di query diagnostica); le V1–V6 tornano «da rieseguire» (piano `docs/05` §9); documentazione riallineata allo stato reale (README con docs/05, Prisma, analisi di lungo periodo e archivio eventi; docs/03 con settings I28 e stack aggiornato) |
 | 2026-10-07 | `history-chart.tsx` (`PacePanel` + render in `StatsPanel`), `analysis-panel.tsx` (tab «Per ora» + `HeatmapSection`), `lib/cycles.ts` (`heatmapConsumption`, preesistente), `docs/03` (header, §3, §7, §11 punti 8–9), questo file (I31, I32, §8), `README.md`, `worklog.md` (Task 14) | **I31 + I32 — pace/quota sprecata e heatmap ore + overlay cicli**: I31 cabla nel `StatsPanel` il pannello pace (stesso modello lineare del verdetto I23: ritmo attuale vs pareggio, quota sprecata prevista al reset con equivalenza in ore di consumo, fermo tecnico; tre stati viola/ambra/verde con KPI affiancati); I32 completa l'analisi di lungo periodo con il tab «Per ora» (heatmap 7×24 Europe/Rome: selettore finestra, KPI consumo attribuito/ora di picco/celle attive, scala viola √-normalizzata, tooltip con n° cali) e l'overlay cicli sul grafico storico (toggle «Cicli», fasce alternate + marker reset, attivo di default); verifiche agent-browser: pannello pace coerente col verdetto (fermo tecnico 58m→1h aggiornato live col polling demo, KPI +47,73/+47,95 %/h vs pareggio +21,67/+20,44 %/h), heatmap con consumo attribuito 654,5% (picco ven 17:00 — 556,0%, 5/168 celle) e weekly 33,4% (picco ven 15:00 — 19,7%, 4/168) con scala rinormalizzata al cambio finestra, overlay cicli visibile sul grafico (fasce + marker «reset»), mobile 390px senza overflow pagina (docW 390, scroll interno griglia), console senza errori, tsc+lint puliti |
+| 2026-10-11 | questo file (§1 F7/F8 re-aggiunte + legenda fasi, riga I18 con nota di storia, §3 nota di rollback + ri-registrazione condensata I48–I82, §4 nota verdetti persi, §8 riga qui), `worklog.md` (Task 15), `scripts/verifiche/conteggio-db.mjs` (nuovo, ispezione rapida del DB) | **⚠️⚠️ SECONDO ROLLBACK DEL WORKSPACE — documentazione, ri-registrazione e baseline** (scoperto alla ripresa del lavoro: «continua con il prossimo step»): l'albero risultava ripristinato al checkpoint del 07/10 (stato Task 14: I31/I32) e la history git riscritta con soli commit UUID di piattaforma — gli oggetti dei commit originali (Task 15–30, da `da66837` a `341e0b2`) sono garbage-collected; **persi**: `docs/06-abbellimenti-dashboard.md`, `docs/07-analisi-miglioramenti-aggiuntivi.md`, tutte le implementazioni I18 (fallback), I49 (campionatore + campione-live.jsonl), I50 (tests/lib/ e script test), I51 (backoff), I52 (PWA/SW/manifest), I57–I67 (batch 1–3: rate/health/ring-color/tab-identity/rate-chart/diagnostica/section-nav), I55 (audit tool), cataloghi e righe di tracciamento; **sopravvissuti**: esiti solo del 02/10 (chiave non valida), albero verde (tsc `src/` 0 errori, lint OK), DB ripristinato (**283 api + 241 demo, 5 eventi**, primo punto 02/10 13:10 UTC) con **poller utente ancora attivo** (ultimo punto 11/10 10:52 UTC — i punti api reali tornano ad accumularsi). **Azioni documentali**: nota di rollback in §3 con ri-registrazione CONDENSATA di I48–I82 (stessi numeri e significati comunicati in chat per continuità; I33–I47 restano bruciati; item nuovi da I83; tutte le righe ⬜ oneste — nessuna ✅ senza artefatti), riga I18 con nota di storia, nota §4 sui verdetti del 09/10 privi di artefatti (V2/V3/V4/V5/V6/V8 tornano da rieseguire), F7/F8 re-aggiunte al §1 (il fix di Task 30 era perito col rollback). **Prossimo passo**: clarify utente sul piano di recovery (fondamenta I50/I51/I55 → verifiche/chiave → abbellimenti) |
