@@ -19,7 +19,7 @@
 | `platform.minimax.io/docs/token-plan/faq` | Docs ufficiali (Token Plan legacy) | `scripts/faq.md` |
 | `platform.minimax.io/docs` Chat Completions (OpenAPI) | Docs ufficiali | `scripts/chatapi.md` |
 | `platform.minimax.io/docs` List Models (OpenAPI) | Docs ufficiali | `scripts/listmodels.md` |
-| GitHub `MiniMax-AI/MiniMax-M2` issue **#88** e **#99** | Conferme dal team MiniMax | `scripts/issue88.json`, `scripts/issue99.json` + note |
+| GitHub `MiniMax-AI/MiniMax-M2` issue **#88** e **#99** | Conferme dal team MiniMax | issue pubbliche su GitHub (copie locali `scripts/issue88-99` rimosse 11/10 per sanificazione pre-push: contenevano token JWT) |
 | **CreditGauge** (plugin statusline Claude Code) | Open-source | `scripts/cg_readme.md`, `scripts/cg_minimax.js` |
 | **CodexBar** (macOS, provider MiniMax) | Open-source | `scripts/codexbar_minimax.md`, `scripts/minimax_fetcher.swift` |
 | **dsh-provider-usage** (plugin DeepSeek Harness) | Open-source | `scripts/dsh_readme.md` |
@@ -207,7 +207,7 @@ Strategie, in ordine di utilità:
 | `faq.md`, `faq.json` | Docs ufficiali Token Plan (FAQ completa, migrazione piani) |
 | `chatapi.md` | OpenAPI Chat Completions (schema `usage`) |
 | `listmodels.md` | OpenAPI List Models |
-| `issue88.json`, `issue99.json`, `issue88.html`, `issue99.html` | Issue GitHub MiniMax-M2 (endpoint + semantica usage_count) |
+| *(rimossi 11/10, sanificazione pre-push)* `issue88.json`, `issue99.json`, `issue88.html`, `issue99.html` | Issue GitHub MiniMax-M2 (endpoint + semantica usage_count) — contenevano token JWT; fonte sostitutiva: le issue pubbliche su GitHub |
 | `cg_readme.md`, `cg_minimax.js`, `cg_flat.json`, `cg_tree.json` | CreditGauge: mapping campi MiniMax |
 | `codexbar_minimax.md`, `minimax_fetcher.swift`, `minimax_parser.swift`, `minimax_service.swift` | CodexBar: fetch/parse MiniMax (endpoint alternativo, cookie, diagnostiche) |
 | `dsh_readme.md` | dsh-provider-usage: tabella endpoint di quota per tutti i provider |
