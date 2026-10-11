@@ -19,6 +19,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TabIdentity } from "@/lib/tab-identity";
 import { filterHistoryByPreset, RANGE_PRESETS, type RangePreset } from "@/lib/interval";
 import { readCompactMode } from "@/lib/compact";
+import { ewmaProjection } from "@/lib/ewma";
 import { RateChart } from "@/components/history-chart";
 import {
   deriveBanner,
@@ -564,6 +565,8 @@ export default function DashboardPage() {
     [history, rangePreset, now],
   );
   const trend = React.useMemo(() => computeTrend(filteredHistory, chartWindow), [filteredHistory, chartWindow]);
+  /* I72 — proiezione EWMA (A/B): segue l'intervallo selezionato come il trend lineare */
+  const ewma = React.useMemo(() => ewmaProjection(filteredHistory, chartWindow), [filteredHistory, chartWindow]);
   const serverTime = React.useMemo(() => (snapshot ? inferServerTime(snapshot.models) : null), [snapshot]);
   const sourceLabel = !lastEndpoint
     ? undefined
@@ -900,6 +903,7 @@ export default function DashboardPage() {
                   resetAt={selectedWindowEnd}
                   remaining={selectedWindowRemaining}
                   serverCount={serverCount}
+                  ewma={ewma}
                 />
               </SectionBoundary>
 

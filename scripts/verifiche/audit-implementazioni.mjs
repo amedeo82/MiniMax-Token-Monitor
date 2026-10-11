@@ -267,6 +267,24 @@ const CHECKS = [
   check.simbolo("I73", "src/app/page.tsx", "VISTA COMPATTA", "widget anelli+countdown+ritmo"),
   check.simbolo("I73", "src/app/page.tsx", "Torna alla vista completa", "uscita dal widget"),
   check.simbolo("I73", "tests/lib/compact.test.ts", "readCompactMode", "test parsing"),
+  /* --- Batch 2 analisi (I70/I71/I72, docs/07) ------------------------ */
+  check.simbolo("I70", "src/lib/rate-anomalies.ts", "export function detectRateAnomalies", "z-score robusto mediana+MAD"),
+  check.simbolo("I70", "src/lib/rate-anomalies.ts", "0.6745", "costante Iglewicz-Hoaglin"),
+  check.simbolo("I70", "src/lib/rate-anomalies.ts", "sma: 1", "ritmi GREZZI (SMA disattivata)"),
+  check.simbolo("I70", "src/components/diagnostica-panel.tsx", "RateAnomaliesPanel", "sezione Anomalie del ritmo"),
+  check.simbolo("I70", "src/components/diagnostica-panel.tsx", "regime atteso", "mediana mostrata in UI"),
+  check.simbolo("I70", "tests/lib/rate-anomalies.test.ts", "MAD", "statistiche robuste testate"),
+  check.simbolo("I71", "src/lib/sampling.ts", "export function samplingQuality", "copertura+gap puri"),
+  check.simbolo("I71", "src/lib/sampling.ts", "export function romeDayKey", "giorno Roma DST-safe"),
+  check.simbolo("I71", "src/components/diagnostica-panel.tsx", "SamplingQualityPanel", "sezione Qualità del campionamento"),
+  check.simbolo("I71", "src/components/diagnostica-panel.tsx", "Copertura", "badge copertura in UI"),
+  check.simbolo("I71", "tests/lib/sampling.test.ts", "NON è un gap", "soglia 15 min testata"),
+  check.simbolo("I72", "src/lib/ewma.ts", "export function ewmaProjection", "proiezione EWMA pura"),
+  check.simbolo("I72", "src/lib/ewma.ts", "Math\\.exp\\(-eta \\/ halfLifeMs\\)", "peso esponenziale sulla mezza vita"),
+  check.simbolo("I72", "src/components/history-chart.tsx", "EwmaCard", "card A/B affiancata al verdetto"),
+  check.simbolo("I72", "src/components/history-chart.tsx", "non sostitutiva", "badge sperimentale"),
+  check.simbolo("I72", "src/app/page.tsx", "ewmaProjection", "wiring ewma in page.tsx"),
+  check.simbolo("I72", "tests/lib/ewma.test.ts", "mezza vita", "effetto half-life testato"),
 ];
 
 /* ------------------------------------------------------------------ */

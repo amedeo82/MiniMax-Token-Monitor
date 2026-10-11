@@ -13,6 +13,11 @@
  *   registro — episodi raggruppati (errori a meno di 15 minuti = stesso
  *   guasto), ultimo errore, messaggio più frequente — con badge dello stato
  *   del backoff (I51) quando lo scheduler è in modalità attesa.
+ * - **Anomalie del ritmo** (I70): z-score robusto (mediana + MAD) sui ritmi
+ *   GREZZI di `rateSeries`: evidenzia scoppi e pause fuori regime.
+ * - **Qualità del campionamento** (I71): copertura attesa/osservata per
+ *   giorno Roma + gap > 15 min: quanto lo storico è «buono» prima di
+ *   fidarsi delle analisi.
  */
 
 import * as React from "react";
@@ -20,10 +25,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { detectCycles } from "@/lib/cycles";
 import { saluteMonitor, type SaluteMonitor } from "@/lib/health";
-import { formatDateTimeRome, formatTimeRome, formatCountdown } from "@/lib/time";
+import { detectRateAnomalies, type RateAnomalies } from "@/lib/rate-anomalies";
+import { samplingQuality, type SamplingQuality } from "@/lib/sampling";
+import { formatDateTimeRome, formatTimeRome, formatCountdown, formatDuration } from "@/lib/time";
 import type { HistoryPoint } from "@/components/history-chart";
 import type { UsageEvent } from "@/lib/usage-events";
-import { Activity, Clock4, HeartPulse, TimerReset } from "lucide-react";
+import { Activity, Clock4, HeartPulse, TimerReset, Radar, Gauge } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /* I60 — Orologio dei reset                                            */
@@ -202,6 +209,224 @@ export function MonitorHealth({
 }
 
 /* ------------------------------------------------------------------ */
+/* I70 — Anomalie del ritmo (z-score robusto mediana + MAD)            */
+/* ------------------------------------------------------------------ */
+
+/** Massimo numero di anomalie mostrate (dalla più recente). */
+const MAX_ANOMALIE_VISIBILI = 8;
+
+/**
+ * Sezione «Anomalie del ritmo»: il regime atteso (mediana dei ritmi %/h) e
+ * i momenti in cui il consumo ne è deviato in modo netto (|z| > 3.5). Come
+ * per I60/I62 si giudica lo storico COMPLETO: il regime va misurato sull'
+ * intera osservazione, non sull'ultimo tratto.
+ */
+export function RateAnomaliesPanel({ history }: { history: HistoryPoint[] }) {
+  const anomalie = React.useMemo<RateAnomalies>(
+    () => detectRateAnomalies(history, "interval"),
+    [history],
+  );
+
+  if (anomalie.validi < 8) {
+    return (
+      <div className="flex h-20 items-center justify-center rounded-xl border border-dashed border-white/10 px-4 text-center text-xs text-zinc-500">
+        Servono almeno 8 ritmi misurabili (rilevamenti ravvicinati senza reset) per stimare il regime e
+        cercare anomalie; ora ce ne sono {anomalie.validi}.
+      </div>
+    );
+  }
+
+  const ultime = [...anomalie.anomalie].reverse().slice(0, MAX_ANOMALIE_VISIBILI);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge
+          variant="outline"
+          className={
+            anomalie.anomalie.length === 0
+              ? "gap-1 border-emerald-400/30 bg-emerald-400/10 text-[11px] text-emerald-300"
+              : "gap-1 border-amber-400/30 bg-amber-400/10 text-[11px] text-amber-300"
+          }
+        >
+          <Radar className="size-3" />
+          {anomalie.anomalie.length === 0
+            ? "Nessuna anomalia fuori regime"
+            : `${anomalie.anomalie.length} ${anomalie.anomalie.length === 1 ? "anomalia" : "anomalie"}`}
+        </Badge>
+        <span className="text-[10px] text-zinc-600">
+          regime atteso {anomalie.mediana.toFixed(2)} %/h · soglia |z| &gt; {anomalie.soglia} ·{" "}
+          {anomalie.validi} campioni · finestra 5 ore
+        </span>
+      </div>
+
+      {anomalie.anomalie.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-white/[0.07]">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-white/[0.07] text-[10px] uppercase tracking-wider text-zinc-500">
+                <th className="px-3 py-2 font-medium">Rilevamento (Roma)</th>
+                <th className="px-3 py-2 font-medium">Ritmo</th>
+                <th className="px-3 py-2 font-medium">z robusto</th>
+                <th className="px-3 py-2 font-medium">Lettura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ultime.map((a) => (
+                <tr key={a.i} className="border-b border-white/[0.04] last:border-0">
+                  <td className="whitespace-nowrap px-3 py-2 text-zinc-300">{formatDateTimeRome(a.t)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-zinc-100">
+                    {a.valore.toFixed(2)} %/h
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums">
+                    <span className={a.z > 0 ? "text-rose-300" : "text-sky-300"}>
+                      {a.z > 0 ? "+" : ""}
+                      {a.z.toFixed(1)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-zinc-500">
+                    {a.z > 0 ? "scoppio di consumo" : "pausa anomala nel consumo"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {anomalie.anomalie.length > MAX_ANOMALIE_VISIBILI ? (
+            <p className="border-t border-white/[0.04] px-3 py-1.5 text-[10px] text-zinc-600">
+              Mostrate le {MAX_ANOMALIE_VISIBILI} più recenti di {anomalie.anomalie.length}.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex h-16 items-center justify-center rounded-xl border border-dashed border-white/10 text-xs text-zinc-500">
+          Il ritmo resta nel proprio regime normale sull’intera osservazione.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I71 — Qualità del campionamento                                     */
+/* ------------------------------------------------------------------ */
+
+/** Massimo numero di gap mostrati (dal più recente). */
+const MAX_GAP_VISIBILI = 6;
+
+/**
+ * Sezione «Qualità del campionamento»: quanto lo storico è denso e privo di
+ * buchi prima di fidarsi delle analisi. Complementare alla campagna V8: V8
+ * dice SE i reset cadono dove devono, la qualità dice SE i dati bastano
+ * per dirlo.
+ */
+export function SamplingQualityPanel({ history }: { history: HistoryPoint[] }) {
+  const qualita = React.useMemo<SamplingQuality>(() => samplingQuality(history), [history]);
+
+  if (qualita.totalePunti < 2 || qualita.medianaIntervMs === 0) {
+    return (
+      <div className="flex h-20 items-center justify-center rounded-xl border border-dashed border-white/10 px-4 text-center text-xs text-zinc-500">
+        Servono almeno due rilevamenti per misurare l’intervallo di campionamento e la copertura.
+      </div>
+    );
+  }
+
+  const coperturaMedia =
+    qualita.giorni.length > 0
+      ? qualita.giorni.reduce((a, g) => a + g.copertura, 0) / qualita.giorni.length
+      : 0;
+  const ultimi7 = qualita.giorni.slice(-7);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge
+          variant="outline"
+          className={
+            coperturaMedia >= 90
+              ? "gap-1 border-emerald-400/30 bg-emerald-400/10 text-[11px] text-emerald-300"
+              : coperturaMedia >= 60
+                ? "gap-1 border-amber-400/30 bg-amber-400/10 text-[11px] text-amber-300"
+                : "gap-1 border-rose-400/30 bg-rose-400/10 text-[11px] text-rose-300"
+          }
+        >
+          <Gauge className="size-3" />
+          Copertura {coperturaMedia.toFixed(0)}%
+        </Badge>
+        <span className="text-[10px] text-zinc-600">
+          intervallo tipico {Math.round(qualita.medianaIntervMs / 60_000)} min ·{" "}
+          {qualita.totalePunti.toLocaleString("it-IT")} punti · {qualita.gaps.length}{" "}
+          {qualita.gaps.length === 1 ? "buco" : "buchi"} &gt; 15 min
+        </span>
+      </div>
+
+      {/* Copertura per giorno (ultimi 7 giorni Roma) */}
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          Copertura per giorno (Europe/Rome)
+        </p>
+        <div className="space-y-1.5">
+          {ultimi7.map((g) => (
+            <div key={g.key} className="flex items-center gap-2">
+              <span className="w-[86px] shrink-0 font-mono text-[11px] tabular-nums text-zinc-400">{g.key}</span>
+              <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className={
+                    g.copertura >= 90
+                      ? "h-full rounded-full bg-emerald-400/70"
+                      : g.copertura >= 60
+                        ? "h-full rounded-full bg-amber-400/70"
+                        : "h-full rounded-full bg-rose-400/70"
+                  }
+                  style={{ width: `${Math.max(2, g.copertura)}%` }}
+                />
+              </div>
+              <span className="w-[112px] shrink-0 text-right font-mono text-[10px] tabular-nums text-zinc-500">
+                {g.osservati}/{Math.ceil(g.attesi)} · {g.copertura.toFixed(0)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Gap > 15 min */}
+      {qualita.gaps.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-white/[0.07]">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-white/[0.07] text-[10px] uppercase tracking-wider text-zinc-500">
+                <th className="px-3 py-2 font-medium">Buco da</th>
+                <th className="px-3 py-2 font-medium">A</th>
+                <th className="px-3 py-2 font-medium">Durata</th>
+              </tr>
+            </thead>
+            <tbody>
+              {qualita.gaps.slice(0, MAX_GAP_VISIBILI).map((g, i) => (
+                <tr key={`${g.from}-${i}`} className="border-b border-white/[0.04] last:border-0">
+                  <td className="whitespace-nowrap px-3 py-2 text-zinc-300">{formatDateTimeRome(g.from)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-zinc-300">{formatTimeRome(g.to, false)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-amber-300">
+                    {formatDuration(g.ms)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {qualita.gaps.length > MAX_GAP_VISIBILI ? (
+            <p className="border-t border-white/[0.04] px-3 py-1.5 text-[10px] text-zinc-600">
+              Mostrati i {MAX_GAP_VISIBILI} più recenti di {qualita.gaps.length}.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex h-14 items-center justify-center rounded-xl border border-dashed border-white/10 text-xs text-zinc-500">
+          Nessun buco di campionamento oltre i 15 minuti.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Pannello completo                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -240,6 +465,20 @@ export function DiagnosticaPanel({ history, events, backoffAttivo, backoffDelayM
             Salute del monitor
           </h3>
           <MonitorHealth salute={salute} backoffAttivo={backoffAttivo} backoffDelayMs={backoffDelayMs} />
+        </section>
+        <section aria-label="Anomalie del ritmo">
+          <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+            <Radar className="size-3.5 text-zinc-500" />
+            Anomalie del ritmo
+          </h3>
+          <RateAnomaliesPanel history={history} />
+        </section>
+        <section aria-label="Qualità del campionamento">
+          <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+            <Gauge className="size-3.5 text-zinc-500" />
+            Qualità del campionamento
+          </h3>
+          <SamplingQualityPanel history={history} />
         </section>
       </CardContent>
     </Card>

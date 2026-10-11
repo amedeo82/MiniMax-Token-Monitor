@@ -6,9 +6,11 @@
 > nel recovery con gli stessi numeri e significati comunicati in chat (tracciamento in
 > `docs/04` §3).
 >
-> Stato: **4 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
+> Stato: **7 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
 > del bug noto, I73) è stato implementato l'11/10 pomeriggio (vedi §5.2, §5.6, §5.9,
-> §5.10 e `docs/04` §3); le restanti 11 sono ancora ⬜ (proposte mai implementate).
+> §5.10 e `docs/04` §3); il **batch 2 analisi** (I70, I71, I72) è stato implementato
+> l'11/10 sera (vedi §5.3, §5.4, §5.5 e `docs/04` §3); le restanti 8 sono ancora ⬜
+> (proposte mai implementate).
 
 Contesto della proposta originale: dopo la chiusura dei batch 1–3 (I57–I67) l'analisi
 aveva individuato 15 ulteriori miglioramenti in tre gruppi — analisi avanzata
@@ -34,19 +36,44 @@ grafico, ritmo e analisi; riduce il rumore visivo quando i dati diventano densi.
 > filtro applicato a grafico, StatsPanel/trend, ritmo e analisi di lungo periodo; la
 > Diagnostica resta deliberatamente sullo storico COMPLETO. 7 test dedicati.
 
-## 5.3 I70 — Anomalie del ritmo
+## 5.3 I70 — Anomalie del ritmo ✅
 Z-score robusto (mediana + MAD) sulla serie `rateSeries` (I59) per evidenziare i
 momenti in cui il consumo devia dal proprio regime normale; candidata estensione del
 pannello Diagnostica.
 
-## 5.4 I71 — Qualità del campionamento
+> **Implementato 11/10** (`lib/rate-anomalies.ts` + sezione in `diagnostica-panel.tsx`;
+> design in `docs/03` §5.12): z-score Iglewicz–Hoaglin `0.6745·(x−mediana)/MAD` con
+> soglia 3.5 sui ritmi GREZZI (`sma: 1`: la SMA smorzerebbe i picchi da segnalare);
+> meno di 8 campioni validi → nessuna statistica; fallback documentato con MAD = 0
+> (scala = media degli scarti assoluti); sezione «Anomalie del ritmo» in Diagnostica
+> su storico COMPLETO con regime atteso, max 8 anomalie dalla più recente e z con
+> segno (scoppio vs pausa). 10 test.
+
+## 5.4 I71 — Qualità del campionamento ✅
 Copertura attesa/osservata per giorno + elenco dei gap > 15 min: rende esplicita
 quanto lo storico è «buono» prima di fidarsi delle analisi (complementare a V8).
 
-## 5.5 I72 — Proiezione con regressione esponenzialmente pesata
+> **Implementato 11/10** (`lib/sampling.ts` + sezione in `diagnostica-panel.tsx`;
+> design in `docs/03` §5.12): mediana dell'intervallo campionario (robusta ai buchi),
+> copertura per giorno Europe/Rome via chiave `YYYY-MM-DD` en-CA DST-safe (arco
+> coperto = primo→ultimo punto del giorno, l'ultimo punto copre un intervallo suo;
+> copertura limitata al 100%), gap > 15 min (`gapMin` configurabile, esattamente
+> 15 min NON è un gap) dal più recente; sezione «Qualità del campionamento» in
+> Diagnostica con badge di copertura media, barre degli ultimi 7 giorni e tabella
+> dei gap. 14 test.
+
+## 5.5 I72 — Proiezione con regressione esponenzialmente pesata ✅
 Confronto A/B con il verdetto lineare di I23/I31: la media pesata esponenzialmente
 reagirebbe più in fretta ai cambi di ritmo, al prezzo di più rumore; proposta con
 esito affiancato (non sostitutivo) nel pannello pace.
+
+> **Implementato 11/10** (`lib/ewma.ts` + card in `StatsPanel`; design in `docs/03`
+> §5.12): ritmi istantanei con le STESSE regole di validità di `lib/rate.ts` (gap
+> > 30 min e risalita scartati), peso `exp(−età/mezza vita)` misurata sul SECONDO
+> rilevamento della coppia, mezza vita default 2h, esaurimento stimato solo con
+> ritmo > 0.01 %/h; card «Proiezione EWMA (A/B)» nel StatsPanel AFFIANCATA al
+> verdetto lineare (badge «sperimentale · non sostitutiva»): lineare vs EWMA,
+> differenza e riga di lettura; segue l'intervallo selezionato (I69). 9 test.
 
 ## 5.6 I73 — Modalità compatta / widget ✅
 `?compact=1`: solo anelli principali + countdown + ritmo, per uso come widget/schermo
@@ -116,6 +143,7 @@ pivot; la generalizzazione aprirebbe le analisi anche agli altri modelli del pia
 1. ~~**Batch 1 client-only** (basso rischio, alto valore percepito): I69 · I77 · I76 (con
    il fix del bug `e.value != null`) · I73.~~ → **IMPLEMENTATO 11/10** (vedi §5.2/§5.6/
    §5.9/§5.10 e `docs/04` §3).
-2. **Batch 2 analisi**: I70 · I71 · I72.
+2. ~~**Batch 2 analisi**: I70 · I71 · I72.~~ → **IMPLEMENTATO 11/10** (vedi §5.3/§5.4/
+   §5.5 e `docs/04` §3).
 3. **Batch 3 infrastruttura/integrazione**: I80 · I81 · I68.
 4. **Backlog/qualità**: I74 · I75 · I78 · I79 · I82.

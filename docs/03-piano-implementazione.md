@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-07 (I31 pace + quota sprecata nel StatsPanel, I32 heatmap ore + overlay cicli nel grafico storico — roadmap §11 punti 8–9). Precedente: 2026-10-06 (I30 chiusura campagna verifiche: rimosso il blocco temporaneo di cattura chiave dal proxy — ADR-13/ADR-13-R; stack e mappa codice riallineati: Prisma/SQLite F7/F8, soglie per finestra I28).
+> Ultimo aggiornamento: 2026-10-11 (§5.12 batch 2 analisi — design I70 anomalie ritmo / I71 qualità campionamento / I72 proiezione EWMA). Precedente: 2026-10-07 (I31 pace + quota sprecata nel StatsPanel, I32 heatmap ore + overlay cicli nel grafico storico — roadmap §11 punti 8–9).
 
 ---
 
@@ -344,6 +344,61 @@ basso rischio, nessuna modifica a proxy, DB o protocollo di polling:
   API e schermata di setup restano visibili (servono alla funzione). Compatibile con la
   PWA installata (I52): è la stessa pagina, apribile con URL `/?compact=1` da shortcut
   o schermo secondario.
+
+---
+
+### 5.12 Batch 2 analisi: anomalie del ritmo, qualità del campionamento, proiezione EWMA (I70/I71/I72)
+Tre miglioramenti **puramente client-side di analisi** da `docs/07` (§5.3, §5.4, §5.5) —
+nessuna modifica a proxy, DB o protocollo di polling; tre nuove librerie pure con
+rispettiva suite di test, agganciate alla Diagnostica (I70/I71) e al pannello pace (I72):
+
+- **I70 — Anomalie del ritmo**: logica pura in `lib/rate-anomalies.ts`
+  (`detectRateAnomalies(history, win, opts)`): z-score ROBUSTO secondo
+  **Iglewicz–Hoaglin** sui ritmi GREZZI di `rateSeries(history, win, { sma: 1 })`
+  (la SMA-3 di default va evitata: smorzerebbe proprio i picchi da segnalare).
+  Statistiche: mediana `m` dei ritmi validi, `MAD = mediana(|x − m|)`,
+  `z = 0.6745·(x − m)/MAD`; anomalia se `|z| > 3.5` (soglia classica, opzione
+  `threshold`). Con **meno di 8 campioni validi** (`minValidi`) le statistiche non
+  sono affidabili: nessuna anomalia riportata. Fallback documentato quando
+  `MAD = 0` (serie quasi tutta sullo stesso valore): si usa la media degli scarti
+  assoluti come scala; se anche quella è 0 (tutti identici) non ci sono anomalie.
+  Esito: `{ mediana, mad, scala, soglia, validi, anomalie: [{ i, t, valore, z }] }`
+  (anomalie in ordine cronologico, z con segno per distinguere scoppi `>` e pause `<`).
+  UI: nuova sezione «Anomalie del ritmo» nel **pannello Diagnostica** (storico
+  COMPLETO, coerente con la filosofia I60/I62: il regime va giudicato sull'intera
+  osservazione) — regime atteso (mediana %/h), soglia usata, elenco delle anomalie
+  (max 8, dalla più recente) con data Roma, ritmo e z; empty state dedicato;
+- **I71 — Qualità del campionamento**: logica pura in `lib/sampling.ts`
+  (`samplingQuality(history, opts)`): quanto lo storico è «buono» PRIMA di fidarsi
+  delle analisi (complementare alla campagna V8). (a) **Mediana dell'intervallo**
+  campionario osservato (robusta ai buchi, esclusi i dt ≤ 0); (b) **copertura per
+  giorno Roma**: i punti sono attribuiti al giorno Europe/Rome via chiave
+  `YYYY-MM-DD` (Intl `en-CA`, DST-safe come `startOfTodayRome` I77); per ogni giorno
+  `atteso = arco coperto / medianaIntervallo` (l'arco coperto va dal primo all'ultimo
+  punto del giorno e l'ultimo punto copre un intervallo suo) e
+  `osservati/atteso` limitato al 100%; (c) **gap > 15 min** (`gapMin`, default 15:
+  esattamente 15 min NON è un gap) con inizio, fine e durata. Esito:
+  `{ medianaIntervMs, totalePunti, giorni: [{ key, osservati, attesi, copertura }], gaps: [{ from, to, ms }] }`
+  (giorni in ordine cronologico, gap dal più recente). UI: nuova sezione «Qualità del
+  campionamento» nella Diagnostica — badge di copertura complessiva (media delle
+  coperture giornaliere), tabella degli ultimi 7 giorni con barra di copertura,
+  elenco dei gap con durata; empty state con meno di 2 punti;
+- **I72 — Proiezione EWMA (confronto A/B)**: logica pura in `lib/ewma.ts`
+  (`ewmaProjection(history, win, opts)`): alternativa **esponenzialmente pesata** al
+  verdetto lineare di I23/I31. Ritmi istantanei calcolati con le STESSE regole di
+  `lib/rate.ts` (gap > 30 min → scartato, risalita/reset → scartato), ciascuno pesato
+  con `w = exp(−(tUltimo − t_i)/halfLife)` dove `t_i` è il tempo del SECONDO
+  rilevamento della coppia (quando il ritmo è stato misurato); `halfLifeMs` default
+  **2h** (la finestra 5h dura 5 ore: una mezza vita di 2h pesa l'ultimo tratto ~1,6×
+  il precedente e reagisce prima dei 60 punti a corda di `computeTrend`, al prezzo
+  di più rumore — è esattamente il trade-off da rendere visibile). `ritmoEWMA =
+  Σ w·r / Σ w`; esaurimento stimato solo se `ritmoEWMA > 0.01` (stessa soglia di
+  `computeTrend`). Esito: `{ ritmo, esaurimentoAt, esaurimentoMs, campioni, halfLifeMs }`.
+  UI: card «Proiezione EWMA (A/B)» in `StatsPanel` **affiancata al verdetto, NON
+  sostitutiva** (badge «sperimentale»): esaurimento lineare vs EWMA con la differenza,
+  e una riga di lettura (EWMA anticipa o conferma il lineare); wiring: `page.tsx`
+  calcola `ewmaProjection(filteredHistory, chartWindow)` (segue l'intervallo I69) e la
+  passa come prop; con meno di 2 ritmi validi → N/D spiegato.
 
 ---
 
