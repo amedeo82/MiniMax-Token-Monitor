@@ -327,6 +327,15 @@ const CHECKS = [
   check.simbolo("I78", "src/app/globals.css", "html:not\\(\\.dark\\)", "strato chiaro: rimappatura superfici hardcoded"),
   check.simbolo("I78", "src/components/settings-dialog.tsx", '"aspetto"', "tab Aspetto nelle impostazioni"),
   check.simbolo("I78", "tests/components/theme-toggle.test.tsx", "localStorage", "persistenza tema testata"),
+  /* --- I83/I84 — leggibilità temi chiaro e scuro (docs/03 §5.15/§5.16) --- */
+  check.simbolo("I83", "src/app/globals.css", "html:not\\(\\.dark\\) \\.text-amber-200\\\\/90", "varianti opacità remappate (strato chiaro)"),
+  check.simbolo("I83", "src/app/globals.css", "html:not\\(\\.dark\\) \\.text-zinc-400\\\\!", "classi ! gestite in @layer utilities"),
+  check.simbolo("I83", "src/app/globals.css", "html:not\\(\\.dark\\) \\[data-slot=\"tabs-trigger\"\\]\\[data-state=\"active\"\\]", "stato attivo tab/chip in tema chiaro"),
+  check.simbolo("I84", "src/app/globals.css", "--mm-muted", "token famiglie colore (chiaro/scuro)"),
+  check.simbolo("I84", "src/app/globals.css", "\\.dark \\.text-zinc-500 \\{", "famiglia scuro: muted revisionati"),
+  check.simbolo("I84", "src/app/globals.css", "\\.dark \\.placeholder\\\\:text-zinc-600::placeholder", "famiglia scuro: placeholder leggibile"),
+  check.simbolo("I84", "src/app/globals.css", "background-color: #ecfdf5", "tinte forti → toni 50 pieni (strato chiaro)"),
+  check.simbolo("I84", "src/app/globals.css", "@layer utilities \\{\\s*\\.dark \\.text-zinc-500\\\\!", "etichette menu text-zinc-500! in famiglia scuro"),
 ];
 
 /* ------------------------------------------------------------------ */

@@ -184,6 +184,16 @@ client-side sul registro già caricato.
 > visibili solo perché in dark le utilities producono già i colori giusti); varianti
 > opacità → 700/800/900; 400/500 testo/icone → 600; hover scuri; menu Esporta bianco.
 > Tema scuro INTATTO (probe dopo reload), zero overflow 1280, console pulita.
+>
+> **Correzione I84 (12/10, `docs/03` §5.16)**: probe WCAG su ENTRAMBI i temi (fg fuso
+> sullo sfondo effettivo, oklab/oklch/lab→sRGB) — la misura smentisce i toni 600 di
+> I83 sulle tinte (2.5–3.6:1) e disegna DUE FAMIGLIE di colore esplicite: token
+> `--mm-muted`/`--mm-muted-2` per tema (chiaro `rgb(95,95,104)`, scuro
+> `rgb(150,150,160)`/`rgb(138,138,148)` — il testo secondario era L'UNICO FAIL scuro:
+> zinc-500 3.85–4.12:1, zinc-600 2.26–2.58:1), accent chiaro →700 (rose/amber/sky/
+> orange) e →800 (emerald, amber-200) con tinte forti sui toni 50 pieni; accent scuro
+> INTATTO (già ≥5.5:1). Esiti: 0 FAIL su 74 campioni (era 21 chiaro + 6 scuro).
+> Lezione toolchain: Turbopack serve CSS stale selettivo → pulizia `.next` + restart.
 
 ## 5.12 I79 — Audit di accessibilità sistematico
 Contrasto misurato (WCAG AA), `aria-live` per aggiornamenti polling, focus visibili,

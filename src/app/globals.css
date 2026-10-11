@@ -112,6 +112,23 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ── I84 — DUE FAMIGLIE COLORE (token semantici) ──────────────────────────
+   Due famiglie governano i ruoli di testo misurati al browser (probe WCAG su
+   entrambi i temi, docs/03 §5.16). CHIARO: testo secondario zinc-500/600
+   grezzi misurati 4.24–4.33:1 su tinte grigie (min AA 4.5) → rgb(95,95,104);
+   accent su tinte chiare al tono 700 (600 misurato 2.5–3.6:1) con tinte
+   forti sui toni 50 pieni. SCURO: zinc-500 misurato 3.85–4.12:1 e zinc-600
+   2.26–2.58:1 su fondi scuri → muted alzati; gli accent scuri passano già
+   5.5–15:1 e restano intoccati.                                        */
+:root {
+  --mm-muted: rgb(95 95 104);      /* testo secondario (sorgente zinc-500) */
+  --mm-muted-2: rgb(95 95 104);    /* testo tecnico (sorgente zinc-600) */
+}
+.dark {
+  --mm-muted: rgb(150 150 160);    /* ≥ 6.3:1 su #09090b e sulle card */
+  --mm-muted-2: rgb(138 138 148);  /* ≥ 5.4:1, gerarchia preservata */
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -145,6 +162,21 @@
 .dark [data-slot="tabs-trigger"][data-state="inactive"]:hover {
   color: rgb(228 228 231);
   background-color: rgb(255 255 255 / 0.05);
+}
+
+/* ── I84 — FAMIGLIA SCURO: revisione leggibilità del testo secondario ─────
+   Gli unici FAIL del probe sul tema scuro (tutti gli accent passano): il
+   testo zinc-500 (timestamp, note, etichette) e zinc-600 (note tecniche
+   10–11px). Regole unlayered a specificità 0,2,0 → battono le utilities
+   layered (stessa tecnica I78/I83).                                     */
+.dark .text-zinc-500 {
+  color: var(--mm-muted);
+}
+.dark .text-zinc-600 {
+  color: var(--mm-muted-2);
+}
+.dark .placeholder\:text-zinc-600::placeholder {
+  color: var(--mm-muted-2);
 }
 
 /* I66 — sezioni ancorate: il salto dalla nav interna rispetta header + nav */
@@ -267,22 +299,22 @@ html:not(.dark) .text-sky-300\/80 {
    link chiave, errore di connessione) → 600. Le tinte bg-*400/10 e i bordi
    /25–/30 restano invariati (decorativi e coerenti con le tinte chiare).  */
 html:not(.dark) .text-rose-400 {
-  color: var(--color-rose-600);
+  color: var(--color-rose-700);
 }
 html:not(.dark) .text-amber-400 {
-  color: var(--color-amber-600);
+  color: var(--color-amber-700);
 }
 html:not(.dark) .text-emerald-400 {
-  color: var(--color-emerald-600);
+  color: var(--color-emerald-800);
 }
 html:not(.dark) .text-sky-400 {
-  color: var(--color-sky-600);
+  color: var(--color-sky-700);
 }
 html:not(.dark) .text-orange-400 {
-  color: var(--color-orange-600);
+  color: var(--color-orange-700);
 }
 html:not(.dark) .text-emerald-500 {
-  color: var(--color-emerald-600);
+  color: var(--color-emerald-800);
 }
 html:not(.dark) .text-zinc-200 {
   color: rgb(39 39 42);
@@ -293,8 +325,11 @@ html:not(.dark) .text-zinc-300 {
 html:not(.dark) .text-zinc-400 {
   color: rgb(82 82 91);
 }
+html:not(.dark) .text-zinc-500 {
+  color: var(--mm-muted);
+}
 html:not(.dark) .text-zinc-600 {
-  color: rgb(113 113 122);
+  color: var(--mm-muted-2);
 }
 
 /* Accent troppo chiari su bianco → toni 600/700 */
@@ -302,22 +337,22 @@ html:not(.dark) .text-rose-200 {
   color: var(--color-rose-700);
 }
 html:not(.dark) .text-rose-300 {
-  color: var(--color-rose-600);
+  color: var(--color-rose-700);
 }
 html:not(.dark) .text-amber-100 {
   color: var(--color-amber-800);
 }
 html:not(.dark) .text-amber-200 {
-  color: var(--color-amber-700);
+  color: var(--color-amber-800);
 }
 html:not(.dark) .text-amber-300 {
-  color: var(--color-amber-600);
+  color: var(--color-amber-700);
 }
 html:not(.dark) .text-emerald-200 {
   color: var(--color-emerald-700);
 }
 html:not(.dark) .text-emerald-300 {
-  color: var(--color-emerald-600);
+  color: var(--color-emerald-800);
 }
 html:not(.dark) .text-violet-200 {
   color: var(--color-violet-700);
@@ -329,7 +364,7 @@ html:not(.dark) .text-sky-200 {
   color: var(--color-sky-700);
 }
 html:not(.dark) .text-sky-300 {
-  color: var(--color-sky-600);
+  color: var(--color-sky-700);
 }
 
 /* Superfici accent-alpha (badge, banner) → tinte più corpose su bianco */
@@ -341,6 +376,36 @@ html:not(.dark) .bg-amber-950\/40 {
 }
 html:not(.dark) .bg-amber-950\/20 {
   background-color: rgb(255 251 235 / 0.85);
+}
+
+/* I84 — Tinte accent forti (400/10–500/20) → toni 50 pieni: il testo 700
+   sopra misura 4.8–5.7:1; sulla tinta traslucente scendeva a 2.5–4.5. */
+html:not(.dark) .bg-emerald-400\/10,
+html:not(.dark) .bg-emerald-500\/15,
+html:not(.dark) .bg-emerald-500\/20 {
+  background-color: #ecfdf5;
+}
+html:not(.dark) .bg-amber-400\/10,
+html:not(.dark) .bg-amber-500\/10 {
+  background-color: #fffbeb;
+}
+html:not(.dark) .bg-rose-400\/10,
+html:not(.dark) .bg-rose-500\/15,
+html:not(.dark) .bg-rose-500\/20 {
+  background-color: #fff1f2;
+}
+html:not(.dark) .bg-orange-400\/10 {
+  background-color: #fff7ed;
+}
+html:not(.dark) .bg-sky-400\/10,
+html:not(.dark) .bg-sky-500\/15,
+html:not(.dark) .bg-sky-500\/20 {
+  background-color: #f0f9ff;
+}
+html:not(.dark) .bg-violet-400\/10,
+html:not(.dark) .bg-violet-500\/15,
+html:not(.dark) .bg-violet-500\/20 {
+  background-color: #f5f3ff;
 }
 
 /* Menu, select e dialog (bg-zinc-950 → bianco, testo → scuro) */
@@ -403,6 +468,9 @@ html:not(.dark) [data-slot="tabs-trigger"][data-state="inactive"]:hover {
   html:not(.dark) .text-zinc-400\! {
     color: rgb(82 82 91) !important;
   }
+  html:not(.dark) .text-zinc-500\! {
+    color: var(--mm-muted) !important;
+  }
   html:not(.dark) .text-zinc-100\! {
     color: rgb(24 24 27) !important;
   }
@@ -449,6 +517,15 @@ html:not(.dark) [data-slot="tabs-trigger"][data-state="inactive"]:hover {
   }
   html:not(.dark) .hover\:text-rose-300\!:hover {
     color: var(--color-rose-700) !important;
+  }
+}
+
+/* I84 — FAMIGLIA SCURO, utilities !: le etichette text-zinc-500! dei menu
+   (Esporta/Storico/Registro) sul pannello scuro misuravano ~4.1:1. Stesso
+   layer delle utilities, posizione successiva → vincono (lezione I83). */
+@layer utilities {
+  .dark .text-zinc-500\! {
+    color: var(--mm-muted) !important;
   }
 }
 
