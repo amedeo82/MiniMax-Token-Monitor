@@ -533,3 +533,24 @@ Stage Summary:
 - La correzione empirica più importante: il bug del registro eventi (evento senza value = crash di tutta la pagina) è RIPRODOTTO e CORRETTO, con la pagina ora protetta da 10 error boundary indipendenti
 - Suite di qualità: 179 test / 546 asserzioni, audit 146/146; README e docs allineati
 - Restano da fare in docs/07: batch 2 analisi (I70/I71/I72), batch 3 infrastruttura (I80/I81/I68), backlog (I74/I75/I78/I79/I82); fuori docs/07: V4 fresca con chiave reale, campagna campionatore I49+V8+I56
+
+---
+Task ID: 24
+Agent: Super Z (main)
+Task: Batch 2 analisi docs/07 — I70/I71/I72 implementati («procedi con il prossimo step. poi aggiorna la documentazione, fai il commit ed il push»)
+
+Work Log:
+- Docs-first: docs/03 §5.12 «Batch 2 analisi» con il design completo delle 3 proposte (z-score robusto Iglewicz–Hoaglin, qualità del campionamento con giorno Roma DST-safe, proiezione EWMA con mezza vita 2h)
+- I70 — lib/rate-anomalies.ts NUOVO: detectRateAnomalies pura (mediana + MAD su ritmi GREZZI di rateSeries con sma:1 — la SMA di default smorzerebbe i picchi; z = 0.6745·(x−mediana)/MAD, soglia 3.5, minValidi 8; fallback documentato MAD=0 → media degli scarti assoluti, 0 → nessuna anomalia); diagnostica-panel.tsx: sezione «Anomalie del ritmo» su storico COMPLETO (coerente con I60/I62) con badge verde/ambra, regime atteso, max 8 anomalie dalla più recente, z con segno (scoppio rosso / pausa azzurra), empty state dedicato
+- I71 — lib/sampling.ts NUOVO: samplingQuality pura (mediana intervallo robusta ai buchi; copertura per giorno Europe/Rome via romeDayKey en-CA DST-safe, arco coperto = primo→ultimo punto + un intervallo per l'ultimo, cap 100%; gap > gapMin=15 min — esattamente 15 NON è un gap — dal più recente); diagnostica-panel.tsx: sezione «Qualità del campionamento» con badge copertura media (verde ≥90/ambra ≥60/rosa), barre ultimi 7 giorni Roma, tabella gap con durata, empty state < 2 punti
+- I72 — lib/ewma.ts NUOVO: ewmaProjection pura (ritmi istantanei con le STESSE regole di lib/rate.ts: gap > 30 min e risalita scartati; peso exp(−età/halfLife) misurata sul SECONDO rilevamento della coppia; mezza vita default 2h; esaurimento solo se ritmo > 0.01); history-chart.tsx: EwmaCard nel StatsPanel AFFIANCATA al verdetto (badge «sperimentale · non sostitutiva»), KPI Lineare vs EWMA vs Differenza + riga di lettura (anticipa/allontana/concorda con soglia ±30 min); page.tsx: ewma = ewmaProjection(filteredHistory, chartWindow) passato come prop (segue l'intervallo I69)
+- Correzioni in itinere: attese di test ricalcolate (MAD della serie con jitter = 2, non 1 — z(60) ≈ 13.5; threshold 2 su serie con 14 %/h → 2 anomalie non 3); ewmaProjection restituisce ritmo null (non 0) quando il ritmo è trascurabile — doc interfaccia allineata
+- Protocollo di validazione fisso: bunx tsc --noEmit = 0 errori su src/+tests/ (4 baseline esterne examples/skills) · bun run lint EXIT=0 · bun test 212/212 (654 asserzioni, era 179/546) · audit 163/163 PASS 0 scoperte (era 146, +17 check; fix pattern regex con parentesi escapate per il check del peso exp)
+- Verifica browser reale (route /api/history e /api/events bloccate con body {} dal primo step — nessuna scrittura demo sul DB: demo 241→241, eventi 8→8; il +1 punto «api» è del poller utente ancora attivo): le 3 sezioni nuove presenti (Anomalie 2 rilevate con regime/soglia, Copertura 45% con intervallo tipico, card EWMA piena: Lineare 18:51 vs EWMA 19:08, differenza +16m 55s, lettura «concorda» corretta sotto i ±30 min); desktop 1280 zero overflow (docW 1280), mobile 390 zero overflow (390 vs 390), zero errori pagina e console; screenshot scripts/verify-batch2-diagnostica.png, verify-batch2-ewma.png, verify-batch2-mobile390.png
+- Documentazione: docs/03 (header + §5.12); docs/04 §3 (I70/I71/I72 → ✅) + §8 changelog; docs/07 (header «7 di 15», §5.3/§5.4/§5.5 con nota implementazione, priorità 2 barrata-IMPLEMENTATO); README (3 righe funzionalità + qualità 212/163); questo worklog
+
+Stage Summary:
+- BATCH 2 ANALISI COMPLETATO: I70/I71/I72 passano da ⬜ a ✅ (anomalie del ritmo, qualità del campionamento, proiezione EWMA) — tutte client-side, proxy/DB/protocollo di polling intoccati
+- Scelta di design più importante: I70 opera sui ritmi GREZZI (sma:1) perché la SMA-3 smorza proprio i picchi da segnalare; I71 rende visibile la qualità dello storico PRIMA di fidarsi delle analisi; I72 resta un secondo parere NON sostitutivo del verdetto lineare
+- Suite di qualità: 212 test / 654 asserzioni, audit 163/163; README e docs allineati
+- Restano da fare in docs/07: batch 3 infrastruttura (I80/I81/I68), backlog (I74/I75/I78/I79/I82); fuori docs/07: V4 fresca con chiave reale, campagna campionatore I49+V8+I56

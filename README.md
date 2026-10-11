@@ -54,6 +54,9 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Istogramma del residuo** (I61): quante volte la quota è stata osservata in ciascuna fascia 0–100
 - **Oggi vs media** (I64): consumo di oggi contro la media degli stessi giorni delle ultime 5 settimane (oggi escluso)
 - **Diagnostica del monitor** (I60/I62): orologio dei reset (dot plot asse UTC con blocchi teorici 00/05/10/15/20) e salute del rilevamento (episodi di errore, guasto più frequente, stato del backoff)
+- **Anomalie del ritmo** (I70): z-score robusto (mediana + MAD) sui ritmi grezzi — scoppi di consumo e pause anomale fuori regime, con regime atteso e soglia |z| > 3.5
+- **Qualità del campionamento** (I71): copertura attesa/osservata per giorno (Europe/Rome, DST-safe) e buchi > 15 min — quanto lo storico è «buono» prima di fidarsi delle analisi
+- **Proiezione EWMA (A/B)** (I72): secondo parere esponenzialmente pesato (mezza vita 2h) affiancato al verdetto lineare — mostra quanto il ritmo recente si discosta dalla media della finestra
 - **Panoramica modelli**: tabella comparativa di tutte le finestre del piano (residuo, stato, countdown reset)
 - **Export CSV/JSON** dello storico e del registro eventi (locale e archivio completo dal server; formato compatibile Excel it-IT)
 
@@ -62,8 +65,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Archivio eventi** oltre il diario locale di 200 voci (fino a 5.000 eventi / 180 giorni), stesso schema di sincronizzazione
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 179 test / 546 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **filtri intervallo/eventi, modalità compatta (batch 1 docs/07)**, **fallback endpoint (I18)** e **parità TS↔Service Worker**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 146 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 212 test / 654 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **filtri intervallo/eventi, modalità compatta (batch 1 docs/07)**, **anomalie/campionamento/EWMA (batch 2 docs/07)**, **fallback endpoint (I18)** e **parità TS↔Service Worker**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 163 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 
 ---
 

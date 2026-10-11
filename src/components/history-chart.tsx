@@ -21,6 +21,7 @@ import {
 import { formatCountdown, formatDateTimeRome, formatDuration, formatShortRome, formatTimeRome } from "@/lib/time";
 import { detectCycles, movingAverage } from "@/lib/cycles";
 import { rateSeries } from "@/lib/rate";
+import type { EwmaProjection } from "@/lib/ewma";
 import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
 import { fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import {
@@ -502,6 +503,7 @@ export function StatsPanel({
   resetAt = null,
   remaining = null,
   serverCount = null,
+  ewma = null,
 }: {
   trend: TrendStats;
   win: "interval" | "weekly";
@@ -511,6 +513,8 @@ export function StatsPanel({
   remaining?: number | null;
   /** Punti conservati sul server (I16); null = server non raggiunto. */
   serverCount?: number | null;
+  /** I72 — proiezione EWMA (A/B affiancata al verdetto, non sostitutiva). */
+  ewma?: EwmaProjection | null;
 }) {
   const winLabel = win === "interval" ? "5 ore" : "settimanale";
   return (
@@ -573,6 +577,9 @@ export function StatsPanel({
 
       {/* I31 — pace di consumo e quota sprecata (stesso filone del verdetto) */}
       <PacePanel trend={trend} resetAt={resetAt} remaining={remaining} win={win} />
+
+      {/* I72 — proiezione EWMA: secondo parere affiancato al verdetto lineare */}
+      <EwmaCard trend={trend} ewma={ewma} />
     </div>
   );
 }
@@ -797,6 +804,111 @@ function PacePanel({
             {breakevenPace.toFixed(2)} %/h, ritmo attuale {fmtRate(pace.currentPace)}).
           </p>
           {kpis("Residuo previsto al reset", `~${residual.toFixed(1)}%`, "text-emerald-200")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I72 — Proiezione EWMA: secondo parere A/B affiancato al verdetto     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Card di confronto A/B tra la proiezione lineare di I23/I31 (corda su 60
+ * punti, quel che alimenta il Verdetto d'esaurimento) e la proiezione
+ * esponenzialmente pesata (`lib/ewma.ts`, mezza vita 2h). AFFIANCATA, non
+ * sostitutiva: il verdetto ufficiale resta quello lineare. L'EWMA reagisce
+ * prima ai cambi di ritmo recenti; la differenza tra i due orari è la
+ * misura visiva di quanto il ritmo recente si sta discostando dalla media
+ * della finestra osservata.
+ */
+function EwmaCard({
+  trend,
+  ewma,
+}: {
+  trend: TrendStats;
+  ewma: EwmaProjection | null;
+}) {
+  // Non calcolabile: servono almeno due ritmi istantanei validi
+  if (ewma === null || ewma.campioni < 2 || ewma.ritmo === null) {
+    return (
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
+        <div className="flex items-start gap-2.5">
+          <Spline className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+          <div>
+            <p className="text-xs font-semibold text-zinc-300">
+              Proiezione EWMA (A/B)
+              <Badge variant="outline" className="ml-1.5 border-white/10 px-1.5 py-0 text-[9px] uppercase tracking-wider text-zinc-500">
+                sperimentale
+              </Badge>
+            </p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+              Servono almeno due ritmi misurabili (rilevamenti ravvicinati, senza reset) per stimare
+              l’esaurimento anche con la media esponenzialmente pesata e confrontarlo con il verdetto lineare.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const lineare = trend.exhaustionAt;
+  const ewmaAt = ewma.esaurimentoAt;
+
+  /** Differenza tra i due orari stimati (negativa = EWMA anticipa il lineare). */
+  const deltaMs = lineare !== null && ewmaAt !== null ? ewmaAt - lineare : null;
+
+  const lettura =
+    trend.ratePerHour !== null && deltaMs !== null
+      ? deltaMs < -1_800_000
+        ? "Il ritmo recente è più alto della media della finestra: l’EWMA ANTICIPA il verdetto lineare."
+        : deltaMs > 1_800_000
+          ? "Il ritmo recente è più basso della media della finestra: l’EWMA ALLONTANA l’esaurimento stimato."
+          : "Il ritmo recente conferma la media della finestra: i due modelli concordano."
+      : null;
+
+  return (
+    <div className="rounded-xl border border-sky-400/25 bg-sky-400/[0.05] p-4 sm:col-span-3">
+      <div className="flex items-start gap-2.5">
+        <Spline className="mt-0.5 size-4 shrink-0 text-sky-400" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-sky-200">
+            Proiezione EWMA (A/B)
+            <Badge variant="outline" className="ml-1.5 border-sky-400/30 px-1.5 py-0 text-[9px] uppercase tracking-wider text-sky-300/80">
+              sperimentale · non sostitutiva
+            </Badge>
+          </p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-sky-200/70">
+            Secondo parere con media esponenzialmente pesata dei ritmi istantanei (mezza vita{" "}
+            {formatCountdown(ewma.halfLifeMs)}): reagisce prima ai cambi di ritmo recenti, al prezzo di più
+            rumore. Il verdetto ufficiale resta quello lineare.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Lineare (I23/I31)</p>
+              <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-100">
+                {lineare !== null ? formatDateTimeRome(lineare) : "—"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">EWMA</p>
+              <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-sky-200">
+                {ewmaAt !== null ? formatDateTimeRome(ewmaAt) : "—"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Differenza</p>
+              <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-100">
+                {deltaMs === null
+                  ? "—"
+                  : deltaMs === 0
+                    ? "coincidenti"
+                    : `${deltaMs < 0 ? "−" : "+"}${formatCountdown(Math.abs(deltaMs))}`}
+              </p>
+            </div>
+          </div>
+          {lettura ? <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">{lettura}</p> : null}
         </div>
       </div>
     </div>
