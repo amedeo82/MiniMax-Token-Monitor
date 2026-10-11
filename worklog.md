@@ -405,3 +405,25 @@ Stage Summary:
 - Ciclo operativo da oggi: a fine di ogni task → commit codice/documenti + commit DB separato (I30) + `git push origin main`
 - Raccomandazione all'utente consegnata in chat: ruotare il PAT dopo la verifica (è transitato in chat in chiaro e resta nel .git/config locale); se ruotato, fornire il nuovo token alla sessione successiva
 - Prossimo passo di progetto: avvio fase 1 del piano di ricreazione (fondamenta: I50 test suite, I51 backoff, I55 audit tool) su conferma utente
+
+---
+Task ID: 18
+Agent: Super Z (main)
+Task: Recovery fase 1 — fondamenta: I51 backoff, I50 test suite, I55 audit tool (richiesta utente: «procedi e ricrea tutto il lavoro fatto, ad ogni ripristino aggiorna la documentazione, poi commit e push»)
+
+Work Log:
+- Lettura stato autoritativo prima di lavorare: docs/04 §3 (righe condensate I48–I82), docs/03, package.json, moduli core sopravvissuti (time/cycles/usage-events/minimax), proxy api/minimax/usage, page.tsx completo, tsconfig/eslint
+- **I51**: creato `src/lib/backoff.ts` puro con random iniettabile (backoffDelayMs ×2^n cap 10 min floor 1s, nextBackoffMs jitter ±25% con cap/floor post-jitter, parseRetryAfterMs forme secondi+HTTP-date, delayAfterFailure con Retry-After come floor del client); proxy con ciclo di retry transitori (429/500/502/503/504 + rete/timeout, 1+2 tentativi, pause 400/800ms, Retry-After upstream inoltrato o default prudente 30s/10s) e flag `transient`; `ApiError.retryAfterMs/transient`; scheduler client in page.tsx (setTimeout ricorsivo: successo → intervallo utente, fallimento → backoff crescente; badge «prossimo tra» sul ritardo reale programmato)
+- **I51 — fix doppio fetch al salvataggio**: i due vecchi effetti (prima sincronizzazione + intervallo) dipendevano dall'OGGETTO settings → ogni salvataggio rifetchava; ora: ri-sync solo su cambio connessione (chiave/regione/demo via connKey + ref), handleSaveSettings azzera snapshot solo se la connessione è cambiata e non chiama più fetchData direttamente, scheduler riavviato solo sulle primitive rilevanti
+- **I50**: creata suite `tests/lib/` — 5 file (minimax 24 test: forme risposta piatta/annidata, base_resp 1004, alias titolo/crediti, epoch s/ms, statusLabel, quotaLevel, findModel; time 17: toDate, formattazioni CEST/CET con epoch deterministici, countdown, durate, windowProgress; cycles 17: cicli RESET_JUMP/RESET_TARGET con falso reset sorgenti miste, weekday drawdown, heatmap celle+contatori, SMA; usage-events 27 con mock localStorage: registro/cap 200/voci malformate, windowThresholdKey I28 con bordi, migrazione legacy, banner, transizioni; backoff 17 deterministici) = **102 test / 273 asserzioni**, script `"test": "bun test"` in package.json, `tests/bun-env.d.ts` con reference bun-types per tsc
+- Correzioni in itinere: 3 test falliti al primo giro (formatDateTimeRome: it-IT con virgola; romeZoneInfo: ICU di Bun dà GMT+2 non CEST → asserzione sugli offset; heatmap: fixture con punto medio in cella sbagliata) — fix e suite verde
+- **I55**: creato `scripts/verifiche/audit-implementazioni.mjs` (Node ≥18 zero dipendenze): 73 verifiche dichiarative (file/simbolo/wiring/assenza) su I1–I32 ✅ + I50/I51, coverage check automatico (✅ senza check → SCOPERTA), assenze ricorsive per I15/I19/I20 🚫 (ADR-8), report MD+JSON in esiti/; fix EISDIR su assenza-dir e firme pushPointToServer/pushEventsToServer (function, non async); check I12 con 97 screenshot sopravvissuti in scripts/
+- Protocollo di verifica: bunx tsc --noEmit → 0 errori fuori baseline (4 nota in examples/skills); bun run lint → EXIT=0; bun test → 102/102 (273 asserzioni); audit → PASS 73/73
+- Documentazione aggiornata (docs-first): docs/04 §3 righe I50/I51/I55 → ✅ con note di recovery, §8 changelog +3 righe 2026-10-11; questo worklog
+- Scoperto durante l'audit: i 97 screenshot PNG delle verifiche browser sono SOPRAVVISSUTI al rollback (artefatti piattaforma in scripts/) — evidenza I12/I31/I32 recuperata
+
+Stage Summary:
+- FASE 1 DEL RECOVERY COMPLETATA: fondamenta (test suite, backoff, audit) di nuovo nel repo, con protocollo verde e audit PASS 73/73
+- La suite test ora protegge OGNI futura ricreazione: da qui in poi ogni modulo ri-creato entra con i suoi test prima del commit
+- L'audit I55 è il verificatore del recovery stesso: a ogni item ri-creato si aggiungono i suoi check (coverage check impedisce che l'audit invecchi)
+- Prossimo: fase 2 — I52 PWA/offline (sw.js + sw-shared + manifest + pwa-register + 14 test parità) e campagna campionatore I49/I56 se il traffico reale lo permette

@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { REGION_ENDPOINTS, Region } from "@/lib/minimax";
+import { parseRetryAfterMs } from "@/lib/backoff";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * I51 — Errori transitori dell'upstream su cui il proxy ritenta PRIMA di
+ * restituire l'errore al client: rate-limit (429) e guasti tipici di server
+ * o rete (5xx, timeout, network). Gli errori permanenti (401/403, JSON
+ * malformato) NON vengono ritentati: rispondere subito è più utile.
+ */
+const TRANSIENT_HTTP = new Set([429, 500, 502, 503, 504]);
+const PROXY_RETRY_MAX = 2; // 1 tentativo + 2 ritenti
+const PROXY_RETRY_BASE_MS = 400; // 400ms, 800ms (senza jitter: pausa corta fissa)
+/** Retry-After default quando l'upstream non lo dichiara (prudente, mai invasivo). */
+const RETRY_AFTER_DEFAULT_429_MS = 30_000;
+const RETRY_AFTER_DEFAULT_OTHER_MS = 10_000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Proxy server-side verso l'endpoint MiniMax Token Plan `/v1/token_plan/remains`.
@@ -13,7 +29,9 @@ export const dynamic = "force-dynamic";
  *
  * POST { apiKey: string, region?: "eu" | "cn" }
  * → 200 { ok: true, status, data, fetchedAt, endpoint }
- * → 200 { ok: false, status, error, fetchedAt, endpoint }  (errore gestito)
+ * → 200 { ok: false, status, error, fetchedAt, endpoint }  (errore gestito;
+ *      gli errori transitori esauriti i ritenti includono retryAfterMs e
+ *      transient: true perché il client scheduler (I51) respetti il floor)
  * → 4xx { ok: false, error } (richiesta malformata)
  */
 export async function POST(req: NextRequest) {
@@ -40,76 +58,118 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12_000);
+    /* I51 — ciclo con ritenti transitori: 1 tentativo + fino a 2 ritenti
+       (pausa 400/800ms) SOLO per errori transitori; ogni tentativo ha il
+       proprio timeout di 12s. */
+    for (let attempt = 0; ; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12_000);
+      let res: Response;
+      try {
+        res = await fetch(endpoint, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "MiniMax-Usage-Dashboard/1.0",
+          },
+          signal: controller.signal,
+          cache: "no-store",
+        });
+      } catch (err: unknown) {
+        clearTimeout(timeout);
+        const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("abort"));
+        if (attempt < PROXY_RETRY_MAX) {
+          await sleep(PROXY_RETRY_BASE_MS * 2 ** attempt);
+          continue;
+        }
+        return NextResponse.json({
+          ok: false,
+          fetchedAt,
+          endpoint,
+          error: {
+            code: isAbort ? "timeout" : "network",
+            message: isAbort
+              ? "Timeout: l'API MiniMax non ha risposto entro 12 secondi (dopo 3 tentativi)."
+              : `Errore di rete nella connessione a ${endpoint}: ${err instanceof Error ? err.message : "sconosciuto"}`,
+            retryAfterMs: RETRY_AFTER_DEFAULT_OTHER_MS,
+            transient: true,
+          },
+        });
+      }
+      clearTimeout(timeout);
 
-    const res = await fetch(endpoint, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "User-Agent": "MiniMax-Usage-Dashboard/1.0",
-      },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    clearTimeout(timeout);
+      const text = await res.text();
+      let data: unknown = null;
+      let parseError: string | null = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        parseError = "La risposta non è JSON valido.";
+      }
 
-    const text = await res.text();
-    let data: unknown = null;
-    let parseError: string | null = null;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      parseError = "La risposta non è JSON valido.";
-    }
+      if (TRANSIENT_HTTP.has(res.status) && attempt < PROXY_RETRY_MAX) {
+        await sleep(PROXY_RETRY_BASE_MS * 2 ** attempt);
+        continue;
+      }
 
-    if (!res.ok) {
+      if (!res.ok) {
+        const transient = TRANSIENT_HTTP.has(res.status);
+        return NextResponse.json({
+          ok: false,
+          status: res.status,
+          fetchedAt,
+          endpoint,
+          error: {
+            code: res.status === 401 || res.status === 403 ? "unauthorized" : "http_error",
+            message:
+              res.status === 401 || res.status === 403
+                ? `Autenticazione rifiutata (HTTP ${res.status}). Controlla la Subscription Key: deve essere la chiave del Token Plan, non una chiave pay-as-you-go.`
+                : `Errore HTTP ${res.status} dall'API MiniMax${parseError ? "" : ":"} ${parseError ?? estraiMessaggio(data)}`,
+            httpStatus: res.status,
+            ...(transient
+              ? {
+                  transient: true,
+                  retryAfterMs:
+                    parseRetryAfterMs(res.headers.get("retry-after")) ??
+                    (res.status === 429 ? RETRY_AFTER_DEFAULT_429_MS : RETRY_AFTER_DEFAULT_OTHER_MS),
+                }
+              : {}),
+          },
+        });
+      }
+
+      if (parseError || data === null) {
+        return NextResponse.json({
+          ok: false,
+          status: res.status,
+          fetchedAt,
+          endpoint,
+          error: { code: "bad_json", message: "Risposta dell'API non interpretabile come JSON.", httpStatus: res.status },
+        });
+      }
+
       return NextResponse.json({
-        ok: false,
+        ok: true,
         status: res.status,
+        data,
         fetchedAt,
         endpoint,
-        error: {
-          code: res.status === 401 || res.status === 403 ? "unauthorized" : "http_error",
-          message:
-            res.status === 401 || res.status === 403
-              ? `Autenticazione rifiutata (HTTP ${res.status}). Controlla la Subscription Key: deve essere la chiave del Token Plan, non una chiave pay-as-you-go.`
-              : `Errore HTTP ${res.status} dall'API MiniMax${parseError ? "" : ":"} ${parseError ?? estraiMessaggio(data)}`,
-          httpStatus: res.status,
-        },
       });
     }
-
-    if (parseError || data === null) {
-      return NextResponse.json({
-        ok: false,
-        status: res.status,
-        fetchedAt,
-        endpoint,
-        error: { code: "bad_json", message: "Risposta dell'API non interpretabile come JSON.", httpStatus: res.status },
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      status: res.status,
-      data,
-      fetchedAt,
-      endpoint,
-    });
   } catch (err: unknown) {
-    const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("abort"));
+    /* Rete/infrastruttura fuori dal ciclo di ritenti (es. body read fallita):
+       trattata come transitoria, con floor Retry-After per lo scheduler I51. */
     return NextResponse.json({
       ok: false,
       fetchedAt,
       endpoint,
       error: {
-        code: isAbort ? "timeout" : "network",
-        message: isAbort
-          ? "Timeout: l'API MiniMax non ha risposto entro 12 secondi."
-          : `Errore di rete nella connessione a ${endpoint}: ${err instanceof Error ? err.message : "sconosciuto"}`,
+        code: "network",
+        message: `Errore di rete nella connessione a ${endpoint}: ${err instanceof Error ? err.message : "sconosciuto"}`,
+        retryAfterMs: RETRY_AFTER_DEFAULT_OTHER_MS,
+        transient: true,
       },
     });
   }
