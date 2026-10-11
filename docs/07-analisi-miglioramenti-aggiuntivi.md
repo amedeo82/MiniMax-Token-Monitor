@@ -6,12 +6,13 @@
 > nel recovery con gli stessi numeri e significati comunicati in chat (tracciamento in
 > `docs/04` §3).
 >
-> Stato: **10 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
+> Stato: **13 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
 > del bug noto, I73) è stato implementato l'11/10 pomeriggio (vedi §5.2, §5.6, §5.9,
 > §5.10 e `docs/04` §3); il **batch 2 analisi** (I70, I71, I72) è stato implementato
 > l'11/10 sera (vedi §5.3, §5.4, §5.5 e `docs/04` §3); il **batch 3 infrastruttura**
 > (I80, I81, I68) è stato implementato l'11/10 notte (vedi §5.13, §5.14, §5.1 e
-> `docs/04` §3); le restanti 5 sono ancora ⬜ (proposte mai implementate).
+> `docs/04` §3); il **batch 4 UX** (I74, I75, I78) è stato implementato l'11/10 sera
+> (vedi §5.7, §5.8, §5.11 e `docs/04` §3); restano 2 proposte ⬜ (I79, I82).
 
 Contesto della proposta originale: dopo la chiusura dei batch 1–3 (I57–I67) l'analisi
 aveva individuato 15 ulteriori miglioramenti in tre gruppi — analisi avanzata
@@ -96,12 +97,35 @@ secondario; compatibile con la PWA installata (I52).
 > intervallo; errore API e schermata di setup restano visibili (servono alla funzione).
 > Verificato in browser, zero overflow a 390px.
 
-## 5.7 I74 — Navigazione inferiore su mobile
+## 5.7 I74 — Navigazione inferiore su mobile ✅
 Bottom bar fissa <md come alternativa alla section-nav sticky (I66) su telefono.
 
-## 5.8 I75 — Vista stampa / report settimanale
+> **Implementato 11/10** (`components/bottom-nav.tsx` + wiring in `page.tsx`; design in
+> `docs/03` §5.14): la logica di scrollspy di I66 è estratta in `useScrollSpySezioni()`
+> (stesso file `section-nav.tsx`) e condivisa dalle due superfici; su <md la nav
+> superiore è nascosta (`hidden md:block`) e la barra fissa al fondo mostra le stesse
+> 8 ancore con target touch più grandi (`px-3 py-2`), safe-area iOS inclusa e
+> spaziatore `h-16` dopo il footer per non coprirlo. Vista compatta I73: né nav né
+> barra. Verificato in browser a 390px (barra fissa, top nav assente, click
+> «Eventi» → aria-current + scroll, zero overflow). 3 test componente.
+
+## 5.8 I75 — Vista stampa / report settimanale ✅
 Blocco `print` dedicato + voce nel menu Esporta: sintesi settimanale stampabile
 (verdetto, cicli, spreco, calendario).
+
+> **Implementato 11/10** (`lib/print.ts` + `components/print-report.tsx` + regole
+> `@media print` in globals.css + voce nel menu Esporta del grafico; design in
+> `docs/03` §5.14): due livelli — (1) Ctrl+P sulla pagina: foglio bianco senza cromo
+> (header/footer/nav/bottoni nascosti) e card non spezzabili; (2) «Stampa report
+> settimanale» → `stampaReportSettimanale()` aggiunge `print-report` a `<body>`,
+> stampa e ripristina su `afterprint` (anche con annullamento); le regole
+> `body.print-report` riducono il foglio al SOLO blocco `.print-report-root`
+> (verdetto lineare+EWMA, cicli+spreco per ENTRAMBE le finestre, consumo per giorno
+> della settimana, calendario 12 settimane — calcolato sullo STORICO COMPLETO, non
+> sull'intervallo I69). Lezione in itinere: l'header del report è un `<div>`, non un
+> `<header>` — la regola print che nasconde il cromo della pagina lo avrebbe nascosto
+> anch'esso (corretto e ri-verificato). Flusso verificato con un PDF reale (media
+> print): solo report, intestazione inclusa. 4 test.
 
 ## 5.9 I76 — Error boundary per sezione + skeleton (+ bug fix noto) ✅
 Error boundary React per ogni sezione con skeleton di fallback: un crash in un
@@ -127,9 +151,24 @@ client-side sul registro già caricato.
 > «N di M eventi», empty state dedicato e «Azzera filtri»; l'export resta sull'archivio
 > COMPLETO (i filtri sono una vista, non una cancellazione). 12 test dedicati.
 
-## 5.11 I78 — Tema chiaro opzionale
+## 5.11 I78 — Tema chiaro opzionale ✅
 `next-themes` è già tra le dipendenze ma inutilizzato: tema chiaro completo
 (palette chiara coerente con i ring continui I65).
+
+> **Implementato 11/10** (`components/theme-toggle.tsx` + ThemeProvider in layout +
+> strato di rimappatura in globals.css + tab «Aspetto» nelle impostazioni; design in
+> `docs/03` §5.14): strategia `class` con `defaultTheme="dark"` (nessun cambiamento
+> per gli utenti esistenti: il localStorage `theme` si popola solo con una scelta
+> esplicita); toggle Sun/Moon nell'header + Select Sistema/Chiaro/Scuro nel nuovo
+> tab «Aspetto» (le impostazioni passano da 3 a 4 tab); il Toaster usa il wrapper
+> shadcn che già legge `useTheme`. La palette chiara NON tocca i componenti: regole
+> unlayered `html:not(.dark)` (specificità maggiore delle utilities) ri-mappano le
+> superfici hardcoded (`bg-[#09090b]`→bianco, scala zinc invertita, white-alpha →
+> black-alpha, accent 200/300 → 600/700) e i tratti SVG white-alpha via selettori
+> per attributo; il blocco JSON grezzo resta deliberatamente SCURO (come i code
+> block dei siti chiari). Ring e favicon (I65/I67) invariati per costruzione.
+> Verificato in browser: toggle → html.light con palette leggibile (screenshot),
+> Select → dark, tema scuro INTATTO a confronto. 3 test componente.
 
 ## 5.12 I79 — Audit di accessibilità sistematico
 Contrasto misurato (WCAG AA), `aria-live` per aggiornamenti polling, focus visibili,
@@ -171,4 +210,6 @@ pivot; la generalizzazione aprirebbe le analisi anche agli altri modelli del pia
    §5.5 e `docs/04` §3).
 3. ~~**Batch 3 infrastruttura/integrazione**: I80 · I81 · I68.~~ → **IMPLEMENTATO
    11/10** (vedi §5.13/§5.14/§5.1 e `docs/04` §3).
-4. **Backlog/qualità**: I74 · I75 · I78 · I79 · I82.
+4. ~~**Backlog/qualità**: I74 · I75 · I78 · I79 · I82.~~ → **I74 · I75 · I78
+   IMPLEMENTATI 11/10** (batch 4 UX, vedi §5.7/§5.8/§5.11 e `docs/04` §3); restano
+   in backlog **I79** (audit di accessibilità) e **I82** (generalizzazione multi-modello).

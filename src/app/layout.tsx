@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaRegister } from "@/components/pwa-register";
@@ -43,13 +44,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    /* I78 — tema chiaro opzionale: strategia class, default SCURO (comportamento
+       invariato finché l'utente non sceglie esplicitamente); `suppressHydrationWarning`
+       su <html> evita il mismatch mentre next-themes assegna la classe. */
     <html lang="it" className="dark" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
-        <PwaRegister />
-        <Toaster position="top-right" richColors closeButton theme="dark" />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          {children}
+          <PwaRegister />
+          {/* Il wrapper shadcn del Toaster legge già useTheme (I78): niente forzatura dark */}
+          <Toaster position="top-right" richColors closeButton />
+        </ThemeProvider>
       </body>
     </html>
   );

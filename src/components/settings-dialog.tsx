@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTheme } from "next-themes";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,8 @@ import {
   ClipboardPaste,
   BellRing,
   Database,
+  Palette,
+  Sun,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { REGION_LABELS, Region } from "@/lib/minimax";
@@ -94,7 +97,14 @@ function thresholdOptionsFor(value: number): { value: number; label: string }[] 
   return [...THRESHOLD_OPTIONS, { value, label: `${value}% residuo` }].sort((a, b) => a.value - b.value);
 }
 
-type SettingsTab = "connection" | "alerts" | "data";
+type SettingsTab = "connection" | "alerts" | "aspetto" | "data";
+
+/** I78 — opzioni del tema (next-themes: class su <html>, default scuro). */
+const THEME_OPTIONS = [
+  { value: "system", label: "Sistema (segue il dispositivo)" },
+  { value: "light", label: "Chiaro" },
+  { value: "dark", label: "Scuro" },
+];
 
 interface SettingsDialogProps {
   open: boolean;
@@ -106,6 +116,7 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJson }: SettingsDialogProps) {
+  const { theme, setTheme } = useTheme();
   const [apiKey, setApiKey] = React.useState(settings.apiKey);
   const [region, setRegion] = React.useState<Region>(settings.region);
   const [refreshSeconds, setRefreshSeconds] = React.useState(settings.refreshSeconds);
@@ -215,7 +226,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
         >
           {/* Tablist sempre visibile, fuori dall'area scrollabile */}
           <div className="shrink-0 border-b border-white/[0.06] px-5 py-2.5">
-            <TabsList className="grid h-8 w-full grid-cols-3 gap-1 border border-white/[0.06] bg-white/[0.03]! p-0.5">
+            <TabsList className="grid h-8 w-full grid-cols-4 gap-1 border border-white/[0.06] bg-white/[0.03]! p-0.5">
               <TabsTrigger
                 value="connection"
                 className="h-7 gap-1.5 text-xs text-zinc-400! data-[state=active]:border-white/10! data-[state=active]:bg-white/[0.08]! data-[state=active]:text-zinc-100!"
@@ -229,6 +240,13 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
               >
                 <BellRing className="size-3.5" />
                 Avvisi
+              </TabsTrigger>
+              <TabsTrigger
+                value="aspetto"
+                className="h-7 gap-1.5 text-xs text-zinc-400! data-[state=active]:border-white/10! data-[state=active]:bg-white/[0.08]! data-[state=active]:text-zinc-100!"
+              >
+                <Palette className="size-3.5" />
+                Aspetto
               </TabsTrigger>
               <TabsTrigger
                 value="data"
@@ -428,7 +446,44 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
               </div>
             </TabsContent>
 
-            {/* ---------------- Tab 3: Dati ---------------- */}
+            {/* ---------------- Tab 3: Aspetto (I78) ---------------- */}
+            <TabsContent value="aspetto" className="mt-0 space-y-4 outline-none">
+              <div className="space-y-2">
+                <Label htmlFor="theme-select" className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+                  <Palette className="size-3.5 text-zinc-400" />
+                  Tema dell&apos;interfaccia
+                </Label>
+                <Select value={theme ?? "dark"} onValueChange={(v) => setTheme(v)}>
+                  <SelectTrigger id="theme-select" className={selectTriggerClass}>
+                    <SelectValue placeholder="Scegli un tema" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-zinc-950 text-zinc-100">
+                    {THEME_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value} className="text-xs">
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  La scelta si applica subito e resta salvata in questo browser (indipendente dalle altre
+                  impostazioni). Il tema chiaro è pensato per stanze illuminate o stampa; grafici e blocchi
+                  JSON restano leggibili su entrambi i fondi.
+                </p>
+              </div>
+
+              <Separator className="bg-white/[0.06]" />
+
+              <div className="flex items-start gap-2 text-[11px] leading-relaxed text-zinc-500">
+                <Sun className="mt-0.5 size-3.5 shrink-0 text-zinc-400" />
+                <p>
+                  Scorciatoia: l&apos;icona sole/luna nell&apos;intestazione alterna subito chiaro e scuro senza
+                  aprire questa finestra.
+                </p>
+              </div>
+            </TabsContent>
+
+            {/* ---------------- Tab 4: Dati ---------------- */}
             <TabsContent value="data" className="mt-0 space-y-4 outline-none">
               <div className="space-y-2">
                 <Label htmlFor="json-paste" className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">

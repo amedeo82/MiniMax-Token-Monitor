@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline, Layers, Timer, PiggyBank, Coffee } from "lucide-react";
+import { TrendingDown, TrendingUp, Activity, Hourglass, Gauge, Download, Database, ShieldCheck, AlertTriangle, Info, Spline, Layers, Timer, PiggyBank, Coffee, Printer } from "lucide-react";
 
 export interface HistoryPoint {
   t: number;
@@ -51,6 +51,8 @@ interface HistoryChartProps {
   onWindowChange: (w: "interval" | "weekly") => void;
   /** Punti attualmente conservati sul server (I16); null = server non raggiunto. */
   serverCount?: number | null;
+  /** I75 — lancia la stampa del report settimanale (assente → voce non mostrata, es. vista compatta). */
+  onStampaReport?: () => void;
 }
 
 interface ChartDatum {
@@ -86,7 +88,7 @@ async function exportHourlyFromServer(format: "csv" | "json"): Promise<void> {
 }
 
 /** Grafico dell'andamento della quota rimanente nel tempo. */
-export function HistoryChart({ history, window: win, onWindowChange, serverCount = null }: HistoryChartProps) {
+export function HistoryChart({ history, window: win, onWindowChange, serverCount = null, onStampaReport }: HistoryChartProps) {
   const [showSma, setShowSma] = React.useState(false);
   /** I32: overlay dei cicli di finestra (fasce alternate + marker dei reset). */
   const [showCycles, setShowCycles] = React.useState(true);
@@ -205,6 +207,19 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="border-white/10! bg-zinc-950! text-zinc-100!">
+              {onStampaReport ? (
+                <>
+                  <DropdownMenuItem
+                    disabled={history.length < 2}
+                    onClick={onStampaReport}
+                    className="text-xs! focus:bg-white/[0.08]! focus:text-zinc-100! data-[disabled]:opacity-40"
+                  >
+                    <Printer className="size-3.5" />
+                    Stampa report settimanale
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-white/[0.06]!" />
+                </>
+              ) : null}
               <DropdownMenuLabel className="text-[11px]! text-zinc-500!">Storico locale</DropdownMenuLabel>
               <DropdownMenuItem
                 disabled={history.length === 0}
@@ -404,7 +419,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
   );
 }
 
-interface TrendStats {
+export interface TrendStats {
   /** Velocità media di consumo in punti percento all'ora (positiva = consumo). */
   ratePerHour: number | null;
   /** Tempo stimato (ms) fino all'esaurimento, se il consumo prosegue lineare. */

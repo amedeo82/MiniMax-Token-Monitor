@@ -10,6 +10,10 @@
  * `scroll-margin-top` (classe `.mm-anchor` in globals.css), che legge la
  * variabile CSS `--nav-offset` = altezza header + 56px (calcolata al mount).
  * Su schermi stretti la barra scorre orizzontalmente.
+ *
+ * I74 — la logica di scrollspy è estratta in `useScrollSpySezioni()` e
+ * condivisa con `BottomNav` (barra inferiore su mobile): stesso stato attivo,
+ * stessa `--nav-offset`, due superfici diverse.
  */
 
 import * as React from "react";
@@ -32,7 +36,16 @@ export const SEZIONI: Sezione[] = [
   { id: "eventi", label: "Eventi" },
 ];
 
-export function SectionNav() {
+/**
+ * Scrollspy condiviso (I66 nav superiore / I74 barra mobile): misura l'header,
+ * imposta `--nav-offset` e osserva le 8 sezioni. Ritorna [sezione attiva,
+ * setter manuale (usato al click per il feedback immediato), offset misurato].
+ */
+export function useScrollSpySezioni(): [
+  string,
+  React.Dispatch<React.SetStateAction<string>>,
+  number,
+] {
   const [attiva, setAttiva] = React.useState<string>(SEZIONI[0].id);
   const [offset, setOffset] = React.useState(130);
 
@@ -61,6 +74,12 @@ export function SectionNav() {
     }
     return () => osservatore.disconnect();
   }, [offset]);
+
+  return [attiva, setAttiva, offset];
+}
+
+export function SectionNav() {
+  const [attiva, setAttiva, offset] = useScrollSpySezioni();
 
   return (
     <nav

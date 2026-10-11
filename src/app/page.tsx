@@ -14,6 +14,10 @@ import { PanoramicTable } from "@/components/model-table";
 import { LongTermAnalysis } from "@/components/analysis-panel";
 import { DiagnosticaPanel } from "@/components/diagnostica-panel";
 import { SectionNav } from "@/components/section-nav";
+import { BottomNav } from "@/components/bottom-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { PrintReport } from "@/components/print-report";
+import { stampaReportSettimanale } from "@/lib/print";
 import { SectionBoundary } from "@/components/section-boundary";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TabIdentity } from "@/lib/tab-identity";
@@ -622,10 +626,10 @@ export default function DashboardPage() {
   /* ---------------------------- render ----------------------------- */
   return (
     <div className="relative min-h-screen bg-[#09090b] text-zinc-100">
-      {/* Decorazioni di sfondo */}
+      {/* Decorazioni di sfondo (no-print: I75 — sulla carta non servono) */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0"
+        className="no-print pointer-events-none fixed inset-0"
         style={{
           background:
             "radial-gradient(700px 380px at 12% -5%, rgba(244,63,94,0.10), transparent 60%), radial-gradient(800px 420px at 88% 0%, rgba(245,158,11,0.07), transparent 60%)",
@@ -681,6 +685,8 @@ export default function DashboardPage() {
               >
                 <Settings2 className="size-4" />
               </Button>
+              {/* I78 — alternanza rapida tema chiaro/scuro */}
+              <ThemeToggle />
               {/* I73 — uscita dalla modalità compatta (torna alla dashboard completa) */}
               {compact ? (
                 <Button
@@ -752,8 +758,13 @@ export default function DashboardPage() {
 
         {/* ------------------------------ Main ------------------------------ */}
         <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
-        {/* I66 — navigazione interna sticky con scrollspy (assente in modalità compatta) */}
-        {!compact ? <SectionNav /> : null}
+        {/* I66 — navigazione sticky con scrollspy (I74: su <md la sostituisce la barra inferiore;
+            entrambe assenti in modalità compatta) */}
+        {!compact ? (
+          <div className="hidden md:block">
+            <SectionNav />
+          </div>
+        ) : null}
 
           {/* Errore */}
           {error ? (
@@ -893,6 +904,7 @@ export default function DashboardPage() {
                     window={chartWindow}
                     onWindowChange={setChartWindow}
                     serverCount={serverCount}
+                    onStampaReport={() => stampaReportSettimanale()}
                   />
                 </SectionBoundary>
               </div>
@@ -983,6 +995,10 @@ export default function DashboardPage() {
                   <EventLog events={events} onClear={handleClearEvents} serverCount={serverEventsCount} />
                 </SectionBoundary>
               </div>
+
+              {/* I75 — report settimanale stampabile: invisibile a schermo, unico contenuto
+                  del foglio quando si stampa via «Stampa report settimanale» (body.print-report) */}
+              <PrintReport history={history} win={chartWindow} demo={settings.demoMode} />
             </>
             )
           ) : loading ? (
@@ -1013,6 +1029,15 @@ export default function DashboardPage() {
             </p>
           </div>
         </footer>
+        ) : null}
+
+        {/* I74 — barra di navigazione inferiore su mobile (fuori dalla vista compatta)
+            + spaziatore che evita che il footer resti coperto dalla barra fissa */}
+        {!compact ? (
+          <>
+            <BottomNav />
+            <div aria-hidden className="h-16 md:hidden" />
+          </>
         ) : null}
       </div>
 

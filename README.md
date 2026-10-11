@@ -37,10 +37,12 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - Polling automatico configurabile con **backoff esponenziale con jitter** (I51: su errore il ritardo cresce fino a 10 min e rispetta il Retry-After dell'API; il proxy ritenta gli errori transitori), **fallback automatico sull'endpoint alternativo `coding_plan/remains`** (I18: se il primario sparisce — 404/405/410/501 o risposta non-JSON — il rilevamento continua senza intervento, con evento nel registro), import manuale di una risposta JSON, modalità demo
 - **PWA installabile con cache offline** (I52): manifest, icone, shell e ultimo snapshot validi in cache; il Service Worker conserva la chiave SOLO in IndexedDB (mai in cache/log)
 - **Titolo e favicon dinamici** (I67): residuo 5h nel titolo del tab e mini-ring colorato come favicon
-- **Navigazione interna sticky con scrollspy** (I66): 8 sezioni ancorate con evidenza della sezione visibile
+- **Navigazione interna sticky con scrollspy** (I66): 8 sezioni ancorate con evidenza della sezione visibile; **su telefono diventa barra fissa in basso** (I74) con gli stessi target e la stessa sezione attiva
 - **Selettore intervallo temporale** (I69): preset 6h/24h/3g/7g/30g/tutto che restringono grafico, statistiche, ritmo e analisi (la diagnostica resta sull'intero storico)
 - **Error boundary per sezione** (I76): un crash in un pannello non porta più giù la pagina — skeleton di fallback con «Riprova» per ogni sezione
 - **Modalità compatta / widget** (I73): apri `/?compact=1` per solo anelli + countdown + ritmo (schermi secondari, compatibile con la PWA)
+- **Tema chiaro opzionale** (I78): toggle sole/luna nell'header o tab «Aspetto» delle impostazioni (Sistema/Chiaro/Scuro, default scuro invariato); il tema scuro resta quello di progetto, il JSON grezzo resta scuro anche in chiaro
+- **Report settimanale stampabile** (I75): voce «Stampa report settimanale» nel menu Esporta → il foglio contiene SOLO il report (verdetto lineare+EWMA, cicli e spreco, consumo per giorno, calendario); Ctrl+P diretto produce comunque una pagina leggibile senza cromo
 
 **Analisi di utilizzo**
 - Grafico storico della quota (finestra 5h o settimanale) con consumo medio in %/h, **media mobile** attivabile (SMA-10) e **overlay dei cicli** (fasce alternate per finestra + marker dei reset rilevati)
@@ -68,8 +70,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 239 test / 731 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, anomalie/campionamento/EWMA, fallback endpoint, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 183 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 249 test / 761 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 203 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 
 ---
 
