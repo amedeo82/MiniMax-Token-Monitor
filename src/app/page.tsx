@@ -128,6 +128,9 @@ export default function DashboardPage() {
   const pollAttemptRef = React.useRef(0);
   const lastRetryAfterRef = React.useRef<number | null>(null);
   const pollDelayRef = React.useRef<number | null>(null);
+  /* I18 — true se l'ultimo rilevamento riuscito è arrivato dall'endpoint
+     alternativo coding_plan/remains (per gli eventi solo su transizione). */
+  const fallbackActiveRef = React.useRef(false);
   /** Mirror sincrono delle impostazioni per scheduler/fetch senza re-trigger. */
   const settingsRef = React.useRef(settings);
 
@@ -315,11 +318,34 @@ export default function DashboardPage() {
           error?: ApiError;
           fetchedAt?: number;
           endpoint?: string;
+          fallback?: { used: boolean; primaryEndpoint?: string; reason?: string };
+          fallbackTried?: boolean;
         };
 
         setLastEndpoint(json.endpoint ?? "");
         setLastFetch(json.fetchedAt ?? Date.now());
         lastRetryAfterRef.current = json.ok ? null : json.error?.retryAfterMs ?? null;
+
+        /* I18 — evento tecnico SOLO sulla transizione primario ↔ fallback
+           (nessuno spam a ogni poll): attivazione quando i dati arrivano da
+           coding_plan/remains, ritorno al primario al primo successo senza
+           fallback. Tornare al primario con un errore è silenzioso: se ne
+           occupa già l'evento «Rilevamento fallito» di markError. */
+        const fbUsed = json.ok === true && json.fallback?.used === true;
+        if (fbUsed && !fallbackActiveRef.current) {
+          fallbackActiveRef.current = true;
+          addEvents(
+            makeEvent(
+              "info",
+              `Endpoint primario non disponibile (${json.fallback?.reason ?? "motivo non specificato"}): dati da coding_plan/remains`,
+            ),
+          );
+        } else if (!fbUsed && fallbackActiveRef.current && json.ok) {
+          fallbackActiveRef.current = false;
+          addEvents(makeEvent("info", "Ritorno all'endpoint primario token_plan/remains"));
+        } else if (!fbUsed && fallbackActiveRef.current) {
+          fallbackActiveRef.current = false;
+        }
 
         if (json.ok && json.data) {
           try {

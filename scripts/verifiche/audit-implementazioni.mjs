@@ -191,6 +191,18 @@ const CHECKS = [
   check.simbolo("I51", "src/app/page.tsx", "delayAfterFailure", "wiring scheduler client"),
   check.simbolo("I51", "src/app/api/minimax/usage/route.ts", "parseRetryAfterMs|retryAfterMs", "wiring retry transitorio proxy"),
   check.simbolo("I51", "src/app/api/minimax/usage/route.ts", "TRANSIENT_HTTP", "classificazione errori transitori"),
+
+  /* --- I18 fallback coding_plan/remains ------------------------------ */
+  check.simbolo("I18", "src/lib/minimax.ts", "export const CODING_PLAN_ENDPOINTS", "endpoint alternativi per regione"),
+  check.simbolo("I18", "src/lib/minimax.ts", "coding_plan/remains", "URL alternativo dichiarato"),
+  check.simbolo("I18", "src/lib/minimax.ts", "export const FALLBACK_TRIGGER_HTTP", "trigger HTTP endpoint scomparso"),
+  check.simbolo("I18", "src/lib/minimax.ts", "export function shouldTryFallback", "decisione di fallback pura"),
+  check.simbolo("I18", "src/app/api/minimax/usage/route.ts", "shouldTryFallback|CODING_PLAN_ENDPOINTS", "wiring fallback nel proxy"),
+  check.simbolo("I18", "src/app/api/minimax/usage/route.ts", "tryEndpoint", "campagna di fetch riusabile primario/fallback"),
+  check.simbolo("I18", "src/app/api/minimax/usage/route.ts", "fallbackTried", "annotazione fallback tentato senza successo"),
+  check.simbolo("I18", "src/app/page.tsx", "fallbackActiveRef", "stato fallback nel client"),
+  check.simbolo("I18", "src/app/page.tsx", "coding_plan/remains", "evento tecnico su transizione fallback"),
+  check.file("I18", "tests/lib/minimax-fallback.test.ts", "test dedicati al fallback"),
   check.files("I52", ["public/sw.js", "public/sw-shared.js", "src/app/manifest.ts", "src/components/pwa-register.tsx", "public/icon-192.png", "public/icon-512.png", "public/icon-180.png"], "artefatti PWA"),
   check.simbolo("I52", "public/sw.js", "importScripts\\(\"/sw-shared.js\"\\)", "SW usa la fonte unica"),
   check.simbolo("I52", "public/sw.js", "indexedDB", "segreti solo in IndexedDB (ADR-14)"),

@@ -42,6 +42,59 @@ export const REGION_LABELS: Record<Region, string> = {
   cn: "Cina (minimaxi.com)",
 };
 
+/**
+ * I18 — Endpoint alternativo `coding_plan/remains` (host API, origine console/openplatform;
+ * riferimenti: issue #88, CodexBar, dsh-provider-usage → docs/01 §4).
+ *
+ * La via di I18 è l'accettazione documentale del verdetto V4 = IDENTICI del 09/10/2026
+ * (chiave reale, campagna Task 23; unica evidenza superstite: transcript chat — gli esiti
+ * sono persi col secondo rollback dell'11/10): coding_plan/remains risponde con la STESSA
+ * struttura e gli stessi dati di token_plan/remains, quindi il parser (`parseUsageResponse`)
+ * è condiviso senza modifiche. Una V4 fresca con chiave reale resta raccomandata
+ * (runbook docs/05 §6) alla prima occasione.
+ */
+export const CODING_PLAN_ENDPOINTS: Record<Region, string> = {
+  eu: "https://api.minimax.io/v1/api/openplatform/coding_plan/remains",
+  cn: "https://api.minimaxi.com/v1/api/openplatform/coding_plan/remains",
+};
+
+/**
+ * I18 — Codici HTTP del primario che indicano ENDPOINT non disponibile (risorsa
+ * rimossa/spostata o metodo non accettato): sono l'unico caso HTTP in cui il
+ * fallback ha senso. 404 = risorsa assente, 405 = metodo non consentito,
+ * 410 = rimossa definitivamente, 501 = non implementata.
+ */
+export const FALLBACK_TRIGGER_HTTP: ReadonlySet<number> = new Set([404, 405, 410, 501]);
+
+/**
+ * I18 — Classificazione dell'esito di un tentativo verso il primario,
+ * consumata da `shouldTryFallback` per decidere se provare l'endpoint alternativo.
+ */
+export type PrimaryFailureKind =
+  | "none" // primario ok
+  | "http" // errore HTTP (vedi httpStatus)
+  | "bad_json" // risposta 2xx ma non interpretabile come JSON
+  | "auth" // 401/403 o status_code di business 1004: chiave rifiutata
+  | "network" // errore di rete (DNS, connessione rifiutata, …)
+  | "timeout"; // abort per timeout
+
+/**
+ * I18 — Decisione di fallback (funzione PURA, testata in tests/lib/minimax-fallback.test.ts):
+ * - SI, su `http` con stato in `FALLBACK_TRIGGER_HTTP` (endpoint primario verosimilmente
+ *   scomparso) e su `bad_json` (il primario risponde ma non è più l'API JSON attesa,
+ *   es. pagina di login HTML: segnale tipico di endpoint dismesso);
+ * - NO su `auth` (una chiave rifiutata lo sarebbe anche dal fallback: stesso piano di
+ *   autenticazione, verdetto V4 = IDENTICI — riprovare sarebbe solo rumore);
+ * - NO su `network`/`timeout` (transitori: la gestione corretta è il retry I51 con
+ *   backoff; i due host sono diversi ma un guasto locale di rete colpirebbe entrambi);
+ * - NO su `none` (nessun fallimento da compensare).
+ */
+export function shouldTryFallback(kind: PrimaryFailureKind, httpStatus?: number): boolean {
+  if (kind === "bad_json") return true;
+  if (kind === "http" && httpStatus !== undefined) return FALLBACK_TRIGGER_HTTP.has(httpStatus);
+  return false;
+}
+
 /** Un elemento di quota per un modello, per un tipo di finestra. */
 export interface QuotaWindow {
   /** Percentuale di quota rimanente (0–100). */
