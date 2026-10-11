@@ -386,3 +386,22 @@ Stage Summary:
 - VERDETTO FINALE: il lavoro committato il 09/10 è IRRIPRIBILILE dai bit — forense esaurita (dangling tutti ≤ 06/10, commit originali garbage-collected, nessuno stash/ref secondario, nessuna copia fuori dal workspace); l'unica via è la RICREAZIONE secondo il piano in 4 fasi, usando la chat come fonte delle specifiche e docs/04 §3 come tracciamento
 - Unica protezione reale contro un terzo rollback: REMOTE GIT fuori dal workspace — qualsiasi copia dentro /home/z/my-project (bundle, tar, download/) morirebbe col workspace stesso; fino al primo push ogni sessione riparte potenzialmente da zero
 - In attesa dall'utente: URL repository privato + Personal Access Token per configurare origin ed eseguire il push (oppure esecuzione autonoma coi comandi consegnati); la sanificazione pre-push è pronta ma NON eseguita in attesa di conferma
+
+---
+Task ID: 17
+Agent: Super Z (main)
+Task: Configurazione remote GitHub + sanificazione pre-push + primo push del progetto (su consegna URL e PAT da parte dell'utente: repo amedeo82/MiniMax-Token-Monitor)
+
+Work Log:
+- Verifica pre-push via API GitHub col PAT fornito dall'utente: repo amedeo82/MiniMax-Token-Monitor — privato: True (requisito rispettato: contiene db/custom.db con dati d'uso reali), size 0 (vuoto), default branch main, permessi push/admin OK
+- Riferimenti ai file issue88/99 trovati in docs/01 (tabelle fonti §fonti e appendice file): aggiornati PRIMA della rimozione con nota di sanificazione e fonte sostitutiva (le issue #88/#99 restano consultabili pubbliche su GitHub)
+- Commit di sanificazione: untrack .env (resta su disco locale, conteneva solo DATABASE_URL — nessuna chiave), git rm scripts/issue88.html/json + issue99.html/json (token JWT dentro), docs/01 aggiornato; grep anti-key post-sanificazione su tutti i file tracciati = ZERO token (pattern eyJ*/sk-*/ghp_*)
+- Remote configurato: origin = https://github.com/amedeo82/MiniMax-Token-Monitor.git (PAT solo nel .git/config locale — non tracciato, non pushato)
+- Primo push: `git push -u origin main` EXIT=0 — branch main creato sul remote, tracking impostato; verifica con `git ls-remote origin main`: SHA remoto = SHA locale (push integrale)
+- Push di chiusura task: commit worklog Task 17 + snapshot DB runtime (poller ancora attivo) + `git push origin main`; verifica finale SHA coincidenti e albero pulito
+
+Stage Summary:
+- Il progetto ha ora una copia integrale FUORI dal workspace: un eventuale terzo rollback non causerà più perdite — recovery = `git clone` + ripristino .env
+- Ciclo operativo da oggi: a fine di ogni task → commit codice/documenti + commit DB separato (I30) + `git push origin main`
+- Raccomandazione all'utente consegnata in chat: ruotare il PAT dopo la verifica (è transitato in chat in chiaro e resta nel .git/config locale); se ruotato, fornire il nuovo token alla sessione successiva
+- Prossimo passo di progetto: avvio fase 1 del piano di ricreazione (fondamenta: I50 test suite, I51 backoff, I55 audit tool) su conferma utente
