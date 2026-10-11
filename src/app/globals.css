@@ -158,6 +158,14 @@
    componente, qui sotto html:not(.dark) le ri-mappiamo su equivalenti leggibili
    su bianco (stessa tecnica delle regole hover dark: dichiarazioni unlayered con
    specificità maggiore delle utilities). Il tema scuro resta INTATTO.      */
+/* ── I83 — Correzione leggibilità (12/10): le classi con PREFISSO VARIANTE
+   (data-[state=active]:…), con SUFFISSO ! (text-zinc-100!) o con OPACITÀ
+   (text-amber-200/70) sono nomi distinti nel DOM e sfuggivano ai selettori per
+   classe → tab attivi bianco su bianco, warning/info quasi invisibili, icone
+   registro eventi deboli. Cure: selettori per STATO, varianti opacità, toni
+   400/500→600 per testo/icone, hover scuri, blocco layered per le ! (le
+   utilities !important layered battono le important unlayered — Cascade 5).
+   Dettagli in docs/03 §5.15.                                                   */
 
 html:not(.dark) {
   color-scheme: light;
@@ -198,8 +206,7 @@ html:not(.dark) .bg-white\/\[0\.03\] {
   background-color: rgb(0 0 0 / 0.03);
 }
 html:not(.dark) .bg-white\/\[0\.04\],
-html:not(.dark) .bg-white\/\[0\.05\],
-html:not(.dark) .bg-white\/5\! {
+html:not(.dark) .bg-white\/\[0\.05\] {
   background-color: rgb(0 0 0 / 0.04);
 }
 html:not(.dark) .bg-white\/\[0\.06\],
@@ -219,6 +226,63 @@ html:not(.dark) .bg-black\/20 {
 /* Testi: scala zinc invertita per il contrasto su bianco */
 html:not(.dark) .text-zinc-100 {
   color: rgb(24 24 27);
+}
+
+/* I83 — Testi accent con MODIFICATORE DI OPACITÀ: sono nomi di classe DISTINTI
+   da quelli senza opacità (text-amber-200/70 ≠ text-amber-200) e le regole sopra
+   non li raggiungono: su bianco restavano quasi invisibili (banner avvisi, card
+   EWMA, PacePanel, boundary). 700/800 per /70–/90, 900 per la /50.        */
+html:not(.dark) .text-rose-100 {
+  color: var(--color-rose-800);
+}
+html:not(.dark) .text-rose-200\/90 {
+  color: var(--color-rose-700);
+}
+html:not(.dark) .text-rose-200\/60 {
+  color: var(--color-rose-800);
+}
+html:not(.dark) .text-amber-200\/90,
+html:not(.dark) .text-amber-200\/80,
+html:not(.dark) .text-amber-200\/70 {
+  color: var(--color-amber-800);
+}
+html:not(.dark) .text-amber-200\/50 {
+  color: var(--color-amber-900);
+}
+html:not(.dark) .text-emerald-200\/70 {
+  color: var(--color-emerald-700);
+}
+html:not(.dark) .text-violet-200\/70 {
+  color: var(--color-violet-700);
+}
+html:not(.dark) .text-sky-200\/70 {
+  color: var(--color-sky-700);
+}
+html:not(.dark) .text-sky-300\/80 {
+  color: var(--color-sky-700);
+}
+
+/* I83 — Toni 400/500 usati come TESTO o ICONA: su bianco contrasto insufficiente
+   (badge con icona del registro eventi, valori grandi degli anelli, icone KPI,
+   link chiave, errore di connessione) → 600. Le tinte bg-*400/10 e i bordi
+   /25–/30 restano invariati (decorativi e coerenti con le tinte chiare).  */
+html:not(.dark) .text-rose-400 {
+  color: var(--color-rose-600);
+}
+html:not(.dark) .text-amber-400 {
+  color: var(--color-amber-600);
+}
+html:not(.dark) .text-emerald-400 {
+  color: var(--color-emerald-600);
+}
+html:not(.dark) .text-sky-400 {
+  color: var(--color-sky-600);
+}
+html:not(.dark) .text-orange-400 {
+  color: var(--color-orange-600);
+}
+html:not(.dark) .text-emerald-500 {
+  color: var(--color-emerald-600);
 }
 html:not(.dark) .text-zinc-200 {
   color: rgb(39 39 42);
@@ -275,40 +339,117 @@ html:not(.dark) .bg-rose-950\/40 {
 html:not(.dark) .bg-amber-950\/40 {
   background-color: rgb(255 251 235 / 0.9);
 }
+html:not(.dark) .bg-amber-950\/20 {
+  background-color: rgb(255 251 235 / 0.85);
+}
 
 /* Menu, select e dialog (bg-zinc-950 → bianco, testo → scuro) */
-html:not(.dark) .bg-zinc-950,
-html:not(.dark) .bg-zinc-950\! {
+html:not(.dark) .bg-zinc-950 {
   background-color: #ffffff;
 }
 html:not(.dark) .bg-zinc-950\/95 {
   background-color: rgb(255 255 255 / 0.97);
 }
-html:not(.dark) .text-zinc-100\! {
-  color: rgb(24 24 27) !important;
+
+/* I83 — Hover di testo illeggibili su bianco (toni 200–300) → toni scuri.
+   Il link «Trova nella console» scurisce (rose-700) per dare feedback.
+   (Le varianti con suffisso ! sono nel blocco @layer utilities in fondo.) */
+html:not(.dark) .hover\:text-zinc-200:hover {
+  color: rgb(39 39 42);
+}
+html:not(.dark) .hover\:text-zinc-300:hover {
+  color: rgb(63 63 70);
+}
+html:not(.dark) .hover\:text-rose-300:hover {
+  color: var(--color-rose-700);
 }
 
-/* Hover white-alpha → black-alpha (equivalenti light delle regole dark sopra) */
-html:not(.dark) .hover\:bg-white\/\[0\.08\]\!:hover,
+/* Hover white-alpha → black-alpha (equivalenti light delle regole dark sopra).
+   Solo le classi SENZA suffisso !: quelle con ! sono nel blocco layered. */
 html:not(.dark) .hover\:bg-white\/\[0\.08\]:hover {
   background-color: rgb(0 0 0 / 0.07);
 }
-html:not(.dark) .hover\:bg-white\/5\!:hover,
-html:not(.dark) .hover\:bg-white\/5:hover {
+html:not(.dark) .hover\:bg-white\/5:hover,
+html:not(.dark) .hover\:bg-white\/\[0\.05\]:hover {
   background-color: rgb(0 0 0 / 0.05);
 }
-html:not(.dark) .hover\:bg-white\/\[0\.02\]\!:hover {
-  background-color: rgb(0 0 0 / 0.03);
-}
 
-/* Stato attivo di toggle/tab */
-html:not(.dark) [data-slot="toggle-group-item"][data-state="on"],
-html:not(.dark) [data-slot="tabs-trigger"][data-state="active"] {
-  background-color: rgb(0 0 0 / 0.07);
-}
+/* I83 — Stato attivo di toggle/tab SENZA utilities !: vince già la specificità
+   unlayered; le versioni con ! sono nel blocco @layer utilities in fondo. */
 html:not(.dark) [data-slot="tabs-trigger"][data-state="inactive"]:hover {
   color: rgb(39 39 42);
   background-color: rgb(0 0 0 / 0.04);
+}
+
+/* ── I83 — Blocco LAYERED per le classi con suffisso ! e gli stati attivi ────
+   Le utilities con ! (es. hover:bg-white/[0.08]!) sono emesse da Tailwind v4
+   con !important DENTRO @layer utilities, e per le dichiarazioni important un
+   layer batte SEMPRE le regole unlayered (Cascade 5 §6.4 — verificato al
+   browser: la versione unlayered di queste regole NON veniva applicata).
+   Stesso layer, posizione successiva e specificità maggiore (0,3,1+) → vincono. */
+@layer utilities {
+  /* Stati attivi di tab e chips (batte data-[state=…]:bg-white/[0.08]! ecc.) */
+  html:not(.dark) [data-slot="tabs-trigger"][data-state="active"] {
+    background-color: rgb(0 0 0 / 0.07) !important;
+    border-color: rgb(0 0 0 / 0.12) !important;
+    color: rgb(24 24 27) !important;
+  }
+  html:not(.dark) [data-slot="toggle-group-item"][data-state="on"] {
+    background-color: rgb(0 0 0 / 0.07) !important;
+    border-color: rgb(0 0 0 / 0.12) !important;
+    color: rgb(24 24 27) !important;
+  }
+  /* Superfici e testi con ! (tab impostazioni, menu Esporta, separatori) */
+  html:not(.dark) .text-zinc-400\! {
+    color: rgb(82 82 91) !important;
+  }
+  html:not(.dark) .text-zinc-100\! {
+    color: rgb(24 24 27) !important;
+  }
+  html:not(.dark) .bg-zinc-950\! {
+    background-color: #ffffff !important;
+  }
+  html:not(.dark) .bg-white\/5\! {
+    background-color: rgb(0 0 0 / 0.04) !important;
+  }
+  html:not(.dark) .bg-white\/\[0\.03\]\! {
+    background-color: rgb(0 0 0 / 0.03) !important;
+  }
+  html:not(.dark) .bg-white\/\[0\.04\]\! {
+    background-color: rgb(0 0 0 / 0.04) !important;
+  }
+  html:not(.dark) .bg-white\/\[0\.06\]\! {
+    background-color: rgb(0 0 0 / 0.06) !important;
+  }
+  html:not(.dark) .border-white\/10\! {
+    border-color: rgb(0 0 0 / 0.12) !important;
+  }
+  /* Focus del menu Esporta (voci bianche su bianco senza questa regola) */
+  html:not(.dark) .focus\:bg-white\/\[0\.08\]\!:focus {
+    background-color: rgb(0 0 0 / 0.06) !important;
+  }
+  html:not(.dark) .focus\:text-zinc-100\!:focus {
+    color: rgb(24 24 27) !important;
+  }
+  /* Hover con ! (bottoni, righe tabella, voci menu) */
+  html:not(.dark) .hover\:bg-white\/\[0\.08\]\!:hover {
+    background-color: rgb(0 0 0 / 0.07) !important;
+  }
+  html:not(.dark) .hover\:bg-white\/5\!:hover {
+    background-color: rgb(0 0 0 / 0.05) !important;
+  }
+  html:not(.dark) .hover\:bg-white\/\[0\.02\]\!:hover {
+    background-color: rgb(0 0 0 / 0.03) !important;
+  }
+  html:not(.dark) .hover\:bg-white\/\[0\.06\]\!:hover {
+    background-color: rgb(0 0 0 / 0.05) !important;
+  }
+  html:not(.dark) .hover\:text-zinc-200\!:hover {
+    color: rgb(39 39 42) !important;
+  }
+  html:not(.dark) .hover\:text-rose-300\!:hover {
+    color: var(--color-rose-700) !important;
+  }
 }
 
 /* Grafici e SVG: griglie/assi disegnati in white-alpha → black-alpha.
