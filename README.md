@@ -34,7 +34,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - Anelli e barre per ogni finestra del piano (5h / settimanale / 24h video) con badge di stato e countdown vivi (Europe/Rome); anelli principali con **colore continuo HSL + glow dinamico + count-up** (I65)
 - **Avvisi di soglia per finestra** (I28): banner fisso, toast e notifiche del browser quando la quota scende sotto le soglie — attenzione e critiche configurabili **indipendentemente** per finestra 5 ore / 24 ore (video) / settimanale (default 25% / 10%) e al reset delle finestre; con **notifiche a tab chiuso via Service Worker** (I52/ADR-14)
 - **Registro eventi**: timeline locale (reset rilevati, soglie superate, errori di rilevamento) raggruppata per giorno, con export e svuotamento (locale + archivio server)
-- Polling automatico configurabile con **backoff esponenziale con jitter** (I51: su errore il ritardo cresce fino a 10 min e rispetta il Retry-After dell'API; il proxy ritenta gli errori transitori), import manuale di una risposta JSON, modalità demo
+- Polling automatico configurabile con **backoff esponenziale con jitter** (I51: su errore il ritardo cresce fino a 10 min e rispetta il Retry-After dell'API; il proxy ritenta gli errori transitori), **fallback automatico sull'endpoint alternativo `coding_plan/remains`** (I18: se il primario sparisce — 404/405/410/501 o risposta non-JSON — il rilevamento continua senza intervento, con evento nel registro), import manuale di una risposta JSON, modalità demo
 - **PWA installabile con cache offline** (I52): manifest, icone, shell e ultimo snapshot validi in cache; il Service Worker conserva la chiave SOLO in IndexedDB (mai in cache/log)
 - **Titolo e favicon dinamici** (I67): residuo 5h nel titolo del tab e mini-ring colorato come favicon
 - **Navigazione interna sticky con scrollspy** (I66): 8 sezioni ancorate con evidenza della sezione visibile
@@ -59,8 +59,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Archivio eventi** oltre il diario locale di 200 voci (fino a 5.000 eventi / 180 giorni), stesso schema di sincronizzazione
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 146 test / 463 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff e **parità TS↔Service Worker**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 116 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 156 test / 496 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **fallback endpoint (I18)** e **parità TS↔Service Worker**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 126 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 
 ---
 

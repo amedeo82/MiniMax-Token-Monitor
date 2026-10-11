@@ -65,7 +65,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 
 | File | Responsabilità |
 |------|----------------|
-| `src/lib/minimax.ts` | Tipi (`UsageSnapshot`, `ModelQuota`, `QuotaWindow`, `ApiError`), `REGION_ENDPOINTS`, `parseUsageResponse()` (tollerante: risposta piatta o sotto `data`, epoch s/ms, status numerici o testuali), `statusLabel()`, `consumedPercent()`, `inferServerTime()`, `quotaLevel()`, `modelLabel()`, `EXTRA_ENDPOINTS` |
+| `src/lib/minimax.ts` | Tipi (`UsageSnapshot`, `ModelQuota`, `QuotaWindow`, `ApiError`), `REGION_ENDPOINTS`, **I18**: `CODING_PLAN_ENDPOINTS` (endpoint alternativo per regione), `FALLBACK_TRIGGER_HTTP` {404,405,410,501}, `PrimaryFailureKind`, `shouldTryFallback()` (decisione pura di fallback), `parseUsageResponse()` (tollerante: risposta piatta o sotto `data`, epoch s/ms, status numerici o testuali), `statusLabel()`, `consumedPercent()`, `inferServerTime()`, `quotaLevel()`, `modelLabel()`, `EXTRA_ENDPOINTS` |
 | `src/lib/time.ts` | `TZ_ROME`, `LOCALE_IT`, `toDate()` (accetta epoch s/ms, ISO, Date), `formatFullRome/DateTimeRome/TimeRome/DateRome/ShortRome`, `romeZoneInfo()`, `formatCountdown()`, `formatDuration()`, `msUntil()`, `windowProgress()` |
 | `src/lib/usage-events.ts` | Motore di monitoraggio: registro eventi (`mm-dash-events-v1`, max 200: `loadEvents/appendEvents/clearEvents/replaceEvents/makeEvent`), `deriveBanner()` (banner quota bassa stateless), `evaluateTransitions()` (soglie warn/crit + reset tra due snapshot), `canNotify()/notifyBrowser()` (Notification API), `AlertConfig` con **soglie per tipo di finestra** (I28: `AlertThresholds {h5,h24,weekly}`, `windowThresholdKey()` risolve il tipo dalla durata reale start→end, `migrateLegacyThresholds()` per il vecchio formato globale) |
 | `src/lib/export.ts` | Esportazione locale: `historyToCsv()/eventsToCsv()` (CSV «;» + BOM UTF-8, Excel it-IT), `exportHistoryCsv/Json()`, `exportEventsCsv()`, `downloadTextFile()` |
@@ -75,7 +75,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
 | `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
 | `prisma/schema.prisma` | Modello `UsagePoint` (t unique, interval, weekly, source, region) — storico server-side, nessun dato sensibile |
-| `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano |
+| `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano; **I18**: campagna di fetch `tryEndpoint()` riusabile (ritenti transitori I51) per primario e fallback `coding_plan/remains` — sul fallimento definitivo per endpoint scomparso tenta l'alternativo e risponde con `fallback {used, primaryEndpoint, reason}` (o `fallbackTried: true`), mai su auth né su errori transitori |
 | `src/app/api/history/route.ts` | I16 persistenza storico (SQLite/Prisma): POST (upsert per `t`, validazione input, pruning FIFO a 10.000 punti + cutoff 90 giorni), GET (`?limit=&since=`, ordinato per `t`), DELETE (svuota). La chiave API non transita mai qui |
 | `src/app/api/events/route.ts` | I27 persistenza registro eventi (SQLite/Prisma): POST (upsert per `id`, validazione tipo/finestra/messaggio, max 500 eventi/richiesta, pruning a 5.000 eventi + cutoff 180 giorni), GET (`?limit=&since=&kind=`, ordinato per `t`), DELETE (svuota). Nessuna chiave API transita qui |
 | `src/components/quota-cards.tsx` | `ModelCard` (card per modello: due finestre con barre, countdown, badge stato), `MainWindows` (riepilogo finestre general), `CountsRow` (residuo/totale/consumato + nota su percentuali), `windowKindLabel()` (5h vs 24h dinamica) |
@@ -237,6 +237,36 @@ Stesso schema offline-first del §5.7, applicato agli eventi (reset, soglie, err
   gli eventi cancellati dal dispositivo);
 - **Privacy**: su DB arrivano solo timestamp, tipo, messaggio e % residua dell'evento;
   nessuna chiave API transita su `/api/events`.
+
+### 5.9 Fallback automatico sull'endpoint alternativo (I18)
+Resilienza contro lo scenario «l'endpoint primario `token_plan/remains` viene ritirato o
+smette di rispondere come API JSON»: il monitor non si ferma, ma continua a rilevare
+dall'endpoint alternativo `coding_plan/remains` (stessa struttura e stessi dati — verdetto
+V4 = IDENTICI del 09/10, accettazione documentale dopo la perdita degli esiti col secondo
+rollback; `docs/01` §4, `docs/05` §6):
+
+- **Decisione pura** (`lib/minimax.ts`): `shouldTryFallback(kind, httpStatus)` risponde SI
+  solo su HTTP 404/405/410/501 (`FALLBACK_TRIGGER_HTTP`: endpoint assente/rimosso/metodo
+  non accettato) e su `bad_json` (il primario risponde ma non è più JSON — es. pagina di
+  login HTML: segnale tipico di dismissione); NO su `auth` (401/403 o chiave rifiutata:
+  il fallback userebbe la stessa chiave), su `network`/`timeout` (transitori: interviene
+  il retry I51 con backoff) e su errori HTTP non catalogati;
+- **Proxy** (`api/minimax/usage/route.ts`): la campagna di fetch è estratta in
+  `tryEndpoint()` (1 tentativo + 2 ritenti transitori I51, timeout 12s per tentativo)
+  usata identicamente per primario e fallback; sul fallimento definitivo del primario con
+  trigger valido viene interrogato `CODING_PLAN_ENDPOINTS[region]` — successo → risposta
+  `ok:true` con `endpoint` = URL alternativo e `fallback {used: true, primaryEndpoint,
+  reason}`; fallback fallito a sua volta → prevale l'errore del PRIMARIO (più rilevante
+  per la diagnosi) con annotazione `fallbackTried: true`;
+- **Client** (`page.tsx`): `fallbackActiveRef` traccia la sorgente dell'ultimo rilevamento;
+  eventi tecnici «info» SOLO sulla transizione (attivazione: «Endpoint primario non
+  disponibile (motivo): dati da coding_plan/remains»; ritorno: «Ritorno all'endpoint
+  primario token_plan/remains») — nessuno spam a ogni poll; il ritorno al primario con
+  errore è silenzioso (lo copre già l'evento «Rilevamento fallito»); il pannello TechInfo
+  mostra comunque l'endpoint effettivamente usato (campo `endpoint` della risposta);
+- **Parser condiviso**: nessuna modifica a `parseUsageResponse` (V4 = IDENTICI); test
+  dedicati in `tests/lib/minimax-fallback.test.ts` (endpoint, trigger, decisione, parità
+  parser) + check I18 nell'audit (`docs/04` §3).
 
 ### 5.10 PWA / offline e notifiche a tab chiuso (I52, ADR-14)
 I52 rende la dashboard **installabile** e capace di avvisare anche a tab chiuso, senza

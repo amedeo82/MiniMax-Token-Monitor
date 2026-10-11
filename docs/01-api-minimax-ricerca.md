@@ -104,6 +104,15 @@ GET https://api.minimaxi.com/v1/api/openplatform/coding_plan/remains  ← Cina
   'Authorization' field…», `coding_plan` → «cookie is missing, log in again». I due
   servizi gestiscono l'auth in modo distinto (coerente con l'origine console/web di
   coding_plan); la compatibilità dei **dati** resta da confermare con chiave reale.
+- ✅ **Verdetto V4 = IDENTICI (09/10/2026, chiave reale — accettazione documentale, esiti
+  persi col rollback dell'11/10)**: stessa struttura e stessi dati → il parser
+  `parseUsageResponse` è condiviso senza modifiche. Da qui **I18**: il proxy
+  (`api/minimax/usage`) sul fallimento definitivo del primario per endpoint scomparso
+  (HTTP 404/405/410/501 o risposta non-JSON — `shouldTryFallback` in `lib/minimax.ts`)
+  ripete il rilevamento su `coding_plan/remains` (`CODING_PLAN_ENDPOINTS`) e risponde con
+  `fallback {used, primaryEndpoint, reason}`; nessun fallback su errori di autenticazione
+  né transitori (retry I51). Dettagli in `docs/03` §5.9; una V4 fresca resta raccomandata
+  (`docs/05` §6).
 
 ---
 

@@ -206,6 +206,14 @@ la compatibilità dei **dati** resta da confermare con chiave reale.
 `token_plan/remains` fallisse); se `ASIMMETRICI` o strutturalmente diversi → documentare
 in `docs/01` §4 e ridefinire I18.
 
+> **Stato (11/10/2026)**: il verdetto del 09/10 con chiave reale fu **IDENTICI**, ma gli
+> esiti sono **persi col secondo rollback dell'11/10** (unica evidenza superstite: transcript
+> chat). Su autorizzazione utente («procedi con I18») vale l'**accettazione documentale** di
+> quel verdetto: I18 è stato implementato e validato sui percorsi testabili senza chiave
+> (`docs/04` riga I18, test 156/156, audit 126/126). Una **V4 fresca con chiave reale resta
+> raccomandata** per riportare l'esito su artefatti formali: un esito diverso da IDENTICI
+> porterebbe a ridefinire I18.
+
 ---
 
 ## 7. V5 — i conteggi si popolano su alcuni piani?
@@ -292,6 +300,7 @@ vanno poi riportati in `docs/04` §4 (stato della verifica), `docs/01` (semantic
 | 2026-10-04 | Catena automatica (Task 7) | reale (via ADR-13) | ⚠️ **Setup + avvio**: cattura temporanea della chiave nel proxy (`ADR-13`, `docs/04` §5) + watcher `watcher-quick.sh` collaudato con chiave finta; il browser dell'anteprima ha fornito la chiave reale e la campagna è partita (rapide V4/V5/V1 `--once`/V6 + lunghe V1/V2) | nessuno (log di sessione perduto, vedi sotto) |
 | 2026-10-04→05 | V1/V2 lunghe + controprova V2 sul confine delle 17:00 | reale | ⚠️ **IN CORSO AL MOMENTO DELLA PERDITA**: il riavvio del workspace del 06/10 (04:53 UTC) ha terminato i processi e cancellato log, file chiave ed esiti prima della scrittura su `esiti/`; nessun verdetto recuperabile dagli artefatti → le verifiche tornano «da rieseguire» (§9) | nessuno (perduto col riavvio) |
 | 2026-10-06 | Chiusura amministrativa (I30) | — | Meccanismo di cattura RIMOSSO dal proxy (ritiro ADR-13, proxy ritestato 200 e senza scritture); DB controllato (351 punti: 126 api 02/10 + 225 demo, integro); toolkit e watcher restano pronti per una nuova campagna | — |
+| 2026-10-11 | Verifica proxy I18 (curl, chiave finta) | finta | ✓ fallback NON innescato su errore di autenticazione: risposta `ok:true` con passthrough `status_code 1004` sul primario `token_plan` (messaggio «login fail…», coerente con l'evidenza del 02/10), nessun campo `fallback`; trigger validati nei test (156/156) e audit 126/126 | — |
 
 > Le righe «non valida» servono a validare il toolkit e a raccogliere indizi; il
 > **verdetto definitivo** di ogni verifica richiede la Subscription Key reale (§9).

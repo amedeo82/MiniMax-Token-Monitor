@@ -487,3 +487,26 @@ Stage Summary:
 - Mapping finale degli item persi: I18 ⬜ (attende V4 fresca o accettazione documentale del verdetto V4=IDENTICI), I48/I49/I54/I56 ⬜ (verifiche da ri-eseguire, non codice; I49/I56 richiedono una nuova campagna con chiave reale nel polling), I53 + I68–I82 ⬜ (proposte mai implementate, catalogo docs/07 rigenerato)
 - Lo stato dichiarato in docs/04 è di nuovo allineato alla realtà del codice (audit come garanzia continua)
 - Suggerimenti per la prossima sessione: (1) docs/07 batch 1 client-only (I69/I77/I76+fix bug/I73) con clarify §10; (2) nuova campagna campionatore I49+V8+I56 quando l'utente conferma il polling con chiave reale; (3) I18 se l'utente accetta documentalmente il verdetto V4=IDENTICI registrato nel transcript chat
+
+---
+Task ID: 22
+Agent: Super Z (main)
+Task: I18 — fallback automatico su coding_plan/remains (documento, commit e push su richiesta utente: «procedi con I18, poi documenta e commit con push»)
+
+Work Log:
+- Via di sblocco: accettazione documentale del verdetto V4 = IDENTICI del 09/10 (chiave reale, campagna Task 23; esiti persi col secondo rollback, transcript chat unica evidenza) — percorso già previsto nella riga I18 di docs/04 e autorizzato dall'utente con «procedi con I18»
+- src/lib/minimax.ts: CODING_PLAN_ENDPOINTS (eu: api.minimax.io, cn: api.minimaxi.com — docs/01 §4), FALLBACK_TRIGGER_HTTP {404,405,410,501}, tipo PrimaryFailureKind, shouldTryFallback() pura (SI anche su bad_json; NO su auth 401/403/1004, network, timeout — lì interviene il retry I51)
+- api/minimax/usage/route.ts: rifattorizzato in tryEndpoint() riusabile (1 tentativo + 2 ritenti transitori I51, timeout 12s, invariato per primario e fallback); sul fallimento definitivo del primario con trigger valido tenta CODING_PLAN_ENDPOINTS[region]; successo → ok:true con endpoint alternativo e fallback {used, primaryEndpoint, reason}; fallback fallito → errore del PRIMARIO con fallbackTried: true
+- src/app/page.tsx: fallbackActiveRef + evento tecnico «info» SOLO sulla transizione primario↔fallback (attivazione con motivo, ritorno al primario al primo successo senza fallback; ritorno con errore silenzioso — coperto da markError); tipo risposta esteso con fallback/fallbackTried
+- tests/lib/minimax-fallback.test.ts (nuovo): 10 test su endpoint per regione, trigger set, decisione (SI/NO per ogni kind) e parità del parser su risposta coding_plan (V4 = IDENTICI)
+- scripts/verifiche/audit-implementazioni.mjs: +10 check I18 (simboli, wiring proxy e client, file test)
+- Protocollo di validazione fisso: bunx tsc --noEmit = 0 errori su src/+tests/ (4 baseline esterne examples/skills) · bun run lint EXIT=0 · bun test 156/156 (496 asserzioni, era 146/463) · audit 126/126 PASS 0 scoperte (era 116)
+- Verifica reale proxy: curl con chiave finta → ok:true con passthrough status_code 1004 sul primario token_plan (messaggio «login fail…», coerente con l'evidenza del 02/10), NESSUN campo fallback (auth non innescà il fallback) — registrata in docs/05 §10
+- Verifica agent-browser (con route di protezione su /api/history e /api/events dalla prima apertura): desktop 1280 zero overflow (docW 1280), mobile 390 zero overflow (docW 390), zero errori pagina, console pulita; screenshot scripts/verify-i18-desktop.png e verify-i18-mobile.png
+- Documentazione: docs/04 (riga I18 ✅ con nota via, §4 riga V4 ✅ accettazione documentale + nota I18, §8 changelog), docs/01 §4 (verdetto + meccanismo fallback), docs/03 (§3 mappa minimax.ts e route.ts, nuova §5.9), docs/05 (§6 stato accettazione, §10 riga curl), README (riga polling+fallback, Qualità 156 test/126 verifiche)
+
+Stage Summary:
+- I18 ✅: primo item del filone estensioni ri-creato dopo il rollback; il monitor sopravvive al ritiro dell'endpoint primario (404/405/410/501 o non-JSON) continuando su coding_plan/remains con parser condiviso
+- Nei percorsi senza chiave la validazione è completa (test, audit, curl, browser); l'unico residuo è la conferma empirica dei DATI con chiave reale (V4 fresca raccomandata in docs/05 §6 — se desse esito diverso, I18 si ridefinisce)
+- Suite di qualità aggiornata: 156 test / 496 asserzioni, audit 126/126; README allineato
+- Commit: codice+docs in un commit, snapshot DB runtime separato (lezione I30), push origin main (ciclo operativo Task 17)
