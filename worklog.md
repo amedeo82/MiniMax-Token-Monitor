@@ -596,3 +596,25 @@ Stage Summary:
 - Suite di qualità: 249 test / 761 asserzioni, audit 203/203; README e docs allineati
 - Restano da fare in docs/07: I79 (audit accessibilità), I82 (generalizzazione multi-modello); fuori docs/07: V4 fresca con chiave reale, campagna campionatore I49+V8+I56
 - Chiusura: commit codice+docs e commit DB separato (lezione I30), push origin main
+
+---
+Task ID: 27
+Agent: Super Z (main)
+Task: I83 — Correzione leggibilità del tema chiaro (segnalazione utente: warning gialli, info azzurre EWMA, icone registro eventi, tab attivo impostazioni bianco su bianco; verifica al browser richiesta)
+
+Work Log:
+- Analisi del strato `html:not(.dark)` di I78 in globals.css e censimento completo delle classi accent in src/ con rg: individuate TRE famiglie di classi che sfuggivano ai selettori per classe — (1) nomi con PREFISSO VARIANTE e/o SUFFISSO `!` (data-[state=active]:bg-white/[0.08]!, text-zinc-400!, data-[state=on]:text-zinc-100! dei chips I69, focus:bg-white/[0.08]! del menu Esporta, …): nel DOM sono stringhe distinte da quelle senza; (2) varianti con MODIFICATORE DI OPACITÀ (text-amber-200/70…/50, text-rose-200/90…/60, text-sky-200/70, text-sky-300/80, text-emerald-200/70, text-violet-200/70, text-rose-100); (3) toni 400/500 usati come TESTO/ICONA (rose/amber/emerald/sky/orange-400, emerald-500) troppo chiari su bianco
+- Docs-first: docs/03 §5.15 con cause, cure e criteri di accettazione
+- Implementazione in globals.css: varianti opacità → 700/800/900; 400/500 testo/icone → 600 (verificato prima che le variabili --color-* esistano nel CSS compilato: solo rose-900 assente e non referenziata); hover scuri (text-zinc-200/300, text-rose-300, con e senza !); bg-amber-950/20 → tinta chiara; menu Esporta bianco (bg-zinc-950! rimappato); cure per STATO dei tab/chips attivi
+- LEZIONE DI CASCADE verificata al browser: la prima versione con !important UNLAYERED NON ha battuto le utilities ! di Tailwind v4 (emesse con !important DENTRO @layer utilities — per le important un layer batte sempre le unlayered, Cascade 5 §6.4): le regole `!` di I78 erano MORTE dalla nascita (invisibile in dark perché le utilities producono già i colori giusti). Cura definitiva: blocco @layer utilities dedicato in coda alla sezione chiara (stesso layer, posizione successiva, specificità 0,3,1+ → vince) per stati attivi, classi !, focus e hover !
+- Nota tecnica probe: querySelectorAll('.text-sky-200\\/70') non è un selettore valido (la / non si escapa in CSS) → i probe vanno scritti scandendo className.includes(...)
+- Verifica browser reale (route /api/history + /api/events bloccate con body {} — nessuna scrittura demo sul DB; tema via localStorage theme): probe di colore calcolato → tab attivo impostazioni e tab finestra grafico rgb(24,24,27) su rgba(0,0,0,0.07) con bordo rgba(0,0,0,0.12) (era bianco su bianco); chips I69 attive idem; card EWMA sky-200[/70] e badge sky-300/80 in sky-700; badge registro eventi (icona+testo) emerald/amber/rose/orange-600; nota tecnica amber-200/50 in amber-900; menu Esporta bianco con voci scure; TabsList bg grigina; TEMA SCURO INTATTO al probe dopo reload in dark (chip/tab/badge/body = valori originali); zero overflow 1280 in entrambi i temi, console senza errori; screenshot scripts/verify-i83-impostazioni-light.png, verify-i83-grafico-light.png, verify-i83-ewma-light.png, verify-i83-eventi-light.png, verify-i83-menu-light.png
+- Protocollo di validazione fisso: bunx tsc --noEmit = 0 errori su src/+tests/ (4 baseline esterne examples/skills) · bun run lint EXIT=0 · bun test 249/249 (761 asserzioni, invariato — fix solo CSS) · audit 203/203 PASS 0 scoperte
+- Documentazione: docs/03 (header + §5.15 con lezione cascade); docs/04 §3 (I83 → ✅) + §8 changelog; docs/07 §5.11 (nota correzione); questo worklog
+
+Stage Summary:
+- I83 COMPLETATA: il tema chiaro ora è leggibile su tutte le superfici segnalate (tab attivi impostazioni e grafico, chips intervallo/filtri, banner e card di avviso, card EWMA, badge con icona del registro eventi, menu Esporta) senza toccare alcun componente e con il tema scuro verificato intatto al probe
+- Scoperta più importante: in Tailwind v4 le utilities con ! (important) DENTRO @layer utilities battono qualsiasi !important unlayered — le regole light di I78 per le classi ! non hanno MAI funzionato; la cura è un blocco @layer utilities dedicato con specificità maggiore
+- Suite invariata: 249 test / 761 asserzioni, audit 203/203; docs allineati (03 §5.15, 04 §3+§8, 07 §5.11)
+- Restano da fare in docs/07: I79 (audit accessibilità), I82 (generalizzazione multi-modello); fuori docs/07: V4 fresca con chiave reale, campagna campionatore I49+V8+I56
+- Chiusura: commit codice+docs e commit DB separato (lezione I30), push origin main

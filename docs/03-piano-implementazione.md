@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-11 (§5.13 batch 3 infrastruttura — design I80 endpoint summary / I81 test componente / I68 downsampling orario). Precedente: 2026-10-11 (§5.12 batch 2 analisi — design I70 anomalie ritmo / I71 qualità campionamento / I72 proiezione EWMA).
+> Ultimo aggiornamento: 2026-10-12 (§5.15 correzione leggibilità tema chiaro — I83: varianti opacità, toni 400→600 per testo/icone, stati attivi tab/chips con blocco layered, hover scuri). Precedente: 2026-10-11 (§5.14 batch 4 UX — I74 barra mobile / I75 vista stampa / I78 tema chiaro).
 
 ---
 
@@ -518,6 +518,84 @@ proxy, DB e protocollo di polling intoccati; nessuna dipendenza nuova (`next-the
 > PDF report `scripts/verify-batch4-report.pdf`, mobile 390 con barra fissa e top
 > nav assente (`verify-batch4-mobile390.png`), desktop dark intatto
 > (`verify-batch4-desktop-dark.png`), zero overflow 1280/390, console pulita.
+
+### 5.15 Correzione leggibilità del tema chiaro (I83) — 12/10
+
+> **Segnalazione utente**: in tema chiaro molti avvisi non sono leggibili — scritte
+> gialle dei warning, scritte info azzurre (EWMA), icone del registro eventi, e il tab
+> attivo del menu impostazioni è bianco su bianco. Verifica con il browser richiesta.
+
+**Analisi delle cause (tre buchi nel strato `html:not(.dark)` di I78, tutti della stessa
+famiglia: nomi di CLASSE diversi non raggiunti dai selettori esistenti):**
+
+1. **Utilities con prefisso variante e suffisso `!`** — es. `data-[state=active]:bg-white/[0.08]!`:
+   nel DOM il nome della classe è la stringa INTERA (con prefisso e `!`), quindi i selettori
+   per classe di I78 (`.bg-white\/\[0\.08\]`, `.text-zinc-100\!`) NON la raggiungono. Esito:
+   tab attivo delle impostazioni = fondo `white/[0.08]` su bianco + testo `zinc-100` ≈ bianco →
+   INVISIBILE; identico per le chips `data-[state=on]` del selettore intervallo I69 (page).
+   Stessa famiglia: i tab finestra «5 ore/Settimanale» del grafico usano
+   `data-[state=active]:text-zinc-100` SENZA `!` — anch'esso un nome di classe con prefisso.
+   **Cura**: vincere per STATO, non per nome di classe — selettori attributo
+   `[data-slot="tabs-trigger"][data-state="active"]` e
+   `[data-slot="toggle-group-item"][data-state="on"]` con dichiarazioni `!important` unlayered
+   (per le important l'ordine dei layer è invertito: l'implicit outer layer batte le utilities
+   layered — Cascade 5 §6.4; da confermare empiricamente al browser).
+2. **Varianti di colore con MODIFICATORE DI OPACITÀ** — `text-amber-200/70`, `text-amber-200/90`,
+   `text-amber-200/80`, `text-amber-200/50`, `text-rose-200/90`, `text-rose-200/60`,
+   `text-emerald-200/70`, `text-violet-200/70`, `text-sky-200/70`, `text-sky-300/80`:
+   classi DISTINTE da quelle senza opacità → non rimappate → su bianco restano i toni 100–200
+   quasi trasparenti (banner avvisi, card EWMA, PacePanel, boundary, nota tecnica).
+   **Cura**: mappatura dedicata per ogni variante osservata (700/800 per le /70–/90,
+   900 per la /50).
+3. **Toni 400/500 usati come TESTO o ICONA** — `text-rose-400`, `text-amber-400`,
+   `text-emerald-400`, `text-sky-400`, `text-orange-400`, `text-emerald-500` (badge del
+   registro eventi con icona, valori grandi anelli, icone KPI, link chiave, errore connessione):
+   su bianco contrasto insufficiente. **Cura**: rimappare 400/500 → 600 SOLO per il testo
+   (le varianti `bg-*400/10` dei badge restano tinte chiare coerenti, i bordi /25–/30 restano).
+
+**Cure di contorno (stessa passata):**
+- `text-zinc-400!` (testo base dei tab impostazioni) e `bg-white/[0.03]!` (TabsList):
+  varianti con `!` dei selettori già mappati → selettori dedicati.
+- Hover illeggibili su bianco: `hover:text-rose-300` (+`!`), `hover:text-zinc-200` (+`!`),
+  `hover:text-zinc-300` → toni 600/700/800; `hover:bg-white/[0.05]` (nav) e
+  `hover:bg-white/[0.06]!` → black-alpha.
+- `bg-amber-950/20` (card fallback SectionBoundary) → tinta ambra chiara come le /40 già mappate.
+- INTATTO: blocco JSON grezzo (resta scuro di proposito — la regola `pre.bg-black/50 *` ha
+  specificità superiore e il blocco non usa accent-400), tema scuro, grafici recharts,
+  anelli canvas, toni `bg-*400/10`/bordi `/25–/30` decorativi, hover colorati 500/20.
+
+> **Accettazione**: in tema chiaro (a) tab attivo impostazioni visibile (testo scuro su
+> grigino, bordo), (b) tab attivo finestra grafico leggibile, (c) chips attive I69/I77
+> leggibili, (d) banner crit/warn e card EWMA/Pace con testo leggibile, (e) icone badge
+> registro eventi visibili, (f) desktop dark intatto. Screenshot per ciascuna.
+
+> **Implementato 12/10** con una LEZIONE di cascade emersa solo al browser:
+> 1. La prima versione vincere-per-stato usava `!important` UNLAYERED e NON ha funzionato
+>    sulle chips I69 (ancora bianche su bianche al probe): le utilities con `!` di Tailwind
+>    v4 sono emesse con `!important` DENTRO `@layer utilities`, e per le dichiarazioni
+>    important un layer batte SEMPRE le regole unlayered (Cascade 5 §6.4 — l'ordine dei
+>    layer per le important è invertito rispetto alle normali: l'implicit outer layer è
+>    l'ultimo resort, non il primo). Le regole di I78 per le classi con `!`
+>    (`.text-zinc-100\!`, `.bg-zinc-950\!`, gli hover `!`) erano quindi MORTE dalla
+>    nascita — senza effetti visibili solo perché in dark le utilities già producono i
+>    colori giusti. Cura definitiva: blocco `@layer utilities` dedicato in coda alla
+>    sezione chiara (stesso layer, posizione successiva, specificità 0,3,1+ → vince).
+> 2. Il probe con `querySelectorAll('.text-sky-200\\/70')` fallisce (`/` non escapabile
+>    nel selettore CSS di querySelectorAll): i probe vanno scritti scandendo
+>    `className.includes(...)` invece dei selettori di classe.
+> Esiti (probe di colore calcolato + screenshot): tab attivo impostazioni e tab finestra
+> grafico `rgb(24,24,27)` su `rgba(0,0,0,0.07)` con bordo `rgba(0,0,0,0.12)` (era bianco
+> su bianco); chips I69 attive idem; card EWMA `text-sky-200[/70]` e badge `sky-300/80` in
+> sky-700 scuro; avvisi `amber-200/70–90` in amber-800, `rose-100`/`rose-200/60` in
+> rose-800, `rose-200/90` in rose-700; badge registro eventi (icona+testo) emerald-600 /
+> amber-600 / rose-600 / orange-600; menu Esporta bianco con voci scure (era `bg-zinc-950!`);
+> nota tecnica `amber-200/50` in amber-900; TabsList `bg-white/[0.03]!` grigina. Tema scuro
+> INTATTO (chip/tab/badge/body con i valori originali al probe dopo reload in dark).
+> Zero overflow 1280 in entrambi i temi, console senza errori. Screenshot
+> `scripts/verify-i83-impostazioni-light.png`, `verify-i83-grafico-light.png`,
+> `verify-i83-ewma-light.png`, `verify-i83-eventi-light.png`, `verify-i83-menu-light.png`.
+> Suite invariata: tsc 0 errori su src/+tests/, lint OK, 249/249 (761 asserzioni),
+> audit 203/203 PASS (fix solo CSS: nessun nuovo check di audit necessario).
 
 ---
 

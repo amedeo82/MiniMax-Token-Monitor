@@ -169,6 +169,21 @@ client-side sul registro già caricato.
 > block dei siti chiari). Ring e favicon (I65/I67) invariati per costruzione.
 > Verificato in browser: toggle → html.light con palette leggibile (screenshot),
 > Select → dark, tema scuro INTATTO a confronto. 3 test componente.
+>
+> **Correzione leggibilità 12/10 (I83, `docs/03` §5.15)** — segnalazione utente:
+> warning gialli, info azzurre EWMA, icone del registro eventi e tab attivo delle
+> impostazioni illeggibili in chiaro. Tre famiglie di classi sfuggivano ai selettori
+> per classe qui sopra: i nomi con PREFISSO VARIANTE (`data-[state=active]:…`) e
+> SUFFISSO `!` (es. `bg-white/[0.08]!`) sono stringhe diverse nel DOM, e le varianti
+> con OPACITÀ (`text-amber-200/70`) sono classi distinte da quelle senza. In più i
+> toni 400/500 usati come testo/icona sono troppo chiari su bianco. Cure: selettori
+> per STATO (tabs-trigger active, toggle-group-item on) e per classe escapata dentro
+> un blocco `@layer utilities` con `!important` — lezione verificata al browser: le
+> utilities `!important` layered battono SEMPRE le important unlayered (Cascade 5
+> §6.4), quindi anche le regole `!` di I78 erano morte dalla nascita (senza effetti
+> visibili solo perché in dark le utilities producono già i colori giusti); varianti
+> opacità → 700/800/900; 400/500 testo/icone → 600; hover scuri; menu Esporta bianco.
+> Tema scuro INTATTO (probe dopo reload), zero overflow 1280, console pulita.
 
 ## 5.12 I79 — Audit di accessibilità sistematico
 Contrasto misurato (WCAG AA), `aria-live` per aggiornamenti polling, focus visibili,
