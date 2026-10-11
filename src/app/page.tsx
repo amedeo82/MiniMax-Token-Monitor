@@ -14,7 +14,11 @@ import { PanoramicTable } from "@/components/model-table";
 import { LongTermAnalysis } from "@/components/analysis-panel";
 import { DiagnosticaPanel } from "@/components/diagnostica-panel";
 import { SectionNav } from "@/components/section-nav";
+import { SectionBoundary } from "@/components/section-boundary";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TabIdentity } from "@/lib/tab-identity";
+import { filterHistoryByPreset, RANGE_PRESETS, type RangePreset } from "@/lib/interval";
+import { readCompactMode } from "@/lib/compact";
 import { RateChart } from "@/components/history-chart";
 import {
   deriveBanner,
@@ -61,6 +65,7 @@ import {
   ClipboardPaste,
   AlertTriangle,
   AlertOctagon,
+  Maximize2,
 } from "lucide-react";
 
 const SETTINGS_KEY = "mm-dash-settings-v1";
@@ -109,6 +114,10 @@ export default function DashboardPage() {
   const [history, setHistory] = React.useState<HistoryPoint[]>([]);
   const [events, setEvents] = React.useState<UsageEvent[]>([]);
   const [chartWindow, setChartWindow] = React.useState<"interval" | "weekly">("interval");
+  /* I69 — intervallo temporale selezionato (grafico/ritmo/analisi; default: tutto) */
+  const [rangePreset, setRangePreset] = React.useState<RangePreset>("all");
+  /* I73 — modalità compatta ?compact=1 (widget: anelli + countdown + ritmo) */
+  const [compact, setCompact] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [now, setNow] = React.useState<number>(() => Date.now());
   /** I16: punti conservati sul server; null = server non ancora raggiunto. */
@@ -144,6 +153,8 @@ export default function DashboardPage() {
     setEvents(loadEvents());
     setMounted(true);
     setNow(Date.now());
+    /* I73 — la querystring si legge solo lato client (non esiste in SSR) */
+    setCompact(readCompactMode(window.location.search));
 
     /* I16: scarica lo storico conservato sul server e fondilo con quello locale,
        così la cronologia sopravvive a cache svuotate e resta disponibile a lungo. */
@@ -544,7 +555,15 @@ export default function DashboardPage() {
   /* ---------------------------- derived ---------------------------- */
   const general = snapshot ? findModel(snapshot, "general") : undefined;
   const otherModels = snapshot ? snapshot.models.filter((m) => m.modelName.toLowerCase() !== "general") : [];
-  const trend = React.useMemo(() => computeTrend(history, chartWindow), [history, chartWindow]);
+  /* I69 — storico filtrato per l'intervallo selezionato: la finestra scivola anche col
+     solo scorrere del tempo (il tick `now` la aggiorna senza nuovi fetch). La
+     Diagnostica resta deliberatamente sullo storico COMPLETO: guasti e blocchi
+     teorici vanno giudicati sull'intera osservazione, non sull'ultimo tratto. */
+  const filteredHistory = React.useMemo(
+    () => filterHistoryByPreset(history, rangePreset, now),
+    [history, rangePreset, now],
+  );
+  const trend = React.useMemo(() => computeTrend(filteredHistory, chartWindow), [filteredHistory, chartWindow]);
   const serverTime = React.useMemo(() => (snapshot ? inferServerTime(snapshot.models) : null), [snapshot]);
   const sourceLabel = !lastEndpoint
     ? undefined
@@ -570,6 +589,32 @@ export default function DashboardPage() {
   const selectedWindow = chartWindow === "interval" ? general?.interval : general?.weekly;
   const selectedWindowEnd = selectedWindow?.end ?? null;
   const selectedWindowRemaining = selectedWindow?.remainingPercent ?? null;
+
+  /* I69 — selettore a chips dell'intervallo, condiviso da vista completa e compatta */
+  const rangeSelector = (
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Intervallo temporale">
+      <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Intervallo</span>
+      <ToggleGroup
+        type="single"
+        value={rangePreset}
+        onValueChange={(v) => {
+          if (v !== "") setRangePreset(v as RangePreset);
+        }}
+        className="gap-1 rounded-full border border-white/[0.07] bg-white/[0.03] p-1"
+      >
+        {RANGE_PRESETS.map((p) => (
+          <ToggleGroupItem
+            key={p.id}
+            value={p.id}
+            aria-label={`Intervallo ${p.label}`}
+            className="h-7 rounded-full border-0 px-3! text-[11px] font-medium text-zinc-400 data-[state=on]:bg-white/[0.10]! data-[state=on]:text-zinc-100!"
+          >
+            {p.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
+  );
 
   /* ---------------------------- render ----------------------------- */
   return (
@@ -633,10 +678,26 @@ export default function DashboardPage() {
               >
                 <Settings2 className="size-4" />
               </Button>
+              {/* I73 — uscita dalla modalità compatta (torna alla dashboard completa) */}
+              {compact ? (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Torna alla vista completa"
+                  title="Torna alla vista completa"
+                  onClick={() => {
+                    window.location.href = "/";
+                  }}
+                  className="h-9 w-9 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]!"
+                >
+                  <Maximize2 className="size-4" />
+                </Button>
+              ) : null}
             </div>
           </div>
 
-          {/* Riga badge stato */}
+          {/* Riga badge stato — nascosta in modalità compatta (I73: widget minimale) */}
+          {!compact ? (
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 pb-3 sm:px-6">
             {snapshot?.planTitle ? (
               <Badge className="gap-1 border-transparent bg-gradient-to-r from-rose-500/15 to-orange-500/15 text-rose-300 hover:from-rose-500/15">
@@ -683,12 +744,13 @@ export default function DashboardPage() {
             ) : null}
             <TrendBadge trend={trend} />
           </div>
+          ) : null}
         </header>
 
         {/* ------------------------------ Main ------------------------------ */}
         <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
-          {/* I66 — navigazione interna sticky con scrollspy */}
-          <SectionNav />
+        {/* I66 — navigazione interna sticky con scrollspy (assente in modalità compatta) */}
+        {!compact ? <SectionNav /> : null}
 
           {/* Errore */}
           {error ? (
@@ -741,16 +803,43 @@ export default function DashboardPage() {
               </p>
             </div>
           ) : !mounted ? (
-            /* Skeleton al primo rendering */
-            <div className="space-y-6">
-              <div className="grid gap-4 lg:grid-cols-3">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-48 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
-                ))}
+            compact ? (
+              /* I73 — skeleton ridotto del widget */
+              <div className="space-y-6">
+                <div className="h-72 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
+                <div className="h-56 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
               </div>
-              <div className="h-64 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
-            </div>
+            ) : (
+              /* Skeleton al primo rendering */
+              <div className="space-y-6">
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-48 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
+                  ))}
+                </div>
+                <div className="h-64 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
+              </div>
+            )
           ) : snapshot ? (
+            compact ? (
+              /* I73 — VISTA COMPATTA (widget): solo anelli principali + countdown + ritmo.
+                 Niente nav, banner, grafico, panoramica, analisi, diagnostica, tecnici,
+                 registro, footer. Errore API e schermata di setup restano visibili sopra
+                 (fuori da questo branch: servono alla funzione del widget). */
+              <>
+                <div id="quota" className="mm-anchor">
+                  <SectionBoundary title="Finestre principali" fallbackHeight="h-64">
+                    <MainWindows general={general} now={now} />
+                  </SectionBoundary>
+                </div>
+                <div id="ritmo" className="mm-anchor space-y-3">
+                  {rangeSelector}
+                  <SectionBoundary title="Ritmo di consumo" fallbackHeight="h-56">
+                    <RateChart history={filteredHistory} window={chartWindow} />
+                  </SectionBoundary>
+                </div>
+              </>
+            ) : (
             <>
               {/* Banner quota bassa (avvisi di soglia) */}
               {banner ? (
@@ -782,7 +871,9 @@ export default function DashboardPage() {
 
               {/* Anelli principali */}
               <div id="quota" className="mm-anchor">
-                <MainWindows general={general} now={now} />
+                <SectionBoundary title="Finestre principali" fallbackHeight="h-64">
+                  <MainWindows general={general} now={now} />
+                </SectionBoundary>
               </div>
 
               {/* Data odierna a Roma */}
@@ -790,46 +881,60 @@ export default function DashboardPage() {
                 Oggi a Roma: <span className="font-medium text-zinc-400">{formatDateRome(now)}</span>
               </p>
 
-              {/* Grafico + statistiche */}
-              <div id="grafico" className="mm-anchor">
-                <HistoryChart
-                  history={history}
-                  window={chartWindow}
-                  onWindowChange={setChartWindow}
+              {/* Grafico + statistiche — I69: selettore intervallo e storico filtrato */}
+              <div id="grafico" className="mm-anchor space-y-3">
+                {rangeSelector}
+                <SectionBoundary title="Grafico storico" fallbackHeight="h-64">
+                  <HistoryChart
+                    history={filteredHistory}
+                    window={chartWindow}
+                    onWindowChange={setChartWindow}
+                    serverCount={serverCount}
+                  />
+                </SectionBoundary>
+              </div>
+              <SectionBoundary title="Statistiche di proiezione" fallbackHeight="h-40">
+                <StatsPanel
+                  trend={trend}
+                  win={chartWindow}
+                  resetAt={selectedWindowEnd}
+                  remaining={selectedWindowRemaining}
                   serverCount={serverCount}
                 />
-              </div>
-              <StatsPanel
-                trend={trend}
-                win={chartWindow}
-                resetAt={selectedWindowEnd}
-                remaining={selectedWindowRemaining}
-                serverCount={serverCount}
-              />
+              </SectionBoundary>
 
-              {/* I59 — ritmo di consumo %/h sotto il grafico */}
+              {/* I59 — ritmo di consumo %/h sotto il grafico (I69: storico filtrato) */}
               <div id="ritmo" className="mm-anchor">
-                <RateChart history={history} window={chartWindow} />
+                <SectionBoundary title="Ritmo di consumo" fallbackHeight="h-56">
+                  <RateChart history={filteredHistory} window={chartWindow} />
+                </SectionBoundary>
               </div>
 
               {/* Vista panoramica: tutte le finestre del piano a confronto */}
               <div id="panoramica" className="mm-anchor">
-                <PanoramicTable models={snapshot.models} now={now} />
+                <SectionBoundary title="Vista panoramica" fallbackHeight="h-48">
+                  <PanoramicTable models={snapshot.models} now={now} />
+                </SectionBoundary>
               </div>
 
-              {/* Analisi di lungo periodo: cicli, calendario, distribuzione, heatmap (I26 + batch abbellimenti) */}
+              {/* Analisi di lungo periodo: cicli, calendario, distribuzione, heatmap (I26 + batch abbellimenti)
+                  I69: segue l'intervallo selezionato; la Diagnostica sotto resta sullo storico COMPLETO */}
               <div id="analisi" className="mm-anchor">
-                <LongTermAnalysis history={history} />
+                <SectionBoundary title="Analisi di lungo periodo" fallbackHeight="h-64">
+                  <LongTermAnalysis history={filteredHistory} />
+                </SectionBoundary>
               </div>
 
-              {/* I60/I62 — diagnostica: orologio dei reset + salute del monitor */}
+              {/* I60/I62 — diagnostica: orologio dei reset + salute del monitor (storico completo, fuori da I69) */}
               <div id="diagnostica" className="mm-anchor">
-                <DiagnosticaPanel
-                  history={history}
-                  events={events}
-                  backoffAttivo={lastOk === false}
-                  backoffDelayMs={pollDelayRef.current}
-                />
+                <SectionBoundary title="Diagnostica" fallbackHeight="h-48">
+                  <DiagnosticaPanel
+                    history={history}
+                    events={events}
+                    backoffAttivo={lastOk === false}
+                    backoffDelayMs={pollDelayRef.current}
+                  />
+                </SectionBoundary>
               </div>
 
               {/* Altri modelli */}
@@ -839,11 +944,13 @@ export default function DashboardPage() {
                     <h2 className="text-sm font-semibold text-zinc-200">Altri modelli</h2>
                     <Separator className="flex-1 bg-white/[0.06]" />
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {otherModels.map((m, i) => (
-                      <ModelCard key={m.modelName} model={m} now={now} delay={i * 60} />
-                    ))}
-                  </div>
+                  <SectionBoundary title="Altri modelli" fallbackHeight="h-40">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {otherModels.map((m, i) => (
+                        <ModelCard key={m.modelName} model={m} now={now} delay={i * 60} />
+                      ))}
+                    </div>
+                  </SectionBoundary>
                 </section>
               ) : null}
 
@@ -852,23 +959,28 @@ export default function DashboardPage() {
 
               {/* JSON + dettagli tecnici (min-w-0: permette alle card di restringersi
                   sotto il min-content del <pre> JSON, evitando overflow orizzontale) */}
-              <div id="tecnici" className="mm-anchor grid min-w-0 gap-4 lg:grid-cols-2">
-                <RawJsonPanel rawJson={rawJson} fetchedAt={lastFetch} endpoint={lastEndpoint} ok={lastOk} />
-                <TechInfo
-                  region={settings.region as Region}
-                  demoMode={settings.demoMode}
-                  lastFetch={lastFetch}
-                  refreshSeconds={settings.refreshSeconds}
-                  serverTime={serverTime}
-                  sourceLabel={sourceLabel}
-                />
-              </div>
+              <SectionBoundary title="Pannelli tecnici" fallbackHeight="h-48">
+                <div id="tecnici" className="mm-anchor grid min-w-0 gap-4 lg:grid-cols-2">
+                  <RawJsonPanel rawJson={rawJson} fetchedAt={lastFetch} endpoint={lastEndpoint} ok={lastOk} />
+                  <TechInfo
+                    region={settings.region as Region}
+                    demoMode={settings.demoMode}
+                    lastFetch={lastFetch}
+                    refreshSeconds={settings.refreshSeconds}
+                    serverTime={serverTime}
+                    sourceLabel={sourceLabel}
+                  />
+                </div>
+              </SectionBoundary>
 
-              {/* Registro eventi: reset, soglie, errori (archivio server I27) */}
+              {/* Registro eventi: reset, soglie, errori (archivio server I27) — filtri client-side I77 */}
               <div id="eventi" className="mm-anchor">
-                <EventLog events={events} onClear={handleClearEvents} serverCount={serverEventsCount} />
+                <SectionBoundary title="Registro eventi" fallbackHeight="h-56">
+                  <EventLog events={events} onClear={handleClearEvents} serverCount={serverEventsCount} />
+                </SectionBoundary>
               </div>
             </>
+            )
           ) : loading ? (
             <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
               <RefreshCw className="mr-2 size-4 animate-spin" /> Sincronizzazione in corso…
@@ -877,6 +989,7 @@ export default function DashboardPage() {
         </main>
 
         {/* ----------------------------- Footer ----------------------------- */}
+        {!compact ? (
         <footer className="mt-auto border-t border-white/[0.06] bg-[#09090b]/80 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-[11px] text-zinc-600 sm:flex-row sm:px-6">
             <p>
@@ -896,6 +1009,7 @@ export default function DashboardPage() {
             </p>
           </div>
         </footer>
+        ) : null}
       </div>
 
       <SettingsDialog
