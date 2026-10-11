@@ -305,6 +305,46 @@ mai esporre la Subscription Key né consumare chiamate extra fuori dai polling r
   messaggio `SKIP_WAITING` dal nuovo SW quando la pagina ne rileva uno in attesa
   (aggiornamento immediato senza aspettare la chiusura di tutti i tab).
 
+### 5.11 Batch 1 client-only: selettore intervallo, filtri eventi, error boundary, modalità compatta (I69/I77/I76/I73)
+Quattro miglioramenti **puramente client-side** da `docs/07` (§5.2, §5.10, §5.9, §5.6) —
+basso rischio, nessuna modifica a proxy, DB o protocollo di polling:
+
+- **I69 — Selettore intervallo temporale**: preset `6h · 24h · 3g · 7g · 30g · tutto`
+  con filtro client-side sullo storico già in memoria. Logica pura in `lib/interval.ts`
+  (`RANGE_PRESETS`, `filterHistoryByPreset(history, preset, nowMs)`: finestra
+  `[now − ampiezza, +∞)` inclusiva, ordine cronologico preservato, `tutto` restituisce
+  l'array originale). Lo stato `rangePreset` vive in `page.tsx` e il filtro si applica a
+  **grafico + StatsPanel/trend + ritmo (RateChart) + analisi di lungo periodo**;
+  la Diagnostica (I60/I62) resta deliberatamente sullo storico COMPLETO (i guasti e i
+  blocchi teorici vanno giudicati sull'intera osservazione, non sull'ultimo tratto);
+  default «tutto» = comportamento identico al passato. Selettore UI a chips (ToggleGroup)
+  sopra il grafico, dentro l'àncora `#grafico`;
+- **I77 — Filtri del registro eventi**: logica pura in `lib/event-filters.ts`
+  (`filterEvents(events, filtri, nowMs)`): chips multi-selezione per `kind`
+  (nessuna selezionata = tutti), ricerca testuale case-insensitive su messaggio e
+  modello, periodo (`tutto` / `oggi` a Roma / `24h` / `7g`). Filtri applicati PRIMA del
+  raggruppamento per giorno; contatore «N di M eventi» e empty state dedicato quando i
+  filtri escludono tutto; l'export (CSV/JSON) resta sull'archivio COMPLETO (i filtri sono
+  una vista, non una cancellazione) e il menu Esporta lo dichiara;
+- **I76 — Error boundary per sezione + fix del bug noto**: (a) fix in `event-log.tsx`:
+  il suffisso «· NN% residuo» è stampato solo con `typeof e.value === "number"` — la
+  vecchia condizione `e.value !== null` lascava passare `undefined` (evento senza
+  `value`, es. da fonti esterne/archivio) e crashava `.toFixed(1)` portando giù l'intera
+  pagina (evidenza empirica `docs/07` §5.9); (b) nuovo `components/section-boundary.tsx`:
+  error boundary React (class component, `componentDidCatch`) con skeleton di fallback
+  animato, messaggio tecnico e pulsante «Riprova» (reset dello stato interno); ogni
+  sezione principale della pagina (anelli, grafico+stats, ritmo, panoramica, analisi,
+  diagnostica, tecnici, eventi, altri modelli) è avvolta in modo indipendente: un crash
+  in un pannello non elimina più l'intera dashboard;
+- **I73 — Modalità compatta / widget**: `?compact=1` (helper puro `readCompactMode` in
+  `lib/compact.ts`, parsing robusto del querystring) trasforma la pagina in un widget:
+  header ridotto (titolo, orologio Roma, aggiorna, uscita dalla modalità), solo
+  **anelli principali + countdown (MainWindows) + ritmo (RateChart)**, senza nav,
+  banner sezioni, panoramica, analisi, diagnostica, tecnici, registro, footer; errore
+  API e schermata di setup restano visibili (servono alla funzione). Compatibile con la
+  PWA installata (I52): è la stessa pagina, apribile con URL `/?compact=1` da shortcut
+  o schermo secondario.
+
 ---
 
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro

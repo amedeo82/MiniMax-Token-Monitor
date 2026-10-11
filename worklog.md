@@ -510,3 +510,26 @@ Stage Summary:
 - Nei percorsi senza chiave la validazione è completa (test, audit, curl, browser); l'unico residuo è la conferma empirica dei DATI con chiave reale (V4 fresca raccomandata in docs/05 §6 — se desse esito diverso, I18 si ridefinisce)
 - Suite di qualità aggiornata: 156 test / 496 asserzioni, audit 126/126; README allineato
 - Commit: codice+docs in un commit, snapshot DB runtime separato (lezione I30), push origin main (ciclo operativo Task 17)
+
+---
+Task ID: 23
+Agent: Super Z (main)
+Task: Batch 1 client-only docs/07 — I69/I77/I76/I73 implementati («procedi con il prossimo step»)
+
+Work Log:
+- Prima del batch: push di sicurezza del commit pendente 843298d (snapshot piattaforma, ahead 1) e .gitignore aggiornato (tool-results/ ignorato)
+- Docs-first: docs/03 §5.11 «Batch 1 client-only» con il design completo delle 4 proposte (semantica finestra semiaperta, filtri come vista non cancellazione, boundary per sezione, widget compatta)
+- I69 — lib/interval.ts NUOVO: RANGE_PRESETS (6h/24h/3g/7g/30g/all) + filterHistoryByPreset pura (finestra [now−ampiezza, +∞) inclusiva, «tutto» = stesso array, ordine preservato); page.tsx: stato rangePreset + filteredHistory (si restringe anche col solo scorrere del tempo via tick now) applicato a HistoryChart, StatsPanel/trend, RateChart, LongTermAnalysis; Diagnostica resta su storico COMPLETO (scelta documentata); selettore a chips (ToggleGroup) sopra il grafico, condiviso con la vista compatta
+- I77 — lib/event-filters.ts NUOVO: filterEvents pura (kind multi-selezione, ricerca case-insensitive su messaggio+modello, periodo tutto/oggi-Roma/24h/7g) + startOfTodayRome DST-safe (mezzanotte Roma via parte en-CA + offset con raffinamento); event-log.tsx: chips ToggleGroup per kind, ricerca con icona, Select periodo, contatore «N di M eventi», empty state dedicato, «Azzera filtri»; export resta sull'archivio COMPLETO (i filtri sono una vista)
+- I76 — fix bug noto: event-log.tsx `typeof e.value === "number"` al posto di `e.value !== null` (undefined passava e crashava .toFixed portando giù l'intera pagina); section-boundary.tsx NUOVO (class component, getDerivedStateFromError + componentDidCatch, fallback skeleton animato + messaggio tecnico + «Riprova»); le 10 sezioni della pagina (anelli, grafico, stats, ritmo, panoramica, analisi, diagnostica, altri modelli, tecnici, eventi) avvolte indipendentemente
+- I73 — lib/compact.ts NUOVO: readCompactMode pura (?compact, =1, =true; tutto il resto NO); page.tsx: vista compatta = header ridotto (con pulsante «Torna alla vista completa» Maximize2), solo MainWindows + RateChart + selettore intervallo; senza nav, badge row, banner, grafico, panoramica, analisi, diagnostica, tecnici, registro, footer; errore API e setup restano visibili; skeleton ridotto per il primo mount
+- Correzioni in itinere: bug startOfTodayRome (doppia sottrazione dell'offset nel raffinamento — stima poi naive−offset(stima)); 2 assert di test errati (ordine non cronologico conservato, model default di ev())
+- Protocollo di validazione fisso: bunx tsc --noEmit = 0 errori su src/+tests/ (4 baseline esterne examples/skills) · bun run lint EXIT=0 · bun test 179/179 (546 asserzioni, era 156/496) · audit 146/146 PASS 0 scoperte (era 126, +20 check)
+- Verifica browser reale (route /api/history + /api/events bloccate con body {} dal primo step — nessuna scrittura demo sul DB): selettore I69 presente e click 6h → grafico+ritmo renderizzati; filtri I77: chips Reset → «1 di 8 eventi», ricerca case-insensitive («reset» → 1 match), empty state su query inesistente, «Azzera filtri» funziona; I76: evento SENZA value iniettato in localStorage → ricarica → pagina renderizzata e evento visibile (prima crashava), evento di prova poi rimosso; I73: ?compact=1 = solo #quota+#ritmo+selettore (nav/grafico/panoramica/analisi/diagnostica/eventi/footer/badge assenti), uscita → «/» ripristina la vista completa; mobile 390px zero overflow (390 vs 390) in entrambe le viste; console senza errori; screenshot scripts/verify-batch1-i69-6h.png, verify-batch1-i77-filtri.png, verify-batch1-i73-compact.png, verify-batch1-mobile390.png
+- Documentazione: docs/03 §5.11; docs/04 §3 (I69/I77/I76/I73 → ✅) + §8 changelog; docs/07 (header «4 di 15», §5.2/§5.6/§5.9/§5.10 con nota implementazione, priorità 1 barrata-IMPLEMENTATO); README (3 righe funzionalità + qualità 179/146); questo worklog
+
+Stage Summary:
+- BATCH 1 CLIENT-ONLY COMPLETATO: prime 4 proposte di docs/07 passano da ⬜ a ✅ (I69 selettore intervallo, I77 filtri registro, I76 error boundary + fix bug empirico, I73 widget compatta) — tutte client-side, proxy/DB/protocollo di polling intoccati
+- La correzione empirica più importante: il bug del registro eventi (evento senza value = crash di tutta la pagina) è RIPRODOTTO e CORRETTO, con la pagina ora protetta da 10 error boundary indipendenti
+- Suite di qualità: 179 test / 546 asserzioni, audit 146/146; README e docs allineati
+- Restano da fare in docs/07: batch 2 analisi (I70/I71/I72), batch 3 infrastruttura (I80/I81/I68), backlog (I74/I75/I78/I79/I82); fuori docs/07: V4 fresca con chiave reale, campagna campionatore I49+V8+I56

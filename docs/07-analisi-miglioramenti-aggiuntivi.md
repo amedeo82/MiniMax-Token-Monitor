@@ -4,9 +4,11 @@
 > miglioramenti (client-only e non) proposti dopo la chiusura dei batch abbellimenti
 > (docs/06) e **perso col secondo rollback del workspace dell'11/10**. Ri-creato l'11/10
 > nel recovery con gli stessi numeri e significati comunicati in chat (tracciamento in
-> `docs/04` §3). Nessuna delle proposte era implementata al momento del rollback.
+> `docs/04` §3).
 >
-> Stato: **tutte ⬜** (proposte mai implementate, invariate dal rollback).
+> Stato: **4 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
+> del bug noto, I73) è stato implementato l'11/10 pomeriggio (vedi §5.2, §5.6, §5.9,
+> §5.10 e `docs/04` §3); le restanti 11 sono ancora ⬜ (proposte mai implementate).
 
 Contesto della proposta originale: dopo la chiusura dei batch 1–3 (I57–I67) l'analisi
 aveva individuato 15 ulteriori miglioramenti in tre gruppi — analisi avanzata
@@ -23,9 +25,14 @@ grafici leggibili e leggeri quando lo storico server cresce oltre i 10.000 punti
 grana fine resta disponibile per le analisi (I26+), il grafico principale userebbe la
 grana oraria oltre una soglia di zoom.
 
-## 5.2 I69 — Selettore intervallo temporale
+## 5.2 I69 — Selettore intervallo temporale ✅
 Preset 6h/24h/3g/7g/30g/tutto con filtro client-side sullo storico, applicabile a
 grafico, ritmo e analisi; riduce il rumore visivo quando i dati diventano densi.
+
+> **Implementato 11/10** (`lib/interval.ts` + selettore a chips in `page.tsx`; design in
+> `docs/03` §5.11): finestra `[now − ampiezza, +∞)` inclusiva, «tutto» = array originale;
+> filtro applicato a grafico, StatsPanel/trend, ritmo e analisi di lungo periodo; la
+> Diagnostica resta deliberatamente sullo storico COMPLETO. 7 test dedicati.
 
 ## 5.3 I70 — Anomalie del ritmo
 Z-score robusto (mediana + MAD) sulla serie `rateSeries` (I59) per evidenziare i
@@ -41,9 +48,15 @@ Confronto A/B con il verdetto lineare di I23/I31: la media pesata esponenzialmen
 reagirebbe più in fretta ai cambi di ritmo, al prezzo di più rumore; proposta con
 esito affiancato (non sostitutivo) nel pannello pace.
 
-## 5.6 I73 — Modalità compatta / widget
+## 5.6 I73 — Modalità compatta / widget ✅
 `?compact=1`: solo anelli principali + countdown + ritmo, per uso come widget/schermo
 secondario; compatibile con la PWA installata (I52).
+
+> **Implementato 11/10** (`lib/compact.ts` + vista compatta in `page.tsx`; design in
+> `docs/03` §5.11): header ridotto con pulsante di uscita «⤢ Torna alla vista completa»;
+> sono visibili solo anelli+countdown (MainWindows), ritmo (RateChart) e selettore
+> intervallo; errore API e schermata di setup restano visibili (servono alla funzione).
+> Verificato in browser, zero overflow a 390px.
 
 ## 5.7 I74 — Navigazione inferiore su mobile
 Bottom bar fissa <md come alternativa alla section-nav sticky (I66) su telefono.
@@ -52,16 +65,29 @@ Bottom bar fissa <md come alternativa alla section-nav sticky (I66) su telefono.
 Blocco `print` dedicato + voce nel menu Esporta: sintesi settimanale stampabile
 (verdetto, cicli, spreco, calendario).
 
-## 5.9 I76 — Error boundary per sezione + skeleton (+ bug fix noto)
+## 5.9 I76 — Error boundary per sezione + skeleton (+ bug fix noto) ✅
 Error boundary React per ogni sezione con skeleton di fallback: un crash in un
 pannello non deve buttare giù la pagina intera. **Evidenza empirica**: bug reale in
 `event-log.tsx` (~203) dove `e.value != null` non copre `undefined` e un evento senza
-`value` crasha il registro (e con esso tutta la pagina). **Il bug è ancora presente
-nel codice ripristinato** — la proposta resta valida con evidenza da ri-produrre.
+`value` crasha il registro (e con esso tutta la pagina). ~~Il bug è ancora presente
+nel codice ripristinato~~ → **corretto**.
 
-## 5.10 I77 — Filtri del registro eventi
+> **Implementato 11/10** (`section-boundary.tsx` + fix in `event-log.tsx`; design in
+> `docs/03` §5.11): il suffisso «· NN% residuo» è stampato solo con
+> `typeof e.value === "number"`; **bug riprodotto e corretto in browser** (evento senza
+> `value` iniettato in localStorage: renderizzato senza crash dopo il fix); ogni sezione
+> principale della pagina è avvolta in un boundary indipendente con skeleton, messaggio
+> tecnico e «Riprova».
+
+## 5.10 I77 — Filtri del registro eventi ✅
 Chips per `kind` (reset/warn/crit/error/info) + ricerca testuale + periodo, filtri
 client-side sul registro già caricato.
+
+> **Implementato 11/10** (`lib/event-filters.ts` + UI in `event-log.tsx`; design in
+> `docs/03` §5.11): chips multi-selezione (nessuna = tutti), ricerca case-insensitive su
+> messaggio e modello, periodo tutto/oggi (confini Roma DST-safe)/24h/7g; contatore
+> «N di M eventi», empty state dedicato e «Azzera filtri»; l'export resta sull'archivio
+> COMPLETO (i filtri sono una vista, non una cancellazione). 12 test dedicati.
 
 ## 5.11 I78 — Tema chiaro opzionale
 `next-themes` è già tra le dipendenze ma inutilizzato: tema chiaro completo
@@ -87,8 +113,9 @@ pivot; la generalizzazione aprirebbe le analisi anche agli altri modelli del pia
 
 ## Priorità suggerite (invariate dalla proposta originale)
 
-1. **Batch 1 client-only** (basso rischio, alto valore percepito): I69 · I77 · I76 (con
-   il fix del bug `e.value != null`) · I73.
+1. ~~**Batch 1 client-only** (basso rischio, alto valore percepito): I69 · I77 · I76 (con
+   il fix del bug `e.value != null`) · I73.~~ → **IMPLEMENTATO 11/10** (vedi §5.2/§5.6/
+   §5.9/§5.10 e `docs/04` §3).
 2. **Batch 2 analisi**: I70 · I71 · I72.
 3. **Batch 3 infrastruttura/integrazione**: I80 · I81 · I68.
 4. **Backlog/qualità**: I74 · I75 · I78 · I79 · I82.

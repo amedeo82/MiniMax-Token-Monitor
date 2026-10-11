@@ -11,6 +11,15 @@ import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -30,8 +39,16 @@ import {
   Trash2,
   Download,
   Database,
+  FilterX,
+  Search,
 } from "lucide-react";
 import { formatDateTimeRome } from "@/lib/time";
+import {
+  EVENT_PERIODS,
+  filterEvents,
+  type EventFilters,
+  type EventPeriod,
+} from "@/lib/event-filters";
 import type { UsageEvent, UsageEventKind } from "@/lib/usage-events";
 import { exportEventsCsv, exportEventsJson } from "@/lib/export";
 import { fetchServerEvents, serverEventsToEvents } from "@/lib/server-events";
@@ -52,10 +69,36 @@ interface EventLogProps {
   serverCount?: number | null;
 }
 
-/** Timeline del registro eventi, dal più recente al più vecchio. */
+const KIND_ORDER: UsageEventKind[] = ["reset", "warn", "crit", "error", "info"];
+
+/** Timeline del registro eventi, dal più recente al più vecchio, con filtri client-side (I77). */
 export function EventLog({ events, onClear, serverCount = null }: EventLogProps) {
-  const sorted = React.useMemo(() => [...events].sort((a, b) => b.t - a.t), [events]);
-  // Raggruppa per giorno (Europe/Rome) per una lettura tipo diario
+  /* I77 — filtri della vista (non toccano il registro né l'archivio) */
+  const [kinds, setKinds] = React.useState<UsageEventKind[]>([]);
+  const [query, setQuery] = React.useState("");
+  const [period, setPeriod] = React.useState<EventPeriod>("tutto");
+  const filtri: EventFilters = React.useMemo(
+    () => ({ kinds, query, period }),
+    [kinds, query, period],
+  );
+  const filtrati = React.useMemo(
+    () => filterEvents(events, filtri, Date.now()),
+    [events, filtri],
+  );
+  const filtriAttivi =
+    kinds.length > 0 || query.trim() !== "" || period !== "tutto";
+  const azzeraFiltri = React.useCallback(() => {
+    setKinds([]);
+    setQuery("");
+    setPeriod("tutto");
+  }, []);
+
+  const sorted = React.useMemo(
+    () => [...filtrati].sort((a, b) => b.t - a.t),
+    [filtrati],
+  );
+  // Raggruppa per giorno (Europe/Rome) per una lettura tipo diario — i filtri I77
+  // sono applicati PRIMA del raggruppamento
   const groups = React.useMemo(() => {
     const dayFmt = new Intl.DateTimeFormat("it-IT", {
       timeZone: "Europe/Rome",
@@ -95,7 +138,9 @@ export function EventLog({ events, onClear, serverCount = null }: EventLogProps)
             Registro eventi
           </CardTitle>
           <CardDescription className="text-xs text-zinc-500">
-            Reset rilevati, soglie superate ed errori · max 200 sul dispositivo
+            {filtriAttivi
+              ? `${filtrati.length.toLocaleString("it-IT")} di ${events.length.toLocaleString("it-IT")} eventi corrispondono ai filtri · max 200 sul dispositivo`
+              : "Reset rilevati, soglie superate ed errori · max 200 sul dispositivo"}
             {serverCount !== null
               ? ` · ${serverCount.toLocaleString("it-IT")} in archivio sul server`
               : ""}
@@ -173,10 +218,84 @@ export function EventLog({ events, onClear, serverCount = null }: EventLogProps)
         </div>
       </CardHeader>
       <CardContent>
+        {/* I77 — filtri client-side: chips per kind, ricerca testuale, periodo.
+            L'export resta sull'archivio COMPLETO: i filtri sono una vista. */}
+        {events.length > 0 ? (
+          <div className="mb-4 space-y-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <ToggleGroup
+                type="multiple"
+                value={kinds}
+                onValueChange={(v) => setKinds(v as UsageEventKind[])}
+                aria-label="Filtra per tipo di evento"
+                className="flex-wrap gap-1.5"
+              >
+                {KIND_ORDER.map((k) => {
+                  const meta = KIND_META[k];
+                  return (
+                    <ToggleGroupItem
+                      key={k}
+                      value={k}
+                      aria-label={`Mostra solo eventi: ${meta.label}`}
+                      className={`gap-1 rounded-full border px-2.5! text-[11px] ${meta.className} data-[state=on]:opacity-100 data-[state=off]:opacity-45 hover:opacity-80!`}
+                    >
+                      {meta.icon}
+                      {meta.label}
+                    </ToggleGroupItem>
+                  );
+                })}
+              </ToggleGroup>
+              {filtriAttivi ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={azzeraFiltri}
+                  aria-label="Azzera tutti i filtri del registro"
+                  className="h-7 gap-1 px-2 text-[11px] text-zinc-400 hover:bg-white/[0.06]! hover:text-zinc-200!"
+                >
+                  <FilterX className="size-3.5" />
+                  Azzera filtri
+                </Button>
+              ) : null}
+            </div>
+            <div className="flex gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-zinc-500" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Cerca nel registro…"
+                  aria-label="Cerca nel registro eventi"
+                  className="h-8 border-white/10 bg-white/[0.04] pl-8 text-xs text-zinc-200 placeholder:text-zinc-600"
+                />
+              </div>
+              <Select value={period} onValueChange={(v) => setPeriod(v as EventPeriod)}>
+                <SelectTrigger
+                  aria-label="Filtra per periodo"
+                  className="h-8! w-[150px] shrink-0 border-white/10 bg-white/[0.04] text-xs text-zinc-200"
+                >
+                  <SelectValue placeholder="Periodo" />
+                </SelectTrigger>
+                <SelectContent className="border-white/10! bg-zinc-950! text-zinc-100!">
+                  {EVENT_PERIODS.map((p) => (
+                    <SelectItem key={p.id} value={p.id} className="text-xs! focus:bg-white/[0.08]!">
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        ) : null}
+
         {sorted.length === 0 ? (
           <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-white/10 px-6 text-center text-xs leading-relaxed text-zinc-500">
-            Nessun evento registrato. Gli eventi compaiono quando una finestra si resetta, una soglia viene
-            superata o un rilevamento fallisce.
+            {events.length === 0 ? (
+              <>Nessun evento registrato. Gli eventi compaiono quando una finestra si resetta, una soglia viene
+              superata o un rilevamento fallisce.</>
+            ) : (
+              <>Nessun evento corrisponde ai filtri attuali. Prova ad allargare la ricerca o il periodo.</>
+            )}
           </div>
         ) : (
           <ScrollArea className="h-64 pr-3">
@@ -200,7 +319,11 @@ export function EventLog({ events, onClear, serverCount = null }: EventLogProps)
                             <p className="text-xs leading-relaxed text-zinc-300">{e.message}</p>
                             <p className="mt-0.5 font-mono text-[10px] tabular-nums text-zinc-600">
                               {formatDateTimeRome(e.t)}
-                              {e.value !== null ? ` · ${e.value.toFixed(1)}% residuo` : ""}
+                              {/* I76 — fix bug noto: la vecchia condizione `e.value !== null`
+                                  lasciava passare `undefined` (evento senza value) e crashava
+                                  `.toFixed(1)` portando giù l'intera pagina. typeof copre
+                                  null, undefined e ogni valore non numerico. */}
+                              {typeof e.value === "number" ? ` · ${e.value.toFixed(1)}% residuo` : ""}
                             </p>
                           </div>
                         </li>

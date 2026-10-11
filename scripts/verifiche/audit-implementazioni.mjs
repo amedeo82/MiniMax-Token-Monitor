@@ -245,6 +245,28 @@ const CHECKS = [
   check.simbolo("I67", "src/lib/tab-identity.ts", "export function drawFaviconDataUrl", "favicon canvas"),
   check.simbolo("I67", "src/lib/tab-identity.ts", "MutationObserver", "guard anti re-asserzione"),
   check.simbolo("I67", "src/app/page.tsx", "TabIdentity", "wiring tab identity"),
+
+  /* --- Batch 1 client-only (I69/I77/I76/I73, docs/07) ---------------- */
+  check.simbolo("I69", "src/lib/interval.ts", "export const RANGE_PRESETS", "preset 6h/24h/3g/7g/30g/tutto"),
+  check.simbolo("I69", "src/lib/interval.ts", "export function filterHistoryByPreset", "filtro client-side puro"),
+  check.simbolo("I69", "src/app/page.tsx", "filterHistoryByPreset", "wiring filtro nello storico"),
+  check.simbolo("I69", "src/app/page.tsx", "RANGE_PRESETS", "selettore a chips"),
+  check.simbolo("I69", "tests/lib/interval.test.ts", "bordo inferiore INCLUSIVO", "semantica finestra testata"),
+  check.simbolo("I77", "src/lib/event-filters.ts", "export function filterEvents", "filtri kind+testo+periodo puri"),
+  check.simbolo("I77", "src/lib/event-filters.ts", "export function startOfTodayRome", "confine oggi Roma DST-safe"),
+  check.simbolo("I77", "src/components/event-log.tsx", "filterEvents", "wiring filtri nel registro"),
+  check.simbolo("I77", "src/components/event-log.tsx", "ToggleGroup", "chips per kind"),
+  check.simbolo("I77", "src/components/event-log.tsx", "Azzera filtri", "reset della vista"),
+  check.simbolo("I77", "tests/lib/event-filters.test.ts", "DST-safe", "test confine ora legale/solare"),
+  check.simbolo("I76", "src/components/event-log.tsx", 'typeof e.value === "number"', "fix bug undefined.toFixed"),
+  check.simbolo("I76", "src/components/section-boundary.tsx", "componentDidCatch", "error boundary React"),
+  check.simbolo("I76", "src/components/section-boundary.tsx", "Riprova", "skeleton con retry"),
+  check.simbolo("I76", "src/app/page.tsx", "SectionBoundary", "sezioni avvolte indipendentemente"),
+  check.simbolo("I73", "src/lib/compact.ts", "export function readCompactMode", "parsing ?compact=1"),
+  check.simbolo("I73", "src/app/page.tsx", "readCompactMode", "wiring modalità compatta"),
+  check.simbolo("I73", "src/app/page.tsx", "VISTA COMPATTA", "widget anelli+countdown+ritmo"),
+  check.simbolo("I73", "src/app/page.tsx", "Torna alla vista completa", "uscita dal widget"),
+  check.simbolo("I73", "tests/lib/compact.test.ts", "readCompactMode", "test parsing"),
 ];
 
 /* ------------------------------------------------------------------ */
