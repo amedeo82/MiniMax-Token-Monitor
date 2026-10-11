@@ -71,7 +71,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 **Qualità** (I50/I55)
 - **Suite test automatica**: 249 test / 761 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 203 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 211 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 
 ---
 

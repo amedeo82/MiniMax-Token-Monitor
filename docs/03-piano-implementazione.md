@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-12 (§5.15 correzione leggibilità tema chiaro — I83: varianti opacità, toni 400→600 per testo/icone, stati attivi tab/chips con blocco layered, hover scuri). Precedente: 2026-10-11 (§5.14 batch 4 UX — I74 barra mobile / I75 vista stampa / I78 tema chiaro).
+> Ultimo aggiornamento: 2026-10-12 (§5.16 due famiglie di colore — I84: token `--mm-muted` chiaro/scuro, famiglia scuro revisionata al probe WCAG, accent chiaro su toni 700/800 con tinte 50 piene; 0 FAIL su 74 campioni in entrambi i temi). Precedente: 2026-10-12 (§5.15 correzione leggibilità tema chiaro — I83: varianti opacità, toni 400→600 per testo/icone, stati attivi tab/chips con blocco layered, hover scuri).
 
 ---
 
@@ -596,6 +596,71 @@ famiglia: nomi di CLASSE diversi non raggiunti dai selettori esistenti):**
 > `verify-i83-ewma-light.png`, `verify-i83-eventi-light.png`, `verify-i83-menu-light.png`.
 > Suite invariata: tsc 0 errori su src/+tests/, lint OK, 249/249 (761 asserzioni),
 > audit 203/203 PASS (fix solo CSS: nessun nuovo check di audit necessario).
+
+### 5.16 Due famiglie di colore (tema chiaro + tema scuro revisionato) (I84) — 12/10
+
+> **Richiesta utente**: «eseguire le stesse verifiche con il tema scuro ed implementare
+> 2 famiglie di colori, una per il tema chiaro (già quella attuale corretta), una per il
+> tema scuro che va rivista perché quella attuale è poco leggibile; verifiche nel browser
+> per entrambi i temi».
+>
+> **Strumento di misura**: probe WCAG reale nel browser (`scripts/probe-contrast.js`,
+> agent-browser su :3000) che per ogni elemento campionato calcola foreground e sfondo
+> EFFETTIVO (alpha compositing: il fg con opacità viene fuso sullo sfondo prima del
+> rapporto), risolvendo i colori calcolati di Chrome in qualunque formato (`oklab`,
+> `oklch`, `lab`, `rgb`, `color(srgb)`) in sRGB, e valuta il contrasto WCAG 2.1 AA
+> (4.5:1 testo piccolo, 3:1 testo grande). Rotta `/api/history` + `/api/events` bloccate
+> con body `{}` (protocollo: nessuna scrittura demo sul DB).
+>
+> **Esito della misura (baseline)** — SCURO: tutti gli accent (amber/sky/rose/emerald/
+> orange, con e senza opacità) passano con margine (5.5–15:1); gli UNICI FAIL sono il
+> testo secondario: `text-zinc-500` 3.85–4.12:1 e `text-zinc-600` 2.26–2.58:1 (note
+> tecniche, timestamp, etichette a 10–11px). CHIARO (definito «corretto» dall'utente):
+> la misura smentisce parzialmente — 21 FAIL: i toni 600 scelti da I83 su tinte chiare
+> misurano 2.5–3.6:1 (badge registro eventi, valori anelli, badge diagnostica, chip
+> kind), `text-zinc-500`/`text-zinc-600` 4.24–4.33:1 su tinte grigie, etichette menu
+> `text-zinc-500!` 4.33:1. Il giudizio visivo dell'utente resta rispettato: le cure
+> non cambiano l'impianto, alzano solo il margine sotto le soglie AA.
+>
+> **Design: due famiglie esplicite** (token semantici in `globals.css`, un blocco
+> `:root` + un blocco `.dark` affiancati):
+> - `--mm-muted` / `--mm-muted-2` — testo secondario/tecnico. CHIARO: `rgb(95,95,104)`
+>   (zinc-500/600 grezzi NON passavano su tinte grigie; il token misura 5.5–6:1). SCURO:
+>   `rgb(150,150,160)` (≥6.3:1) e `rgb(138,138,148)` (≥5.4:1, gerarchia preservata).
+> - L'aggiornamento dei token basta per ENTRAMBI i temi: le regole che li consumano
+>   sono `html:not(.dark) .text-zinc-500/600` (chiaro) e le NUOVE `.dark .text-zinc-500`,
+>   `.dark .text-zinc-600`, `.dark .placeholder\:text-zinc-600::placeholder` (scuro,
+>   unlayered 0,2,0 → battono le utilities layered, tecnica I78/I83).
+> - **Accent su tinte (chiaro)**: tono 600 → 700 per `rose/amber/sky/orange` (300, 400,
+>   500 come testo/icone) e tono 800 per `emerald` (300/400/500) e `amber-200`; le
+>   tinte forti `bg-*-400/10`, `bg-*-500/15`, `bg-*-500/20` → toni **50 pieni** solidi
+>   (`#ecfdf5`, `#fffbeb`, `#fff1f2`, `#fff7ed`, `#f0f9ff`, `#f5f3ff`): il 700 sul 50
+>   misura 4.8–5.7:1, sul translucido scendeva a 2.5–4.5. `violet-300→600` resta (già
+>   5.2–5.5:1, unico tono 600 che passa). Bordi decorativi `/25–/30` e barre `/70`
+>   invariati. Tinta banner `amber-950/40→amber-50` di I83 invariata.
+> - **Accent (scuro)**: INTATTI — la misura li dà tutti ≥5.5:1; la famiglia scuro non
+>   tocca i componenti, corregge solo il muted (+ il placeholder + `text-zinc-500!`
+>   dei menu Esporta/Storico/Registro con un secondo blocco `@layer utilities` dedicato
+>   a `.dark`, lezione cascade I83).
+> - Tab/chip attivi: token `--mm-ink/--mm-panel/--mm-line` documentati in entrambe le
+>   famiglie; il chiaro li consuma già (I83), lo scuro usa le utilities originali dei
+>   componenti (misurate 13.3–13.6:1, nessuna cura necessaria).
+>
+> **Lezione di toolchain**: Turbopack (Next 16) ha servito per ~1h un CSS STALE e
+> incoerente (regole presenti a metà: token sì, blocco tinte no) sia nel chunk linkato
+> sia nell'HMR; la pipeline reale (`@tailwindcss/postcss` e LightningCSS puri) preserva
+> il blocco. La pulizia di `.next` + restart risolve (precedente noto del progetto con
+> il client Prisma rigenerato). Nuova regola operativa: se una modifica CSS «non prende»
+> in modo selettivo, prima di indagare il CSS va cancellato `.next` e riavviato il dev
+> server; l'audit ora copre I83/I84 con 8 check dedicati (211 totali).
+>
+> Esiti (probe dopo cure, entrambi i temi): CHIARO 36 campioni / 0 FAIL, SCURO 38
+> campioni / 0 FAIL (era 21 e 6). Tab impostazioni verificati in entrambi i temi (attivo
+> `rgb(24,24,27)` su `rgba(0,0,0,0.07)` in chiaro; quasi-bianco su white-alpha in scuro).
+> Screenshot `scripts/verify-i84-impostazioni-light.png`, `verify-i84-impostazioni-dark.png`,
+> `verify-i84-full-light.png`, `verify-i84-full-dark.png`. Suite: tsc 0 errori su
+> src/+tests/, lint OK, 249/249 (761 asserzioni, fix solo CSS), audit 211/211 PASS
+> 0 scoperte (era 203, +8 check I83/I84).
 
 ---
 
