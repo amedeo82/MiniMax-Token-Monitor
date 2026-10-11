@@ -34,9 +34,19 @@ import {
   summarizeCycles,
   weekdayConsumption,
   WEEKDAY_LABELS,
+  sprecoPerCiclo,
+  prevedibilitaCicli,
+  consumoGiornaliero,
+  distribuzioneResiduo,
+  oggiVsMedia,
   type Cycle,
   type CycleSummary,
   type HeatmapGrid,
+  type WasteStats,
+  type Prevedibilita,
+  type CalendarGrid,
+  type Distribuzione,
+  type OggiVsMedia,
 } from "@/lib/cycles";
 import { mergeHistories, fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import { formatDateTimeRome, formatDuration } from "@/lib/time";
@@ -146,7 +156,7 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="cicli-interval">
-          <TabsList className="mb-3 bg-white/[0.06]">
+          <TabsList className="mb-3 h-auto max-w-full flex-wrap justify-start bg-white/[0.06]">
             <TabsTrigger value="cicli-interval" className="text-xs data-[state=active]:text-zinc-900">
               Cicli 5 ore
             </TabsTrigger>
@@ -156,8 +166,14 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
             <TabsTrigger value="giorni" className="text-xs data-[state=active]:text-zinc-900">
               Per giorno
             </TabsTrigger>
+            <TabsTrigger value="calendario" className="text-xs data-[state=active]:text-zinc-900">
+              Calendario
+            </TabsTrigger>
             <TabsTrigger value="ore" className="text-xs data-[state=active]:text-zinc-900">
               Per ora
+            </TabsTrigger>
+            <TabsTrigger value="distribuzione" className="text-xs data-[state=active]:text-zinc-900">
+              Distribuzione
             </TabsTrigger>
           </TabsList>
 
@@ -180,11 +196,22 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
           </TabsContent>
 
           <TabsContent value="giorni" className="mt-0">
-            <WeekdaySection weekly={weekdayWeekly} interval={weekdayInterval} />
+            <div className="space-y-4">
+              <TodayComparison history={data} />
+              <WeekdaySection weekly={weekdayWeekly} interval={weekdayInterval} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="calendario" className="mt-0">
+            <CalendarSection history={data} />
           </TabsContent>
 
           <TabsContent value="ore" className="mt-0">
             <HeatmapSection interval={heatInterval} weekly={heatWeekly} />
+          </TabsContent>
+
+          <TabsContent value="distribuzione" className="mt-0">
+            <DistributionSection history={data} />
           </TabsContent>
         </Tabs>
 
@@ -215,6 +242,8 @@ function CycleSection({
   onGoingLabel: string;
 }) {
   const visible = [...cycles].slice(-8).reverse(); // i più recenti prima
+  const waste = React.useMemo(() => sprecoPerCiclo(cycles), [cycles]);
+  const prev = React.useMemo(() => prevedibilitaCicli(cycles), [cycles]);
 
   return (
     <div className="space-y-3">
@@ -249,6 +278,10 @@ function CycleSection({
           <p className="mt-0.5 text-[10px] text-zinc-500">minimo registrato {summary.minEver?.toFixed(1) ?? "—"}%</p>
         </div>
       </div>
+
+      {/* I57 — spreco per ciclo + I63 — prevedibilità */}
+      <CycleWaste waste={waste} />
+      <PrevedibilitaStrip prev={prev} />
 
       {visible.length === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-white/10 text-xs text-zinc-500">
@@ -402,6 +435,235 @@ function WeekdaySection({
         calcolato sul calo del minimo progressivo della quota tra i rilevamenti — i rimbalzi senza reset
         non sono consumo — e normalizzato sui giorni presenti nello storico ({totalDays} giorni osservati).
         I giorni senza consumo registrato compaiono a 0.
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I57 — Spreco per ciclo + I63 — Prevedibilità                        */
+/* ------------------------------------------------------------------ */
+
+function CycleWaste({ waste }: { waste: WasteStats | null }) {
+  if (!waste) return null;
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Spreco medio</p>
+        <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-amber-300">{waste.media.toFixed(1)}%</p>
+        <p className="mt-0.5 text-[10px] text-zinc-500">residuo al reset</p>
+      </div>
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Spreco mediano</p>
+        <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-zinc-100">{waste.mediana.toFixed(1)}%</p>
+        <p className="mt-0.5 text-[10px] text-zinc-500">su {waste.n} cicli completati</p>
+      </div>
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Peggiore spreco</p>
+        <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-rose-300">{waste.max.toFixed(1)}%</p>
+        <p className="mt-0.5 text-[10px] text-zinc-500">reset più anticipo</p>
+      </div>
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Cicli puliti</p>
+        <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-emerald-300">{waste.percClean.toFixed(0)}%</p>
+        <p className="mt-0.5 text-[10px] text-zinc-500">{waste.clean}/{waste.n} con spreco &lt; 5%</p>
+      </div>
+    </div>
+  );
+}
+
+function PrevedibilitaStrip({ prev }: { prev: Prevedibilita | null }) {
+  if (!prev) return null;
+  const lettura = prev.indice >= 70 ? "Cicli regolari" : prev.indice >= 40 ? "Cicli variabili" : "Cicli irregolari";
+  const tone = prev.indice >= 70 ? "text-emerald-300" : prev.indice >= 40 ? "text-amber-300" : "text-rose-300";
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 py-2.5">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Prevedibilità</p>
+      <p className={`text-xs font-semibold ${tone}`}>
+        {lettura} · indice {prev.indice}/100
+      </p>
+      <p className="text-[11px] text-zinc-500">
+        durata media {formatDuration(prev.mediaMs)} · σ {formatDuration(prev.sigmaMs)} · CV {(prev.cv * 100).toFixed(0)}% · {prev.n} cicli
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I64 — Oggi vs media degli stessi weekday                            */
+/* ------------------------------------------------------------------ */
+
+function TodayComparison({ history }: { history: HistoryPoint[] }) {
+  const [win, setWin] = React.useState<"interval" | "weekly">("interval");
+  const confronto = React.useMemo(() => oggiVsMedia(history, win, 5), [history, win]);
+  const o: OggiVsMedia = confronto;
+  const diffTone = o.senzaMedia ? "text-zinc-400" : o.differenza > 0.05 ? "text-rose-300" : o.differenza < -0.05 ? "text-emerald-300" : "text-zinc-300";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Finestra del confronto">
+        <Button variant="outline" size="sm" aria-pressed={win === "interval"} onClick={() => setWin("interval")}
+          className={`h-8 border-white/10 text-xs ${win === "interval" ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
+          5 ore
+        </Button>
+        <Button variant="outline" size="sm" aria-pressed={win === "weekly"} onClick={() => setWin("weekly")}
+          className={`h-8 border-white/10 text-xs ${win === "weekly" ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
+          Settimanale
+        </Button>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Oggi</p>
+          <p className="mt-1.5 font-mono text-xl font-bold tabular-nums text-zinc-100">{o.oggi.toFixed(1)}%</p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">consumo del giorno</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Media stessi giorni</p>
+          <p className="mt-1.5 font-mono text-xl font-bold tabular-nums text-zinc-100">{o.senzaMedia ? "—" : `${o.media.toFixed(1)}%`}</p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">ultime 5 settimane (oggi escluso)</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Differenza</p>
+          <p className={`mt-1.5 font-mono text-xl font-bold tabular-nums ${diffTone}`}>
+            {o.senzaMedia ? "—" : `${o.differenza > 0 ? "+" : ""}${o.differenza.toFixed(1)}%`}
+          </p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">
+            {o.senzaMedia ? "nessun giorno confrontabile" : `su ${o.giorniConsiderati} giorni`}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I58 — Calendario del consumo (stile GitHub)                         */
+/* ------------------------------------------------------------------ */
+
+const CAL_SETTIMANE = 20;
+
+function CalendarSection({ history }: { history: HistoryPoint[] }) {
+  const [win, setWin] = React.useState<"interval" | "weekly">("interval");
+  const grid: CalendarGrid = React.useMemo(() => consumoGiornaliero(history, win, CAL_SETTIMANE), [history, win]);
+  const winLabel = win === "interval" ? "finestra di 5 ore" : "finestra settimanale";
+
+  const cellColor = (v: number | null): string | undefined => {
+    if (v === null || v <= 0) return undefined;
+    const alpha = 0.12 + 0.78 * Math.sqrt(v / (grid.max || 1));
+    return `rgba(52, 211, 153, ${alpha.toFixed(3)})`;
+  };
+
+  if (grid.total <= 0) {
+    return (
+      <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-6 text-center">
+        <CalendarDays className="size-5 text-zinc-600" />
+        <p className="text-xs leading-relaxed text-zinc-500">
+          Nessun consumo attribuibile a un giorno di calendario ({winLabel}): servono rilevamenti in calo.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Finestra del calendario">
+        <Button variant="outline" size="sm" aria-pressed={win === "interval"} onClick={() => setWin("interval")}
+          className={`h-8 border-white/10 text-xs ${win === "interval" ? "bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
+          5 ore
+        </Button>
+        <Button variant="outline" size="sm" aria-pressed={win === "weekly"} onClick={() => setWin("weekly")}
+          className={`h-8 border-white/10 text-xs ${win === "weekly" ? "bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
+          Settimanale
+        </Button>
+        <span className="ml-auto text-[10px] text-zinc-600">ultime {CAL_SETTIMANE} settimane · la corrente è l&apos;ultima colonna</span>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-white/[0.07] p-2">
+        <div className="space-y-[3px]">
+          {grid.weeks.map((settimana, wi) => (
+            <div key={wi} className="flex items-center gap-[3px]">
+              {settimana.map((cella, ci) => (
+                <div
+                  key={ci}
+                  title={cella.date ? `${cella.date} — consumo ${cella.value?.toFixed(1) ?? "0"}%` : "giorno futuro"}
+                  className="h-5 w-5 shrink-0 rounded-[4px] border border-white/[0.04]"
+                  style={{ backgroundColor: cellColor(cella.value) }}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-[10px] text-zinc-500">
+        <span>0%</span>
+        <span aria-hidden className="h-2 w-28 rounded-full" style={{ background: "linear-gradient(90deg, rgba(52,211,153,0.12), rgba(52,211,153,0.9))" }} />
+        <span>{grid.max.toFixed(1)}% (picco giornaliero)</span>
+        <span className="ml-auto">{grid.giorni} giorni con consumo · totale {grid.total.toFixed(1)}%</span>
+      </div>
+
+      <p className="text-[11px] leading-relaxed text-zinc-500">
+        Consumo per giorno di calendario (Europe/Rome, DST-safe via date stringhe), attribuito al punto medio
+        tra i rilevamenti con la stessa semantica drawdown delle altre analisi. Le colonne sono lun→dom;
+        la settimana corrente è sempre l&apos;ultima.
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* I61 — Istogramma del residuo                                        */
+/* ------------------------------------------------------------------ */
+
+function DistributionSection({ history }: { history: HistoryPoint[] }) {
+  const [win, setWin] = React.useState<"interval" | "weekly">("interval");
+  const dist: Distribuzione = React.useMemo(() => distribuzioneResiduo(history, win), [history, win]);
+  const winLabel = win === "interval" ? "finestra di 5 ore" : "finestra settimanale";
+
+  if (dist.n === 0) {
+    return (
+      <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-6 text-center">
+        <Layers className="size-5 text-zinc-600" />
+        <p className="text-xs leading-relaxed text-zinc-500">Nessun rilevamento da distribuire ({winLabel}).</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Finestra della distribuzione">
+        <Button variant="outline" size="sm" aria-pressed={win === "interval"} onClick={() => setWin("interval")}
+          className={`h-8 border-white/10 text-xs ${win === "interval" ? "bg-sky-500/15 text-sky-200 hover:bg-sky-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
+          5 ore
+        </Button>
+        <Button variant="outline" size="sm" aria-pressed={win === "weekly"} onClick={() => setWin("weekly")}
+          className={`h-8 border-white/10 text-xs ${win === "weekly" ? "bg-sky-500/15 text-sky-200 hover:bg-sky-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
+          Settimanale
+        </Button>
+        <span className="ml-auto text-[10px] text-zinc-600">{dist.n} rilevamenti distribuiti</span>
+      </div>
+
+      <div className="space-y-1.5">
+        {[...dist.fasce].reverse().map((f) => (
+          <div key={f.label} className="flex items-center gap-2">
+            <span className="w-14 shrink-0 text-right font-mono text-[10px] tabular-nums text-zinc-500">{f.label}%</span>
+            <div className="h-4 flex-1 overflow-hidden rounded-md bg-white/[0.04]">
+              <div
+                className="h-full rounded-md transition-[width] duration-500"
+                style={{ width: `${(f.count / (dist.max || 1)) * 100}%`, backgroundColor: f.color }}
+              />
+            </div>
+            <span className="w-20 shrink-0 text-right font-mono text-[10px] tabular-nums text-zinc-400">
+              {f.count} · {((f.count / dist.n) * 100).toFixed(0)}%
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-[11px] leading-relaxed text-zinc-500">
+        Quante volte la quota è stata osservata in ciascuna fascia di residuo (assegnazione con
+        ceil: 84,5% cade in 80–90). Le fasce rosse a sinistra = momenti di scarsità; un istogramma
+        spostato a destra indica un piano usato con ampio margine.
       </p>
     </div>
   );

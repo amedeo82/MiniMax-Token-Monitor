@@ -365,3 +365,329 @@ export function movingAverage(values: number[], k: number): (number | null)[] {
   }
   return out;
 }
+
+/* ------------------------------------------------------------------ */
+/* I57 — Spreco per ciclo                                              */
+/* ------------------------------------------------------------------ */
+
+/** Statistiche di spreco sui cicli completati (I57). */
+export interface WasteStats {
+  /** Cicli completati analizzati. */
+  n: number;
+  /** Residuo medio al reset (punti percento). */
+  media: number;
+  /** Residuo mediano al reset. */
+  mediana: number;
+  /** Spreco più grande osservato (peggiore ciclo). */
+  max: number;
+  /** Cicli «puliti» con spreco < 5 punti. */
+  clean: number;
+  /** Percentuale di cicli puliti (0–100). */
+  percClean: number;
+}
+
+/**
+ * I57 — Quanto quota il reset «buttata via»: per ogni ciclo completato lo
+ * spreco è il residuo osservato all'ultimo rilevamento prima del reset
+ * (`endValue`): quella quota il reset la riporta a pieno senza che sia stata
+ * usata. Media/mediana/max sui cicli completati; `clean` conta i cicli con
+ * spreco sotto 5 punti (reset «in orario», fine finestra quasi a secco).
+ * Ritorna null senza cicli completati.
+ */
+export function sprecoPerCiclo(cycles: Cycle[]): WasteStats | null {
+  const completati = cycles.filter((c) => !c.ongoing);
+  if (completati.length === 0) return null;
+  const sprechi = completati.map((c) => Math.max(0, c.endValue)).sort((a, b) => a - b);
+  const media = sprechi.reduce((a, b) => a + b, 0) / sprechi.length;
+  const metà = Math.floor(sprechi.length / 2);
+  const mediana =
+    sprechi.length % 2 === 1 ? sprechi[metà] : (sprechi[metà - 1] + sprechi[metà]) / 2;
+  const clean = sprechi.filter((s) => s < 5).length;
+  return {
+    n: sprechi.length,
+    media,
+    mediana,
+    max: sprechi[sprechi.length - 1],
+    clean,
+    percClean: (clean / sprechi.length) * 100,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* I63 — Prevedibilità dei cicli                                       */
+/* ------------------------------------------------------------------ */
+
+/** Indice di regolarità dei cicli (I63). */
+export interface Prevedibilita {
+  /** Cicli completati analizzati (≥ 3). */
+  n: number;
+  /** Durata media dei cicli completati, ms. */
+  mediaMs: number;
+  /** Deviazione standard POPOLAZIONE delle durate, ms. */
+  sigmaMs: number;
+  /** Coefficiente di variazione σ/μ (0 = perfettamente regolari). */
+  cv: number;
+  /** Indice di regolarità 0–100: 100 × (1 − min(1, cv)). */
+  indice: number;
+}
+
+/**
+ * I63 — Quanto sono prevedibili le durate dei cicli: σ popolazione e
+ * coefficiente di variazione sulle durate dei cicli completati; l'indice di
+ * regolarità mappa cv ∈ [0,1] → [100, 0]. Ritorna null con meno di 3 cicli
+ * completati (con 2 la statistica non significa nulla).
+ */
+export function prevedibilitaCicli(cycles: Cycle[]): Prevedibilita | null {
+  const durate = cycles.filter((c) => !c.ongoing).map((c) => c.durationMs);
+  if (durate.length < 3) return null;
+  const mediaMs = durate.reduce((a, b) => a + b, 0) / durate.length;
+  if (mediaMs <= 0) return null;
+  const varianza = durate.reduce((acc, d) => acc + (d - mediaMs) ** 2, 0) / durate.length;
+  const sigmaMs = Math.sqrt(varianza);
+  const cv = sigmaMs / mediaMs;
+  return {
+    n: durate.length,
+    mediaMs,
+    sigmaMs,
+    cv,
+    indice: Math.round(Math.max(0, Math.min(100, 100 * (1 - Math.min(1, cv))))),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* I58 — Calendario del consumo per giorno di calendario               */
+/* ------------------------------------------------------------------ */
+
+/** Una cella del calendario (I58): giorno senza dati → value null. */
+export interface DayCell {
+  /** Data in formato YYYY-MM-DD (Europe/Rome) o null per celle future/vuote. */
+  date: string | null;
+  /** Consumo attribuito al giorno (punti percento) o null. */
+  value: number | null;
+}
+
+/** Griglia calendario (I58): righe = settimane, colonne = lun→dom. */
+export interface CalendarGrid {
+  /** Settimane in ordine cronologico; la CORRENTE è sempre l'ultima riga. */
+  weeks: DayCell[][];
+  /** Consumo massimo di un giorno (per la scala di colore). */
+  max: number;
+  /** Giorni con almeno un consumo. */
+  giorni: number;
+  /** Consumo totale attribuito. */
+  total: number;
+}
+
+// Formatter riusabili (quelli top-file: date stringa en-CA = DST-safe di costruzione,
+// weekday en-US per l'allineamento al lunedì — vedi sezione «Consumo per giorno»).
+
+/**
+ * I58 — Consumo per giorno DI CALENDARIO (stile GitHub): il drawdown tra
+ * rilevamenti è attribuito al giorno (Europe/Rome) del punto medio (stessa
+ * semantica di `weekdayConsumption`/`heatmapConsumption`), poi aggregato per
+ * data. La griglia copre le ultime `settimane` settimane (default 26) a
+ * partire da lunedì; la settimana corrente è SEMPRE l'ultima riga, con celle
+ * future a null.
+ */
+export function consumoGiornaliero(
+  history: HistoryPoint[],
+  win: WindowKey,
+  settimane = 26,
+): CalendarGrid {
+  const perGiorno = new Map<string, number>();
+  if (history.length >= 2) {
+    let ref = valueOf(history[0], win);
+    for (let i = 1; i < history.length; i++) {
+      const v = valueOf(history[i], win);
+      if (v < ref) {
+        const midT = (history[i - 1].t + history[i].t) / 2;
+        const dayKey = dateFmt.format(new Date(midT));
+        perGiorno.set(dayKey, (perGiorno.get(dayKey) ?? 0) + (ref - v));
+        ref = v;
+      } else if (v - ref >= RESET_JUMP && v >= RESET_TARGET) {
+        ref = v;
+      }
+      // recupero sotto soglia: rumore, nessun consumo
+    }
+  }
+
+  // Intervallo dei giorni: dal primo all'ultimo giorno CON DATI (fallback: oggi
+  // se non c'è alcun consumo). Terminare all'ultimo giorno osservato rende la
+  // griglia deterministica anche con storico non odierno; con dati vivi l'ultimo
+  // giorno osservato è proprio oggi (settimana corrente = ultima riga).
+  const oggi = dateFmt.format(new Date());
+  const giorniOsservati = [...perGiorno.keys()].sort();
+  const primo = giorniOsservati[0] ?? oggi;
+  const ultimo = giorniOsservati[giorniOsservati.length - 1] ?? primo;
+
+  // Crea la sequenza di date (stringhe) da `primo` (allineato al lunedì) a `ultimo`.
+  const [y, m, d] = primo.split("-").map(Number);
+  let cursor = new Date(Date.UTC(y, m - 1, d));
+  // Torna al lunedì della settimana di `primo`
+  while (weekdayFmt.format(cursor) !== "Mon") {
+    cursor = new Date(cursor.getTime() - 86_400_000);
+  }
+  const [fy, fm, fd] = ultimo.split("-").map(Number);
+  const fine = new Date(Date.UTC(fy, fm - 1, fd));
+
+  const weeks: DayCell[][] = [];
+  let currentWeek: DayCell[] = [];
+  let max = 0;
+  let giorni = 0;
+  let total = 0;
+
+  // Limite di sicurezza: non scavalcare le settimane richieste per eccesso
+  while (cursor.getTime() <= fine.getTime()) {
+    const key = dateFmt.format(cursor);
+    const value = perGiorno.get(key) ?? null;
+    if (cursor.getTime() <= fine.getTime()) {
+      currentWeek.push({ date: key, value });
+      if (value !== null) {
+        giorni += 1;
+        total += value;
+        if (value > max) max = value;
+      }
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    }
+    cursor = new Date(cursor.getTime() + 86_400_000);
+    if (weeks.length > settimane) break; // margine di sicurezza
+  }
+  if (currentWeek.length > 0) {
+    // Settimana corrente COMPLETATA con celle vuote fino a domenica
+    while (currentWeek.length < 7) currentWeek.push({ date: null, value: null });
+    weeks.push(currentWeek);
+  }
+
+  // Taglia alle ultime `settimane` settimane (la corrente è sempre l'ultima)
+  const taglio = weeks.slice(-Math.max(1, settimane));
+  return { weeks: taglio, max, giorni, total };
+}
+
+/* ------------------------------------------------------------------ */
+/* I64 — Oggi vs media degli stessi weekday                            */
+/* ------------------------------------------------------------------ */
+
+/** Confronto «oggi vs media» (I64). */
+export interface OggiVsMedia {
+  /** Data di oggi (YYYY-MM-DD, Europe/Rome). */
+  oggiKey: string;
+  /** Consumo di oggi (0 se nessun rilevamento in calo ancora oggi). */
+  oggi: number;
+  /** Media dei consumi degli stessi weekday nelle ultime N settimane (oggi escluso). */
+  media: number;
+  /** Differenza oggi − media (positiva = oggi più consumo). */
+  differenza: number;
+  /** Numero di giorni usati nella media. */
+  giorniConsiderati: number;
+  /** true se nessun giorno confrontabile (media non significativa). */
+  senzaMedia: boolean;
+}
+
+/**
+ * I64 — Consumo di OGGI contro la media degli STESSI weekday delle ultime
+ * `settimane` settimane (default 5), con oggi ESCLUSO dalla media. Riusa
+ * l'aggregazione per giorno di `consumoGiornaliero`.
+ */
+export function oggiVsMedia(history: HistoryPoint[], win: WindowKey, settimane = 5): OggiVsMedia {
+  const grid = consumoGiornaliero(history, win, Math.max(settimane + 1, 6));
+  const flat = grid.weeks.flat().filter((c): c is { date: string; value: number } => c.date !== null && c.value !== null);
+  const oggiKey = flat.length > 0 ? flat[flat.length - 1].date : dateFmt.format(new Date());
+  const oggi = flat.find((c) => c.date === oggiKey)?.value ?? 0;
+
+  // Weekday (0=lun … 6=dom) di oggi, calcolato dalla data stringa su un utcnoon
+  const [oy, om, od] = oggiKey.split("-").map(Number);
+  const probe = new Date(Date.UTC(oy, om - 1, od, 12));
+  const idx = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(weekdayFmt.format(probe));
+
+  const confrontabili = flat
+    .filter((c) => c.date !== oggiKey)
+    .filter((c) => {
+      const [cy, cm, cd] = c.date.split("-").map(Number);
+      const p = new Date(Date.UTC(cy, cm - 1, cd, 12));
+      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(weekdayFmt.format(p)) === idx;
+    });
+
+  const lastN = confrontabili.slice(-settimane);
+  const media =
+    lastN.length > 0 ? lastN.reduce((a, c) => a + c.value, 0) / lastN.length : 0;
+
+  return {
+    oggiKey,
+    oggi,
+    media,
+    differenza: oggi - media,
+    giorniConsiderati: lastN.length,
+    senzaMedia: lastN.length === 0,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* I61 — Istogramma del residuo                                        */
+/* ------------------------------------------------------------------ */
+
+/** Una fascia dell'istogramma del residuo (I61). */
+export interface ResiduoFascia {
+  /** Etichetta «0–10» … «90–100». */
+  label: string;
+  /** Limite inferiore (incluso), 0–90. */
+  from: number;
+  /** Limite superiore (incluso), 10–100. */
+  to: number;
+  /** Rilevamenti con residuo nella fascia. */
+  count: number;
+  /** Colore della fascia (BAND_COLORS). */
+  color: string;
+}
+
+/** Distribuzione del residuo (I61). */
+export interface Distribuzione {
+  fasce: ResiduoFascia[];
+  /** Rilevamenti totali distribuiti. */
+  n: number;
+  /** Conteggio massimo (per la scala delle barre). */
+  max: number;
+}
+
+/**
+ * Colori delle 10 fasce di residuo: dal rosso (0–10) al verde (90–100), con
+ * i toni di `quotaLevel` come casi limite (10/30/60).
+ */
+export const BAND_COLORS: string[] = [
+  "#ef4444", // 0–10   crit
+  "#fb7185", // 10–20  crit→warn
+  "#f97316", // 20–30  warn
+  "#f59e0b", // 30–40  warn
+  "#fbbf24", // 40–50  warn→good
+  "#eab308", // 50–60  good
+  "#a3e635", // 60–70  good→ok
+  "#84cc16", // 70–80  ok
+  "#4ade80", // 80–90  ok
+  "#22c55e", // 90–100 ok pieno
+];
+
+/**
+ * I61 — Istogramma del residuo osservato: ogni rilevamento della finestra è
+ * assegnato alla fascia con CEIL (84,5 → 80–90; 0 → 0–10; 100 → 90–100).
+ */
+export function distribuzioneResiduo(history: HistoryPoint[], win: WindowKey): Distribuzione {
+  const counts = new Array<number>(10).fill(0);
+  let n = 0;
+  for (const p of history) {
+    const v = valueOf(p, win);
+    if (!isFinite(v)) continue;
+    const idx = Math.min(9, Math.max(0, Math.ceil(v / 10) - 1));
+    counts[idx] += 1;
+    n += 1;
+  }
+  const fasce: ResiduoFascia[] = counts.map((count, i) => ({
+    label: `${i * 10}–${i * 10 + 10}`,
+    from: i * 10,
+    to: i * 10 + 10,
+    count,
+    color: BAND_COLORS[i],
+  }));
+  return { fasce, n, max: Math.max(0, ...counts) };
+}

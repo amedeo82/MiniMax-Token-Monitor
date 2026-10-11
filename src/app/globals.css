@@ -146,3 +146,8 @@
   color: rgb(228 228 231);
   background-color: rgb(255 255 255 / 0.05);
 }
+
+/* I66 — sezioni ancorate: il salto dalla nav interna rispetta header + nav */
+.mm-anchor {
+  scroll-margin-top: var(--nav-offset, 130px);
+}
