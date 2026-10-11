@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-11 (§5.12 batch 2 analisi — design I70 anomalie ritmo / I71 qualità campionamento / I72 proiezione EWMA). Precedente: 2026-10-07 (I31 pace + quota sprecata nel StatsPanel, I32 heatmap ore + overlay cicli nel grafico storico — roadmap §11 punti 8–9).
+> Ultimo aggiornamento: 2026-10-11 (§5.13 batch 3 infrastruttura — design I80 endpoint summary / I81 test componente / I68 downsampling orario). Precedente: 2026-10-11 (§5.12 batch 2 analisi — design I70 anomalie ritmo / I71 qualità campionamento / I72 proiezione EWMA).
 
 ---
 
@@ -399,6 +399,48 @@ rispettiva suite di test, agganciate alla Diagnostica (I70/I71) e al pannello pa
   e una riga di lettura (EWMA anticipa o conferma il lineare); wiring: `page.tsx`
   calcola `ewmaProjection(filteredHistory, chartWindow)` (segue l'intervallo I69) e la
   passa come prop; con meno di 2 ritmi validi → N/D spiegato.
+
+---
+
+### 5.13 Batch 3 infrastruttura: endpoint summary, test di componente, downsampling orario (I80/I81/I68)
+Tre miglioramenti di **infrastruttura/integrazione** da `docs/07` (§5.13, §5.14, §5.1) —
+l'unico che tocca il DB è I68 e riguarda SOLO dati derivati (aggregati orari), non i
+punti grezzi:
+
+- **I80 — Endpoint read-only `/api/summary`**: nuova route `GET /api/summary` SENZA
+  chiave e senza parametri, per widget esterni (statusline, home assistant, script
+  cron). Restituisce SOLO numeri aggregati: `punti` (totale/api/demo/altro),
+  `arco` (primo/ultimo timestamp), `ultimoRilevamento` (t, interval, weekly, source),
+  `eventi` (totale, per kind, ultimo) e `downsample` (ore, prima, ultima — I68).
+  Tutte le query sono di lettura (`count`/`findMany`/`groupBy`): **ADR-8 intoccato**,
+  nessuna scrittura, nessun dato sensibile (sono le stesse percentuali già mostrate
+  nella UI pubblica); errori mappati in italiano come le altre route;
+- **I81 — Test di componente UI**: prima tornata in `tests/components/` con
+  `@testing-library/react` v16 + `happy-dom` (GlobalRegistrator: il pattern ufficiale
+  di Bun per il DOM nei test — **jsdom scartato** perché sotto Bun il suo
+  `requestAnimationFrame`/`act` è meno affidabile con React 19; nota anche in
+  `docs/07` §5.14). Casi: `quota-ring` (render del valore e del N/D, classe colore),
+  `section-nav` (8 ancore con label, IntersectionObserver mockato — non serve al
+  render), `event-log` (contatore «N di M eventi», filtro per kind via click sulla
+  chip, empty state), `section-boundary` (un figlio che lancia → fallback con
+  «Riprova», console.error silenziata). Le librerie pure restano coperte dalla suite
+  `tests/lib/` (già 212 test);
+- **I68 — Archivio con downsampling orario**: nuova tabella Prisma
+  `DownsampledPoint` (bucket per `(hourStart UTC, source)`: min/max/somma/ultimo per
+  interval e weekly + `count` + `lastT`; media = somma/count). La tabella è
+  **dato derivato**: viene mantenuta nella stessa `POST /api/history` che salva il
+  punto grezzo (merge incrementale del bucket via `mergeHourBucket()` pura in
+  `lib/downsample.ts`) e ripulita dallo stesso pruning a 90 giorni; il dato GREZZO
+  (`UsagePoint`) resta intatto — nessuna informazione persa, ADR-8 invariato.
+  Lettura: `GET /api/history?granularity=hour` restituisce i bucket (limit/since
+  come il fine grain). Backfill: `scripts/verifiche/backfill-downsample.mjs`
+  ricostruisce l'intera tabella dai punti esistenti (idempotente, upsert). Consumo
+  client minimo e sicuro: due nuove voci nel menu Esporta («storico ORARIO dal
+  server» CSV/JSON, via `fetchServerHourly()` + `serverHourlyToHistory()` che usa
+  l'ultimo valore del bucket per continuità col grafico). Il passaggio AUTOMATICO
+  del grafico principale alla grana oraria oltre soglia resta candidato (documentato
+  in `docs/07` §5.1): la UI client lavora sui 600 punti locali e le analisi
+  scaricano il fine grain — cambiare quel comportamento non era parte del batch.
 
 ---
 

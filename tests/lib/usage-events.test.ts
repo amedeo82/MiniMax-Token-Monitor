@@ -24,11 +24,17 @@ import type { ModelQuota, QuotaWindow, UsageSnapshot } from "@/lib/minimax";
 /* ------------------------------------------------------------------ */
 
 const store = new Map<string, string>();
-(globalThis as Record<string, unknown>).localStorage = {
-  getItem: (k: string) => store.get(k) ?? null,
-  setItem: (k: string, v: string) => void store.set(k, v),
-  removeItem: (k: string) => void store.delete(k),
-};
+/* Nota I81: da quando i test di componente registrano happy-dom (bunfig
+   preload), localStorage esiste ed è una proprietà a sola LETTURA — si usa
+   defineProperty (configurable) per sostituirla col mock deterministico. */
+Object.defineProperty(globalThis, "localStorage", {
+  configurable: true,
+  value: {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, v),
+    removeItem: (k: string) => void store.delete(k),
+  },
+});
 if (typeof (globalThis as Record<string, unknown>).window === "undefined") {
   (globalThis as Record<string, unknown>).window = globalThis;
 }
