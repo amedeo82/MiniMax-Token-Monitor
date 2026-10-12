@@ -70,32 +70,49 @@ interface AnimatedPercentProps {
 }
 
 /**
+ * I90 — preferenza di movimento ridotto come sistema esterno (useSyncExternalStore):
+ * niente setState sincrono in effect (regola v7); la preferenza resta viva
+ * (la sottoscrizione segue i cambi dell'impostazione OS).
+ */
+function useMovimentoRidotto(): boolean {
+  return React.useSyncExternalStore(
+    (onCambio) => {
+      const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+      mql.addEventListener("change", onCambio);
+      return () => mql.removeEventListener("change", onCambio);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+}
+
+/**
  * Count-up della percentuale con requestAnimationFrame; rispetta
  * `prefers-reduced-motion` (mostra subito il valore finale) e null → «—».
  * Componente senza JSX per vivere in un modulo .ts puro.
+ *
+ * I90 — i casi istantanei (null, movimento ridotto, delta trascurabile)
+ * allineano il display con l'aggiustamento di stato in fase di render
+ * (pattern React «adjusting state when a prop changes»): nessun setState
+ * sincrono in effect; l'effetto guida solo l'animazione rAF (callback).
  */
 export function AnimatedPercent({ value, durationMs = 900, className, suffix = "%" }: AnimatedPercentProps): React.ReactElement {
   const [display, setDisplay] = React.useState<number | null>(value);
+  const ridotto = useMovimentoRidotto();
+
+  const [prevValue, setPrevValue] = React.useState<number | null>(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (value === null || ridotto || Math.abs(value - (display ?? 0)) < 0.05) {
+      setDisplay(value);
+    }
+  }
 
   React.useEffect(() => {
-    if (value === null) {
-      setDisplay(null);
-      return;
-    }
-    const ridotto =
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (ridotto) {
-      setDisplay(value);
-      return;
-    }
+    if (value === null || ridotto) return;
     const from = display === null ? 0 : display;
     const delta = value - from;
-    if (Math.abs(delta) < 0.05) {
-      setDisplay(value);
-      return;
-    }
+    if (Math.abs(delta) < 0.05) return; // già allineato in fase di render
     let raf = 0;
     const t0 = performance.now();
     const step = (t: number) => {
@@ -109,7 +126,7 @@ export function AnimatedPercent({ value, durationMs = 900, className, suffix = "
     return () => cancelAnimationFrame(raf);
     // `display` non è una dipendenza: l'animazione parte sempre dal valore
     // renderizzato precedente verso il nuovo target (regla off nel progetto).
-  }, [value, durationMs]);
+  }, [value, ridotto, durationMs]);
 
   return React.createElement(
     "span",

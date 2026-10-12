@@ -203,7 +203,10 @@ export default function DashboardPage() {
   const pollTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollAttemptRef = React.useRef(0);
   const lastRetryAfterRef = React.useRef<number | null>(null);
-  const pollDelayRef = React.useRef<number | null>(null);
+  /* I90 — il ritardo programmato serve al render (badge countdown, diagnostica):
+     è STATO, non ref (le ref non si leggono durante il render, regola v7).
+     Il ref era scrutto solo qui e nell'effetto scheduler — vedi schedule(). */
+  const [pollDelayMs, setPollDelayMs] = React.useState<number | null>(null);
   /* I18 — true se l'ultimo rilevamento riuscito è arrivato dall'endpoint
      alternativo coding_plan/remains (per gli eventi solo su transizione). */
   const fallbackActiveRef = React.useRef(false);
@@ -211,29 +214,36 @@ export default function DashboardPage() {
   const settingsRef = React.useRef(settings);
 
   /* ----------------------------- init ----------------------------- */
+  /* I90 — il caricamento persisted avviene dopo l'idratazione (l'SSR renderizza
+     le impostazioni di default: nessun mismatch); le scritture di stato sono
+     differite a un microtask — nessun setState sincrono nel corpo dell'effetto
+     (react-hooks/set-state-in-effect v7). Il microtask gira nello stesso task,
+     prima del prossimo frame: timing di paint invariato. */
   React.useEffect(() => {
-    const s = loadSettings();
-    setSettings(s);
-    const local = loadHistory();
-    historyRef.current = local;
-    setHistory(local);
-    setEvents(loadEvents());
-    const mh = loadModelHistory();
-    modelHistoryRef.current = mh;
-    setModelHistory(mh);
-    setMounted(true);
-    setNow(Date.now());
-    /* I73 — la querystring si legge solo lato client (non esiste in SSR) */
-    setCompact(readCompactMode(window.location.search));
+    queueMicrotask(() => {
+      const s = loadSettings();
+      setSettings(s);
+      const local = loadHistory();
+      historyRef.current = local;
+      setHistory(local);
+      setEvents(loadEvents());
+      const mh = loadModelHistory();
+      modelHistoryRef.current = mh;
+      setModelHistory(mh);
+      setMounted(true);
+      setNow(Date.now());
+      /* I73 — la querystring si legge solo lato client (non esiste in SSR) */
+      setCompact(readCompactMode(window.location.search));
 
-    /* I87 — stato kiosk da localStorage; il parametro URL ?kiosk=1 FORZA
-       l'attivazione (bookmark/direct-link sul monitor dedicato). */
-    const ks = loadKioskState();
-    if (readKioskMode(window.location.search) && !ks.enabled) {
-      ks.enabled = true;
-      saveKioskState(ks);
-    }
-    setKioskState(ks);
+      /* I87 — stato kiosk da localStorage; il parametro URL ?kiosk=1 FORZA
+         l'attivazione (bookmark/direct-link sul monitor dedicato). */
+      const ks = loadKioskState();
+      if (readKioskMode(window.location.search) && !ks.enabled) {
+        ks.enabled = true;
+        saveKioskState(ks);
+      }
+      setKioskState(ks);
+    });
 
     /* I16: scarica lo storico conservato sul server e fondilo con quello locale,
        così la cronologia sopravvive a cache svuotate e resta disponibile a lungo. */
@@ -684,7 +694,7 @@ export default function DashboardPage() {
 
     let cancelled = false;
     const schedule = (ms: number) => {
-      pollDelayRef.current = ms;
+      setPollDelayMs(ms);
       pollTimerRef.current = setTimeout(() => {
         if (!cancelled) void tick();
       }, ms);
@@ -703,12 +713,17 @@ export default function DashboardPage() {
         schedule(delay);
       }
     };
-    schedule(Math.max(5, settings.refreshSeconds) * 1000);
+    /* I90 — avvio differito di un tick: schedule (che scrive stato) gira in
+       callback, non sincrono nel corpo dell'effetto (regola v7). Finché il
+       ritardo programmato è null il badge usa il fallback all'intervallo base
+       (stessa semantica del ref a null pre-refactoring). */
+    const avvio = setTimeout(() => schedule(Math.max(5, settings.refreshSeconds) * 1000), 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(avvio);
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
-      pollDelayRef.current = null;
+      setPollDelayMs(null);
     };
   }, [mounted, settings.demoMode, settings.apiKey, settings.refreshSeconds, fetchData]);
 
@@ -848,7 +863,7 @@ export default function DashboardPage() {
         : lastEndpoint;
   const nextRefreshIn =
     settings.refreshSeconds > 0 && lastFetch && !settings.demoMode
-      ? msUntil(lastFetch + (pollDelayRef.current ?? settings.refreshSeconds * 1000), now)
+      ? msUntil(lastFetch + (pollDelayMs ?? settings.refreshSeconds * 1000), now)
       : null;
 
   const needsSetup = !settings.demoMode && !settings.apiKey;
@@ -1351,7 +1366,7 @@ export default function DashboardPage() {
                     history={history}
                     events={events}
                     backoffAttivo={lastOk === false}
-                    backoffDelayMs={pollDelayRef.current}
+                    backoffDelayMs={pollDelayMs}
                   />
                 </SectionBoundary>
               </div>

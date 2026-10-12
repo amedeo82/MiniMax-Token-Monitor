@@ -865,7 +865,7 @@ Stage Summary:
 - Prossimo commit: documentazione (worklog + docs/04 §8); DB separato solo se il poller ha scritto (lezione I30)
 
 ---
-Task ID: 32
+Task ID: 37
 Agent: Super Z (main)
 Task: I88 + I89 — richiesta utente «possiamo aggiornare lo stack tecnologico attuale alle ultime versioni senza introdurre bug o regressioni? verifica, poi commit e push»
 
@@ -887,3 +887,32 @@ Stage Summary:
 - I89: 4 commit a checkpoint (I88 → fase 1 → fase 2) per bisecabilità; le uniche voci tenute indietro (TS 7, Prisma 7/8, eslint 10) hanno motivo documentato; react-day-picker/react-resizable-panels in attesa di rigenerazione shadcn se mai serviranno
 - Apertura nuova: passata «React Compiler-ready» (§7) per riattivare le 2 regole v7 con refactoring dedicato
 - Lezione: l'ordine di discovery dei test di bun NON è garantito — ogni test che sostituisce globali deve salvare/ripristinare i descrittori, mai fare delete
+
+---
+Task ID: 38
+Agent: Super Z (main)
+Task: I90 — passata «React Compiler-ready»: riattivare le 2 regole lint react-hooks v7 (richiesta utente: «procedi con la nuova apertura §7 (passata «React Compiler-ready») può riattivare le 2 regole lint; poi aggiorna la documentazione, commit e push»)
+
+Work Log:
+- Riattivate `react-hooks/set-state-in-effect` e `react-hooks/refs` in eslint.config.mjs (rimossi i due `off`, commento aggiornato alla motivazione della riattivazione); raccolte le violazioni: 18 errori (8 set-state-in-effect + 10 refs) su 8 file
+- Refactoring con ZERO eslint-disable, ogni caso col pattern giusto:
+  - use-mobile.ts (hook shadcn): useSyncExternalStore sulla viewport — snapshot server false = nessun mismatch di idratazione, stesso false iniziale del pre-refactoring
+  - theme-toggle.tsx: mounted-guard via useSyncExternalStore (server false → client true dopo idratazione, timing identico)
+  - section-nav.tsx: offset come misura del DOM da store esterno (snapshot server 130 = valore iniziale); l'effetto ora aggiorna SOLO il CSS var --nav-offset (sistema esterno, ammesso)
+  - settings-dialog.tsx: reset del form all'apertura con l'aggiustamento di stato in fase di render (pattern React «adjusting state when a prop changes», stessa condizione open/settings dell'effetto)
+  - analysis-panel.tsx: coppia remoteRef+serverVersion (7 violazioni refs: letture ref in useMemo/render/JSX) → STATO remote; reset pivot in fase di render; avvio di load() differito a setTimeout(0) (setLoading sync via closure — la regola traccia le chiamate indirette, come già faceva con onSelect del carousel)
+  - ring-color.ts (AnimatedPercent): casi istantanei (null, ridotto, |delta|<0.05) allineati in fase di render con prevValue; prefers-reduced-motion via useSyncExternalStore (ORA VIVO: segue i cambi OS, prima era letto per-run dell'effetto); l'effetto guida solo l'animazione rAF; semantica preservata (origine 0 dopo null via display===null, mount senza animazione, convergenza esatta a value)
+  - page.tsx init: caricamento persisted (settings/history/events/modelHistory/mounted/now/compact/kiosk) differito a queueMicrotask — microtask nello stesso task, PRIMA del frame: paint invariato; SSR/idratazione intatti (l'effetto gira solo lato client); i 3 merge server async restano invariati
+  - page.tsx scheduler I51: pollDelayRef → STATO pollDelayMs (le ref non si leggono in render: badge countdown + DiagnosticaPanel); schedule() scrive stato ed è invocato SOLO da callback (tick async + avvio differito setTimeout(0) con clearTimeout in cleanup); il badge usa il fallback al base quando null (stessa semantica del ref a null)
+  - ui/carousel.tsx RIMOSSO (git rm): dead code shadcn a ZERO import in src/ (stesso criterio I86 per ui/chart.tsx) — eliminava l'ultima violazione stock
+- SCOPERTA a monte: l'audit su HEAD pulito segnava 2 SCOPERTE pre-esistenti — I88/I89 ✅ senza check dedicati (il «278/278 PASS 0 scoperte» del Task 37 era impreciso; il meta-check delle ✅ senza check esiste ed è regolare) → aggiunti 19 check: 4 I88 (descrittore/defineProperty/afterAll/prova), 3 I89 (chart.tsx assente, tenute-indietro documentate), 12 I90 (regole non più off, motivazione in config, carousel assente, i 5 pattern dei file refactorati); fix in itinere: escaping del pattern setRemote( → regex con 2 backslash nel sorgente, non 4
+- Protocollo di validazione fisso: bunx tsc --noEmit = 0 errori su src/+tests/scripts (4 baseline esterne note examples/skills) · bun run lint EXIT=0 CON le 2 regole attive · bun test 324/324 (924 asserzioni, INVARIATA) · audit 297/297 PASS 0 scoperte (era 278: +19)
+- Verifica browser (:3000, rotte **/api/history e **/api/events bloccate ADR-8): dashboard demo completa al primo render (microtask OK: nav, anelli 38%, countdown, demo attiva), tema scuro↔chiaro con etichetta invertita (theme-toggle refactor), dialog impostazioni aperto con campi popolati (regione Europa, Ogni minuto, demo on — reset render), Diagnostica con Salute del monitor, mobile 390: scrollWidth 390 = innerWidth (zero overflow), ?compact=1 attiva il widget (nav e #grafico assenti — primo tentativo di verifica con marker errato «VISTA COMPATTA» che è un commento, non testo UI), console 0 errori, 0 errori pagina; screenshot verify-i90-dashboard-dark.png
+- Documentazione: docs/04 (§3 I90 ✅ con dettaglio dei 8 interventi, §7 apertura CHIUSA, §8 riga changelog), src/lib/version.ts («2026-10-12 · I90» — aggiornata anche per il debito I88/I89 che l'avevano lasciata a I56), README.md (audit 278→297), questo worklog (Task 38 + correzione etichetta del Task I88/I89: 32→37, allineata al riferimento del changelog §8 che era già «Task 37»)
+
+Stage Summary:
+- I90 COMPLETATA: le 2 regole react-hooks v7 sono riattivate con lint 0 — il baseline lint è ora PIÙ RIGIDO di quello pre-aggiornamento stack (set-state-in-effect e refs attive, zero eccezioni nel codice sorgente)
+- Pattern adottati (riferimento per il futuro): useSyncExternalStore per i sistemi esterni letti in render; aggiustamento di stato in fase di render per i reset da prop; stato (non ref) per i valori renderizzati; differimento a microtask/setTimeout(0) per i setState di avvio che restano in effect
+- Debito del Task 37 saldato: 2 SCOPERTE audit (I88/I89 senza check) colmate con 19 check dedicati; audit 297/297
+- Lezione: la regola set-state-in-effect traccia anche le chiamate INDIRETTE via funzioni locali (onSelect, load, schedule) — il differimento a callback (setTimeout(0)/queueMicrotask) è il modo leggibile di mantenere il timing
+- Aperture docs/04: resta solo la ❓ «primo utilizzo» (progettazione) — nessun ⬜ operativo

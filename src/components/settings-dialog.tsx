@@ -134,7 +134,14 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   const [jsonError, setJsonError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<SettingsTab>("connection");
 
-  React.useEffect(() => {
+  /* I90 — il reset del modulo a ogni apertura usa l'aggiustamento di stato in
+     fase di render (pattern React «adjusting state when a prop changes») al
+     posto del setState sincrono in effect (regola v7): stessa condizione del
+     pre-refactoring (apertura, o cambio impostazioni a dialogo aperto),
+     stessi valori, applicati già al render di apertura. */
+  const [prevReset, setPrevReset] = React.useState({ open, settings });
+  if (prevReset.open !== open || prevReset.settings !== settings) {
+    setPrevReset({ open, settings });
     if (open) {
       setApiKey(settings.apiKey);
       setApiKeyAlt(settings.apiKeyAlt);
@@ -150,7 +157,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       setJsonError(null);
       setActiveTab("connection");
     }
-  }, [open, settings]);
+  }
 
   /** Chiede il permesso per le notifiche del browser e registra l'esito. */
   const handleBrowserNotifications = async (enabled: boolean) => {

@@ -20,9 +20,14 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => setMounted(true), []);
+  /* I90 — «montato» via useSyncExternalStore: snapshot server false (bottone
+     neutro, nessun mismatch di idratazione), snapshot client true subito dopo
+     l'idratazione. Nessun setState sincrono in effect (regola v7). */
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const chiaroAttivo = resolvedTheme === "light";
 
