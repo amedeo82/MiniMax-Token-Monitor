@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { ModelCard, MainWindows } from "@/components/quota-cards";
+import { ModelCard, MainWindows, windowShortLabel } from "@/components/quota-cards";
 import { HistoryChart, StatsPanel, computeTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
 import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/components/settings-dialog";
 import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
@@ -40,7 +40,20 @@ import {
 } from "@/lib/usage-events";
 import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
 import { delayAfterFailure } from "@/lib/backoff";
-import { makeDemoSnapshot, makeDemoHistory } from "@/lib/demo";
+import { makeDemoSnapshot, makeDemoHistory, makeDemoModelHistory } from "@/lib/demo";
+import {
+  appendModelPoints,
+  fetchServerModelHistory,
+  historyForModel,
+  loadModelHistory,
+  mergeModelHistories,
+  MODEL_HISTORY_MAX,
+  modelNamesOsservati,
+  modelRowsToPoints,
+  pushModelPointsToServer,
+  saveModelHistory,
+  type ModelHistoryPoint,
+} from "@/lib/model-history";
 import {
   pushPointToServer,
   fetchServerHistory,
@@ -131,6 +144,10 @@ export default function DashboardPage() {
   const [serverEventsCount, setServerEventsCount] = React.useState<number | null>(null);
   /** Mirror sincrono dello storico per costruire i punti senza race. */
   const historyRef = React.useRef<HistoryPoint[]>([]);
+  /* I82 — storico quota per-modello (tutti i modelli osservati) + pivot delle analisi. */
+  const [modelHistory, setModelHistory] = React.useState<ModelHistoryPoint[]>([]);
+  const modelHistoryRef = React.useRef<ModelHistoryPoint[]>([]);
+  const [selectedModel, setSelectedModel] = React.useState<string>("general");
 
   /* Riferimenti per il confronto tra rilevamenti consecutivi (transizioni) */
   const prevSnapRef = React.useRef<UsageSnapshot | null>(null);
@@ -156,6 +173,9 @@ export default function DashboardPage() {
     historyRef.current = local;
     setHistory(local);
     setEvents(loadEvents());
+    const mh = loadModelHistory();
+    modelHistoryRef.current = mh;
+    setModelHistory(mh);
     setMounted(true);
     setNow(Date.now());
     /* I73 — la querystring si legge solo lato client (non esiste in SSR) */
@@ -180,6 +200,19 @@ export default function DashboardPage() {
       } catch {
         /* quota piena: ignora */
       }
+    })();
+
+    /* I82 — scarica lo storico per-modello conservato sul server e fondilo con
+       quello locale: le analisi dei modelli non-general sopravvivono alla cache. */
+    void (async () => {
+      const server = await fetchServerModelHistory(4000);
+      if (!server) return;
+      const remote = modelRowsToPoints(server.rows);
+      if (remote.length === 0) return;
+      const merged = mergeModelHistories(modelHistoryRef.current, remote).slice(-MODEL_HISTORY_MAX);
+      modelHistoryRef.current = merged;
+      setModelHistory(merged);
+      saveModelHistory(merged);
     })();
 
     /* I27: scarica l'archivio eventi conservato sul server e fondilo con il
@@ -233,6 +266,24 @@ export default function DashboardPage() {
       region: snap.region,
       onTotal: (total) => setServerCount(total),
     });
+
+    /* I82 — storico per-modello: un punto per OGNI modello del campione (non
+       solo general), stesse regole di dedup 20s; replica server dei soli nuovi. */
+    const sample = {
+      t: snap.fetchedAt,
+      models: snap.models.map((m) => ({
+        name: m.modelName,
+        interval: m.interval?.remainingPercent ?? null,
+        weekly: m.weekly?.remainingPercent ?? null,
+      })),
+    };
+    const { points: mhPoints, nuovi } = appendModelPoints(modelHistoryRef.current, sample);
+    if (nuovi.length > 0) {
+      modelHistoryRef.current = mhPoints;
+      setModelHistory(mhPoints);
+      saveModelHistory(mhPoints);
+      pushModelPointsToServer(nuovi, { source: snap.source, region: snap.region });
+    }
   }, []);
 
   /** I27: registra gli eventi nel registro locale e li replica sull'archivio server (fire-and-forget). */
@@ -318,6 +369,15 @@ export default function DashboardPage() {
           }
           // Registra anche i rilevamenti demo nello storico (locale + replica server, source "demo")
           pushHistory(snap);
+          // I82 — backfill demo anche dello storico per-modello: rigenera snapshot
+          // sintetici nel passato (stesse curve dei tick demo dal vivo) per OGNI
+          // modello, così le analisi di «video» sono subito sensate.
+          if (modelHistoryRef.current.length < 10) {
+            const merged = mergeModelHistories(modelHistoryRef.current, makeDemoModelHistory());
+            modelHistoryRef.current = merged;
+            setModelHistory(merged);
+            saveModelHistory(merged);
+          }
           if (!silent) setLoading(false);
           return true;
         }
@@ -560,14 +620,34 @@ export default function DashboardPage() {
   /* ---------------------------- derived ---------------------------- */
   const general = snapshot ? findModel(snapshot, "general") : undefined;
   const otherModels = snapshot ? snapshot.models.filter((m) => m.modelName.toLowerCase() !== "general") : [];
+  /* I82 — modello pivot delle analisi (default «general»): grafico/ritmo/analisi
+     seguono lo storico del modello scelto; Diagnostica resta su general completo. */
+  const pivotModel =
+    selectedModel === "general"
+      ? general
+      : snapshot?.models.find((m) => m.modelName.toLowerCase() === selectedModel.toLowerCase());
+  const pivotHistory = React.useMemo(
+    () => (selectedModel === "general" ? history : historyForModel(modelHistory, selectedModel)),
+    [history, modelHistory, selectedModel],
+  );
+  /* I82 — modelli selezionabili: osservati nello storico per-modello ∪ snapshot corrente. */
+  const modelli = React.useMemo(() => {
+    const nomi = modelNamesOsservati(modelHistory);
+    for (const m of snapshot?.models ?? []) {
+      if (!nomi.some((n) => n.toLowerCase() === m.modelName.toLowerCase())) nomi.push(m.modelName);
+    }
+    return nomi;
+  }, [modelHistory, snapshot]);
   /* I69 — storico filtrato per l'intervallo selezionato: la finestra scivola anche col
      solo scorrere del tempo (il tick `now` la aggiorna senza nuovi fetch). La
      Diagnostica resta deliberatamente sullo storico COMPLETO: guasti e blocchi
      teorici vanno giudicati sull'intera osservazione, non sull'ultimo tratto. */
   const filteredHistory = React.useMemo(
-    () => filterHistoryByPreset(history, rangePreset, now),
-    [history, rangePreset, now],
+    () => filterHistoryByPreset(pivotHistory, rangePreset, now),
+    [pivotHistory, rangePreset, now],
   );
+  /* I82 — etichetta breve della finestra «interval» del pivot («5 ore», «24 ore»…). */
+  const intervalLabel = React.useMemo(() => windowShortLabel(pivotModel?.interval), [pivotModel]);
   const trend = React.useMemo(() => computeTrend(filteredHistory, chartWindow), [filteredHistory, chartWindow]);
   /* I72 — proiezione EWMA (A/B): segue l'intervallo selezionato come il trend lineare */
   const ewma = React.useMemo(() => ewmaProjection(filteredHistory, chartWindow), [filteredHistory, chartWindow]);
@@ -592,8 +672,9 @@ export default function DashboardPage() {
   /* Banner quota bassa (deriva solo dallo snapshot corrente) */
   const banner = React.useMemo<BannerInfo | null>(() => deriveBanner(snapshot, settings), [snapshot, settings]);
 
-  /* Finestra selezionata nel grafico: reset e residuo per il verdetto di proiezione */
-  const selectedWindow = chartWindow === "interval" ? general?.interval : general?.weekly;
+  /* Finestra selezionata nel grafico: reset e residuo per il verdetto di proiezione.
+     I82 — dal MODELLO PIVOT (non sempre general): la proiezione segue il grafico. */
+  const selectedWindow = chartWindow === "interval" ? pivotModel?.interval : pivotModel?.weekly;
   const selectedWindowEnd = selectedWindow?.end ?? null;
   const selectedWindowRemaining = selectedWindow?.remainingPercent ?? null;
 
@@ -622,6 +703,33 @@ export default function DashboardPage() {
       </ToggleGroup>
     </div>
   );
+
+  /* I82 — selettore del modello pivot (grafico/ritmo/analisi); nascosto con un solo modello osservato. */
+  const modelSelector =
+    modelli.length > 1 ? (
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Modello delle analisi">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Modello</span>
+        <ToggleGroup
+          type="single"
+          value={selectedModel}
+          onValueChange={(v) => {
+            if (v !== "") setSelectedModel(v);
+          }}
+          className="gap-1 rounded-full border border-white/[0.07] bg-white/[0.03] p-1"
+        >
+          {modelli.map((m) => (
+            <ToggleGroupItem
+              key={m}
+              value={m}
+              aria-label={`Modello ${m}`}
+              className="h-7 rounded-full border-0 px-3! text-[11px] font-medium text-zinc-400 data-[state=on]:bg-white/[0.10]! data-[state=on]:text-zinc-100!"
+            >
+              {m}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+    ) : null;
 
   /* ---------------------------- render ----------------------------- */
   return (
@@ -901,9 +1009,10 @@ export default function DashboardPage() {
                 Oggi a Roma: <span className="font-medium text-zinc-400">{formatDateRome(now)}</span>
               </p>
 
-              {/* Grafico + statistiche — I69: selettore intervallo e storico filtrato */}
+              {/* Grafico + statistiche — I69: selettore intervallo e storico filtrato; I82: pivot per modello */}
               <div id="grafico" className="mm-anchor space-y-3">
                 {rangeSelector}
+                {modelSelector}
                 <SectionBoundary title="Grafico storico" fallbackHeight="h-64">
                   <HistoryChart
                     history={filteredHistory}
@@ -911,6 +1020,7 @@ export default function DashboardPage() {
                     onWindowChange={setChartWindow}
                     serverCount={serverCount}
                     onStampaReport={() => stampaReportSettimanale()}
+                    intervalLabel={intervalLabel}
                   />
                 </SectionBoundary>
               </div>
@@ -922,13 +1032,14 @@ export default function DashboardPage() {
                   remaining={selectedWindowRemaining}
                   serverCount={serverCount}
                   ewma={ewma}
+                  intervalLabel={intervalLabel}
                 />
               </SectionBoundary>
 
-              {/* I59 — ritmo di consumo %/h sotto il grafico (I69: storico filtrato) */}
+              {/* I59 — ritmo di consumo %/h sotto il grafico (I69: storico filtrato; I82: pivot) */}
               <div id="ritmo" className="mm-anchor">
                 <SectionBoundary title="Ritmo di consumo" fallbackHeight="h-56">
-                  <RateChart history={filteredHistory} window={chartWindow} />
+                  <RateChart history={filteredHistory} window={chartWindow} intervalLabel={intervalLabel} />
                 </SectionBoundary>
               </div>
 
@@ -940,10 +1051,15 @@ export default function DashboardPage() {
               </div>
 
               {/* Analisi di lungo periodo: cicli, calendario, distribuzione, heatmap (I26 + batch abbellimenti)
-                  I69: segue l'intervallo selezionato; la Diagnostica sotto resta sullo storico COMPLETO */}
+                  I69: segue l'intervallo selezionato; la Diagnostica sotto resta sullo storico COMPLETO.
+                  I82: segue il modello pivot — con pivot non-general la fonte server è lo storico per-modello. */}
               <div id="analisi" className="mm-anchor">
                 <SectionBoundary title="Analisi di lungo periodo" fallbackHeight="h-64">
-                  <LongTermAnalysis history={filteredHistory} />
+                  <LongTermAnalysis
+                    history={filteredHistory}
+                    nomeModello={selectedModel}
+                    intervalLabel={intervalLabel}
+                  />
                 </SectionBoundary>
               </div>
 

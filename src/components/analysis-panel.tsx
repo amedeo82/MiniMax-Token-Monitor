@@ -49,6 +49,7 @@ import {
   type OggiVsMedia,
 } from "@/lib/cycles";
 import { mergeHistories, fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
+import { fetchServerModelHistory, historyForModel, modelRowsToPoints } from "@/lib/model-history";
 import { formatDateTimeRome, formatDuration } from "@/lib/time";
 import { descrizioneCalendario, descrizioneHeatmap } from "@/lib/a11y";
 import type { HistoryPoint } from "@/components/history-chart";
@@ -57,31 +58,51 @@ import { CalendarDays, Database, Flame, Info, Layers, RefreshCw } from "lucide-r
 interface LongTermAnalysisProps {
   /** Storico fuso locale+server già presente nella pagina (fonte primaria). */
   history: HistoryPoint[];
+  /** I82 — modello pivot dell'analisi: «general» usa lo storico flat server,
+   *  gli altri modelli il proprio storico per-modello (/api/history/models). */
+  nomeModello?: string;
+  /** I82 — etichetta breve della finestra «interval» del modello pivot (es. «5 ore», «24 ore»). */
+  intervalLabel?: string;
 }
 
-export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
+export function LongTermAnalysis({ history, nomeModello = "general", intervalLabel = "5 ore" }: LongTermAnalysisProps) {
   const [loading, setLoading] = React.useState(false);
   const [loadedAt, setLoadedAt] = React.useState<number | null>(null);
   const [serverVersion, setServerVersion] = React.useState(0);
   const remoteRef = React.useRef<HistoryPoint[] | null>(null);
 
-  /** Scarica (o ri-scarica) lo storico completo dal server. */
+  /** Scarica (o ri-scarica) lo storico completo dal server. Con pivot non-general
+   *  la fonte è lo storico PER-MODELLO (I82): lo storico flat di /api/history è
+   *  solo di «general», fonderlo a un altro modello falserebbe le analisi. */
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const server = await fetchServerHistory(10_000);
-      if (server && server.points.length > 0) {
-        remoteRef.current = serverPointsToHistory(server.points);
-        setServerVersion((v) => v + 1);
-        setLoadedAt(Date.now());
+      if (nomeModello === "general") {
+        const server = await fetchServerHistory(10_000);
+        if (server && server.points.length > 0) {
+          remoteRef.current = serverPointsToHistory(server.points);
+          setServerVersion((v) => v + 1);
+          setLoadedAt(Date.now());
+        }
+      } else {
+        const server = await fetchServerModelHistory(10_000);
+        if (server && server.rows.length > 0) {
+          remoteRef.current = historyForModel(modelRowsToPoints(server.rows), nomeModello);
+          setServerVersion((v) => v + 1);
+          setLoadedAt(Date.now());
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [nomeModello]);
 
-  // Prima analisi: scarica lo storico completo appena il pannello monta
+  // Prima analisi: scarica lo storico completo appena il pannello monta.
+  // Al cambio di pivot i punti server del modello precedente vanno DROPPATI:
+  // il merge per timestamp non distingue i modelli.
   React.useEffect(() => {
+    remoteRef.current = null;
+    setServerVersion((v) => v + 1);
     void load();
   }, [load]);
 
@@ -159,7 +180,7 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
         <Tabs defaultValue="cicli-interval">
           <TabsList className="mb-3 h-auto max-w-full flex-wrap justify-start bg-white/[0.06]">
             <TabsTrigger value="cicli-interval" className="text-xs data-[state=active]:text-zinc-900">
-              Cicli 5 ore
+              Cicli {intervalLabel}
             </TabsTrigger>
             <TabsTrigger value="cicli-weekly" className="text-xs data-[state=active]:text-zinc-900">
               Cicli settimanali
@@ -182,7 +203,7 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
             <CycleSection
               cycles={intervalCycles}
               summary={intervalSummary}
-              winLabel="finestra di 5 ore"
+              winLabel={`finestra di ${intervalLabel}`}
               onGoingLabel="Ciclo in corso"
             />
           </TabsContent>
@@ -198,21 +219,21 @@ export function LongTermAnalysis({ history }: LongTermAnalysisProps) {
 
           <TabsContent value="giorni" className="mt-0">
             <div className="space-y-4">
-              <TodayComparison history={data} />
+              <TodayComparison history={data} intervalLabel={intervalLabel} />
               <WeekdaySection weekly={weekdayWeekly} interval={weekdayInterval} />
             </div>
           </TabsContent>
 
           <TabsContent value="calendario" className="mt-0">
-            <CalendarSection history={data} />
+            <CalendarSection history={data} intervalLabel={intervalLabel} />
           </TabsContent>
 
           <TabsContent value="ore" className="mt-0">
-            <HeatmapSection interval={heatInterval} weekly={heatWeekly} />
+            <HeatmapSection interval={heatInterval} weekly={heatWeekly} intervalLabel={intervalLabel} />
           </TabsContent>
 
           <TabsContent value="distribuzione" className="mt-0">
-            <DistributionSection history={data} />
+            <DistributionSection history={data} intervalLabel={intervalLabel} />
           </TabsContent>
         </Tabs>
 
@@ -494,7 +515,7 @@ function PrevedibilitaStrip({ prev }: { prev: Prevedibilita | null }) {
 /* I64 — Oggi vs media degli stessi weekday                            */
 /* ------------------------------------------------------------------ */
 
-function TodayComparison({ history }: { history: HistoryPoint[] }) {
+function TodayComparison({ history, intervalLabel = "5 ore" }: { history: HistoryPoint[]; intervalLabel?: string }) {
   const [win, setWin] = React.useState<"interval" | "weekly">("interval");
   const confronto = React.useMemo(() => oggiVsMedia(history, win, 5), [history, win]);
   const o: OggiVsMedia = confronto;
@@ -505,7 +526,7 @@ function TodayComparison({ history }: { history: HistoryPoint[] }) {
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Finestra del confronto">
         <Button variant="outline" size="sm" aria-pressed={win === "interval"} onClick={() => setWin("interval")}
           className={`h-8 border-white/10 text-xs ${win === "interval" ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
-          5 ore
+          {intervalLabel}
         </Button>
         <Button variant="outline" size="sm" aria-pressed={win === "weekly"} onClick={() => setWin("weekly")}
           className={`h-8 border-white/10 text-xs ${win === "weekly" ? "bg-violet-500/15 text-violet-200 hover:bg-violet-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
@@ -543,10 +564,10 @@ function TodayComparison({ history }: { history: HistoryPoint[] }) {
 
 const CAL_SETTIMANE = 20;
 
-function CalendarSection({ history }: { history: HistoryPoint[] }) {
+function CalendarSection({ history, intervalLabel = "5 ore" }: { history: HistoryPoint[]; intervalLabel?: string }) {
   const [win, setWin] = React.useState<"interval" | "weekly">("interval");
   const grid: CalendarGrid = React.useMemo(() => consumoGiornaliero(history, win, CAL_SETTIMANE), [history, win]);
-  const winLabel = win === "interval" ? "finestra di 5 ore" : "finestra settimanale";
+  const winLabel = win === "interval" ? `finestra di ${intervalLabel}` : "finestra settimanale";
 
   const cellColor = (v: number | null): string | undefined => {
     if (v === null || v <= 0) return undefined;
@@ -570,7 +591,7 @@ function CalendarSection({ history }: { history: HistoryPoint[] }) {
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Finestra del calendario">
         <Button variant="outline" size="sm" aria-pressed={win === "interval"} onClick={() => setWin("interval")}
           className={`h-8 border-white/10 text-xs ${win === "interval" ? "bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
-          5 ore
+          {intervalLabel}
         </Button>
         <Button variant="outline" size="sm" aria-pressed={win === "weekly"} onClick={() => setWin("weekly")}
           className={`h-8 border-white/10 text-xs ${win === "weekly" ? "bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
@@ -619,10 +640,10 @@ function CalendarSection({ history }: { history: HistoryPoint[] }) {
 /* I61 — Istogramma del residuo                                        */
 /* ------------------------------------------------------------------ */
 
-function DistributionSection({ history }: { history: HistoryPoint[] }) {
+function DistributionSection({ history, intervalLabel = "5 ore" }: { history: HistoryPoint[]; intervalLabel?: string }) {
   const [win, setWin] = React.useState<"interval" | "weekly">("interval");
   const dist: Distribuzione = React.useMemo(() => distribuzioneResiduo(history, win), [history, win]);
-  const winLabel = win === "interval" ? "finestra di 5 ore" : "finestra settimanale";
+  const winLabel = win === "interval" ? `finestra di ${intervalLabel}` : "finestra settimanale";
 
   if (dist.n === 0) {
     return (
@@ -638,7 +659,7 @@ function DistributionSection({ history }: { history: HistoryPoint[] }) {
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Finestra della distribuzione">
         <Button variant="outline" size="sm" aria-pressed={win === "interval"} onClick={() => setWin("interval")}
           className={`h-8 border-white/10 text-xs ${win === "interval" ? "bg-sky-500/15 text-sky-200 hover:bg-sky-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
-          5 ore
+          {intervalLabel}
         </Button>
         <Button variant="outline" size="sm" aria-pressed={win === "weekly"} onClick={() => setWin("weekly")}
           className={`h-8 border-white/10 text-xs ${win === "weekly" ? "bg-sky-500/15 text-sky-200 hover:bg-sky-500/20!" : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"}`}>
@@ -685,10 +706,19 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
  * attribuito alla cella (scala con radice quadrata per valorizzare i valori
  * bassi); il tooltip mostra il valore e il numero di cali attribuiti.
  */
-function HeatmapSection({ interval, weekly }: { interval: HeatmapGrid; weekly: HeatmapGrid }) {
+function HeatmapSection({
+  interval,
+  weekly,
+  intervalLabel = "5 ore",
+}: {
+  interval: HeatmapGrid;
+  weekly: HeatmapGrid;
+  /** I82 — etichetta breve della finestra «interval» del modello pivot. */
+  intervalLabel?: string;
+}) {
   const [hw, setHw] = React.useState<"interval" | "weekly">("interval");
   const grid = hw === "interval" ? interval : weekly;
-  const winLabel = hw === "interval" ? "finestra di 5 ore" : "finestra settimanale";
+  const winLabel = hw === "interval" ? `finestra di ${intervalLabel}` : "finestra settimanale";
 
   /** Cella con il consumo massimo (picco della griglia corrente). */
   let peak: { day: number; hour: number; value: number } | null = null;
@@ -732,7 +762,7 @@ function HeatmapSection({ interval, weekly }: { interval: HeatmapGrid; weekly: H
               : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]!"
           }`}
         >
-          5 ore
+          {intervalLabel}
         </Button>
         <Button
           variant="outline"

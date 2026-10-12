@@ -350,6 +350,21 @@ const CHECKS = [
   check.simbolo("I79", "src/app/page.tsx", "aria-live=\"polite\"", "regione live del polling nell'header (orologio degradato ad aria-hidden)"),
   check.simbolo("I79", "src/app/globals.css", "nav a:focus-visible", "focus visibile sui link nav (famiglia scuro)"),
   check.simbolo("I79", "src/app/globals.css", "html:not\\(\\.dark\\) nav a:focus-visible", "focus visibile sui link nav (famiglia chiaro)"),
+  /* --- I82 — generalizzazione multi-modello (docs/03 §5.19) --- */
+  check.simbolo("I82", "src/lib/model-history.ts", "export function historyForModel", "storico per-modello → HistoryPoint[] (contratto analisi invariato, forward-fill)"),
+  check.simbolo("I82", "src/lib/model-history.ts", "export function appendModelPoints", "acquisizione per-modello con dedup 20s"),
+  check.simbolo("I82", "src/lib/model-history.ts", "export function modelRowsToPoints", "righe server LONG (model+win+t) → punti wide UI"),
+  check.simbolo("I82", "src/app/api/history/models/route.ts", "upsertModelPoint", "route /api/history/models su lib I42 (tabella ModelUsagePoint, SQL parametrizzato)"),
+  check.assenza("I82", "src/app/api/history/models/route.ts", "minimax\\.io|minimaxi\\.com|token_plan|chat/completions", "la route tocca SOLO SQLite: nessun endpoint MiniMax (ADR-8)"),
+  check.simbolo("I82", "prisma/schema.prisma", "model ModelUsagePoint", "tabella storico per-modello nello schema (I42/82, @@unique model+win+t)"),
+  check.simbolo("I82", "src/app/page.tsx", "historyForModel\\(modelHistory, selectedModel\\)", "pivotHistory: le analisi seguono il modello pivot"),
+  check.simbolo("I82", "src/app/page.tsx", "appendModelPoints\\(modelHistoryRef\\.current, sample\\)", "ingestione per-modello in pushHistory (unico punto per demo/api/import)"),
+  check.simbolo("I82", "src/app/page.tsx", "makeDemoModelHistory\\(\\)", "backfill demo dello storico per-modello"),
+  check.simbolo("I82", "src/app/page.tsx", "aria-label=\"Modello delle analisi\"", "selettore del modello pivot nel grafico"),
+  check.simbolo("I82", "src/components/analysis-panel.tsx", "historyForModel\\(modelRowsToPoints\\(server\\.rows\\), nomeModello\\)", "Analisi con pivot non-general: fonte server per-modello (NON lo storico flat di general)"),
+  check.simbolo("I82", "src/components/quota-cards.tsx", "export function windowShortLabel", "etichetta breve della finestra interval dalla durata osservata"),
+  check.simbolo("I82", "src/components/history-chart.tsx", "intervalLabel = \"5 ore\"", "etichette finestra parametriche su grafico/statistiche/ritmo"),
+  check.simbolo("I82", "src/lib/demo.ts", "export function makeDemoModelHistory", "storico demo per-modello coerente con i tick dal vivo"),
 ];
 
 /* ------------------------------------------------------------------ */

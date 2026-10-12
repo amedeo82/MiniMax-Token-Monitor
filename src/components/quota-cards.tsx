@@ -130,6 +130,22 @@ export function windowKindLabel(w: QuotaWindow): string {
   return WINDOW_LABELS.interval.long;
 }
 
+/**
+ * I82 — Etichetta BREVE della finestra "interval" del modello pivot (per i
+ * titoli di grafici/analisi: «Cicli 5 ore», «Ritmo finestra 24 ore», …):
+ * dipende dalla durata osservata della finestra (start → end). Default
+ * «5 ore» quando la durata non è nota (comportamento pre-I82 invariato).
+ */
+export function windowShortLabel(w: QuotaWindow | null | undefined): string {
+  if (w && w.start !== null && w.end !== null) {
+    const dur = w.end - w.start;
+    if (dur >= 23 * 3600_000 && dur <= 25 * 3600_000) return "24 ore";
+    if (dur >= 4 * 3600_000 && dur <= 6 * 3600_000) return "5 ore";
+    if (dur > 0) return formatDuration(dur);
+  }
+  return "5 ore";
+}
+
 interface ModelCardProps {
   model: ModelQuota;
   now: number;

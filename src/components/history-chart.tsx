@@ -53,6 +53,8 @@ interface HistoryChartProps {
   serverCount?: number | null;
   /** I75 — lancia la stampa del report settimanale (assente → voce non mostrata, es. vista compatta). */
   onStampaReport?: () => void;
+  /** I82 — etichetta breve della finestra "interval" del modello pivot (es. «5 ore», «24 ore» per il video). */
+  intervalLabel?: string;
 }
 
 interface ChartDatum {
@@ -88,7 +90,7 @@ async function exportHourlyFromServer(format: "csv" | "json"): Promise<void> {
 }
 
 /** Grafico dell'andamento della quota rimanente nel tempo. */
-export function HistoryChart({ history, window: win, onWindowChange, serverCount = null, onStampaReport }: HistoryChartProps) {
+export function HistoryChart({ history, window: win, onWindowChange, serverCount = null, onStampaReport, intervalLabel = "5 ore" }: HistoryChartProps) {
   const [showSma, setShowSma] = React.useState(false);
   /** I32: overlay dei cicli di finestra (fasce alternate + marker dei reset). */
   const [showCycles, setShowCycles] = React.useState(true);
@@ -284,7 +286,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
           </DropdownMenu>
           <Tabs value={win} onValueChange={(v) => onWindowChange(v as "interval" | "weekly")}>
             <TabsList className="bg-white/[0.06]">
-              <TabsTrigger value="interval" className="h-7 text-xs text-zinc-400 hover:text-zinc-200 data-[state=inactive]:hover:bg-white/[0.05] data-[state=active]:text-zinc-100">5 ore</TabsTrigger>
+              <TabsTrigger value="interval" className="h-7 text-xs text-zinc-400 hover:text-zinc-200 data-[state=inactive]:hover:bg-white/[0.05] data-[state=active]:text-zinc-100">{intervalLabel}</TabsTrigger>
               <TabsTrigger value="weekly" className="h-7 text-xs text-zinc-400 hover:text-zinc-200 data-[state=inactive]:hover:bg-white/[0.05] data-[state=active]:text-zinc-100">Settimanale</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -551,6 +553,7 @@ export function StatsPanel({
   remaining = null,
   serverCount = null,
   ewma = null,
+  intervalLabel = "5 ore",
 }: {
   trend: TrendStats;
   win: "interval" | "weekly";
@@ -562,8 +565,10 @@ export function StatsPanel({
   serverCount?: number | null;
   /** I72 — proiezione EWMA (A/B affiancata al verdetto, non sostitutiva). */
   ewma?: EwmaProjection | null;
+  /** I82 — etichetta breve della finestra "interval" del modello pivot. */
+  intervalLabel?: string;
 }) {
-  const winLabel = win === "interval" ? "5 ore" : "settimanale";
+  const winLabel = win === "interval" ? intervalLabel : "settimanale";
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4">
@@ -620,10 +625,10 @@ export function StatsPanel({
       </div>
 
       {/* Verdetto: esaurimento stimato vs orario di reset */}
-      <ProjectionVerdict trend={trend} resetAt={resetAt} remaining={remaining} win={win} />
+      <ProjectionVerdict trend={trend} resetAt={resetAt} remaining={remaining} win={win} intervalLabel={intervalLabel} />
 
       {/* I31 — pace di consumo e quota sprecata (stesso filone del verdetto) */}
-      <PacePanel trend={trend} resetAt={resetAt} remaining={remaining} win={win} />
+      <PacePanel trend={trend} resetAt={resetAt} remaining={remaining} win={win} intervalLabel={intervalLabel} />
 
       {/* I72 — proiezione EWMA: secondo parere affiancato al verdetto lineare */}
       <EwmaCard trend={trend} ewma={ewma} />
@@ -637,13 +642,16 @@ function ProjectionVerdict({
   resetAt,
   remaining,
   win,
+  intervalLabel = "5 ore",
 }: {
   trend: TrendStats;
   resetAt: number | null;
   remaining: number | null;
   win: "interval" | "weekly";
+  /** I82 — etichetta breve della finestra "interval" del modello pivot. */
+  intervalLabel?: string;
 }) {
-  const winLabel = win === "interval" ? "di 5 ore" : "settimanale";
+  const winLabel = win === "interval" ? `di ${intervalLabel}` : "settimanale";
   if (trend.samples < 2 || trend.ratePerHour === null) {
     return (
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
@@ -740,13 +748,16 @@ function PacePanel({
   resetAt,
   remaining,
   win,
+  intervalLabel = "5 ore",
 }: {
   trend: TrendStats;
   resetAt: number | null;
   remaining: number | null;
   win: "interval" | "weekly";
+  /** I82 — etichetta breve della finestra "interval" del modello pivot. */
+  intervalLabel?: string;
 }) {
-  const winLabel = win === "interval" ? "di 5 ore" : "settimanale";
+  const winLabel = win === "interval" ? `di ${intervalLabel}` : "settimanale";
   const pace = computePace(trend, resetAt);
 
   if (trend.samples < 2 || pace.hoursToReset === null || pace.breakevenPace === null) {
@@ -985,9 +996,18 @@ export function TrendBadge({ trend }: { trend: TrendStats }) {
  * della linea sono informative: corrispondono a buchi di campionamento o
  * reset, non sono dati mancanti da riempire.
  */
-export function RateChart({ history, window: win }: { history: HistoryPoint[]; window: "interval" | "weekly" }) {
+export function RateChart({
+  history,
+  window: win,
+  intervalLabel = "5 ore",
+}: {
+  history: HistoryPoint[];
+  window: "interval" | "weekly";
+  /** I82 — etichetta breve della finestra "interval" del modello pivot. */
+  intervalLabel?: string;
+}) {
   const rate = React.useMemo(() => rateSeries(history, win), [history, win]);
-  const winLabel = win === "interval" ? "finestra 5 ore" : "finestra settimanale";
+  const winLabel = win === "interval" ? `finestra ${intervalLabel}` : "finestra settimanale";
 
   const dati = React.useMemo(
     () =>
