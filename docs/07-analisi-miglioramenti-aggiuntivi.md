@@ -6,13 +6,14 @@
 > nel recovery con gli stessi numeri e significati comunicati in chat (tracciamento in
 > `docs/04` §3).
 >
-> Stato: **13 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
+> Stato: **14 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
 > del bug noto, I73) è stato implementato l'11/10 pomeriggio (vedi §5.2, §5.6, §5.9,
 > §5.10 e `docs/04` §3); il **batch 2 analisi** (I70, I71, I72) è stato implementato
 > l'11/10 sera (vedi §5.3, §5.4, §5.5 e `docs/04` §3); il **batch 3 infrastruttura**
 > (I80, I81, I68) è stato implementato l'11/10 notte (vedi §5.13, §5.14, §5.1 e
 > `docs/04` §3); il **batch 4 UX** (I74, I75, I78) è stato implementato l'11/10 sera
-> (vedi §5.7, §5.8, §5.11 e `docs/04` §3); restano 2 proposte ⬜ (I79, I82).
+> (vedi §5.7, §5.8, §5.11 e `docs/04` §3); **I79 (audit accessibilità) è stata
+> implementata il 12/10** (vedi §5.12 e `docs/04` §3); resta 1 proposta ⬜ (I82).
 
 Contesto della proposta originale: dopo la chiusura dei batch 1–3 (I57–I67) l'analisi
 aveva individuato 15 ulteriori miglioramenti in tre gruppi — analisi avanzata
@@ -200,9 +201,21 @@ client-side sul registro già caricato.
 > INTATTO (già ≥5.5:1). Esiti: 0 FAIL su 74 campioni (era 21 chiaro + 6 scuro).
 > Lezione toolchain: Turbopack serve CSS stale selettivo → pulizia `.next` + restart.
 
-## 5.12 I79 — Audit di accessibilità sistematico
+## 5.12 I79 — Audit di accessibilità sistematico ✅
 Contrasto misurato (WCAG AA), `aria-live` per aggiornamenti polling, focus visibili,
 descrizioni `sr-only` per i grafici (heatmap, calendario, reset clock).
+
+> **Implementato 12/10** (design in `docs/03` §5.18): (1) probe contrasto I84 esteso
+> con le superfici nav (desktop I66/I85 + barra mobile I74) — 0 FAIL su 36+38 campioni
+> nei due temi, nav 14.2–14.52:1 attiva e 6.05–6.79:1 inattiva; (2) regione
+> `aria-live="polite"` nell'header per il polling («Dati aggiornati alle … (Roma)»),
+> orologio Roma degradato ad `aria-hidden` (annunciava ogni secondo); (3) focus
+> visibile `nav a:focus-visible` (outline 2px offset 2px, famiglie colore
+> distinte), verificato con Tab reali; (4) `src/lib/a11y.ts` (puro, 7 test) con le
+> descrizioni dei tre grafici: sr-only in heatmap/calendario e aria-label dinamico
+> dell'SVG del ResetClock — verificate al browser su dati reali. Fix collaterale:
+> `event-log.test.tsx` senza `cleanup()` tra i render. 9 check audit dedicati
+> (223 totali).
 
 ## 5.13 I80 — Endpoint read-only `/api/summary` ✅
 KPI aggregati dal DB per widget esterni (statusline, home assistant, ecc.):
@@ -241,5 +254,6 @@ pivot; la generalizzazione aprirebbe le analisi anche agli altri modelli del pia
 3. ~~**Batch 3 infrastruttura/integrazione**: I80 · I81 · I68.~~ → **IMPLEMENTATO
    11/10** (vedi §5.13/§5.14/§5.1 e `docs/04` §3).
 4. ~~**Backlog/qualità**: I74 · I75 · I78 · I79 · I82.~~ → **I74 · I75 · I78
-   IMPLEMENTATI 11/10** (batch 4 UX, vedi §5.7/§5.8/§5.11 e `docs/04` §3); restano
-   in backlog **I79** (audit di accessibilità) e **I82** (generalizzazione multi-modello).
+   IMPLEMENTATI 11/10** (batch 4 UX, vedi §5.7/§5.8/§5.11 e `docs/04` §3);
+   **I79 IMPLEMENTATO 12/10** (vedi §5.12 e `docs/04` §3); resta in backlog
+   **I82** (generalizzazione multi-modello).

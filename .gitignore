@@ -54,3 +54,4 @@ server.log
 /skills/
 # output strumenti sessione (non deliverable)
 tool-results/
+.debris-pre-rollback/
