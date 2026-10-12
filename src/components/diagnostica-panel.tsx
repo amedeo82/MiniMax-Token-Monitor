@@ -28,6 +28,7 @@ import { saluteMonitor, type SaluteMonitor } from "@/lib/health";
 import { detectRateAnomalies, type RateAnomalies } from "@/lib/rate-anomalies";
 import { samplingQuality, type SamplingQuality } from "@/lib/sampling";
 import { formatDateTimeRome, formatTimeRome, formatCountdown, formatDuration } from "@/lib/time";
+import { descrizioneResetClock } from "@/lib/a11y";
 import type { HistoryPoint } from "@/components/history-chart";
 import type { UsageEvent } from "@/lib/usage-events";
 import { Activity, Clock4, HeartPulse, TimerReset, Radar, Gauge } from "lucide-react";
@@ -78,7 +79,9 @@ export function ResetClock({ history }: { history: HistoryPoint[] }) {
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto rounded-xl border border-white/[0.07] bg-white/[0.02] p-2">
-        <svg viewBox="0 0 760 150" className="min-w-[640px]" role="img" aria-label="Orologio dei reset: reset osservati contro blocchi teorici UTC">
+        {/* I79 — l'aria-label del role="img" è generato dai dati (lib/a11y):
+            descrive reset osservati, ultimo reset Roma e blocchi teorici UTC */}
+        <svg viewBox="0 0 760 150" className="min-w-[640px]" role="img" aria-label={descrizioneResetClock(resetti, da, ora)}>
           {/* blocchi teorici di fondo */}
           {BLOCCHI_UTC.map((h) => (
             <line key={h} x1={20 + (h / 24) * (760 - 40)} y1={30} x2={20 + (h / 24) * (760 - 40)} y2={132} stroke="rgba(255,255,255,0.10)" strokeDasharray="3 4" />

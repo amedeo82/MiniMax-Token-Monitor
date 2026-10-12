@@ -662,7 +662,9 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <span className="sr-only" aria-live="polite">
+              {/* I79 — l'ora è già visibile accanto: niente live region (annunciava
+                  OGNI SECONDO — spam per uno screen reader) */}
+              <span className="sr-only" aria-hidden>
                 Ora corrente a Roma: {mounted ? nowRomeTime() : ""}
               </span>
 
@@ -751,6 +753,11 @@ export default function DashboardPage() {
                   : ""}
               </Badge>
             ) : null}
+            {/* I79 — regione live del polling: annuncia ogni snapshot riuscito
+                (aria-live polite, testo solo quando c'è un ultimo rilevamento) */}
+            <p className="sr-only" aria-live="polite">
+              {lastFetch ? `Dati aggiornati alle ${formatTimeRome(lastFetch)} (Roma).` : ""}
+            </p>
             <TrendBadge trend={trend} />
           </div>
           ) : null}
