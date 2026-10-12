@@ -30,12 +30,14 @@ import {
   Sun,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { REGION_LABELS, Region } from "@/lib/minimax";
+import { REGION_LABELS, regioneAlt, Region } from "@/lib/minimax";
 import type { AlertThresholds, WindowThresholdKey } from "@/lib/usage-events";
 import { Textarea } from "@/components/ui/textarea";
 
 export interface DashboardSettings {
   apiKey: string;
+  /** I53 — chiave della SECONDA regione (regioneAlt); "" = monitoraggio solo primaria. */
+  apiKeyAlt: string;
   region: Region;
   /** Intervallo di aggiornamento automatico in secondi; 0 = disattivato. */
   refreshSeconds: number;
@@ -52,6 +54,7 @@ export interface DashboardSettings {
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
   apiKey: "",
+  apiKeyAlt: "",
   region: "eu",
   refreshSeconds: 60,
   demoMode: true,
@@ -118,6 +121,7 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJson }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme();
   const [apiKey, setApiKey] = React.useState(settings.apiKey);
+  const [apiKeyAlt, setApiKeyAlt] = React.useState(settings.apiKeyAlt);
   const [region, setRegion] = React.useState<Region>(settings.region);
   const [refreshSeconds, setRefreshSeconds] = React.useState(settings.refreshSeconds);
   const [demoMode, setDemoMode] = React.useState(settings.demoMode);
@@ -133,6 +137,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   React.useEffect(() => {
     if (open) {
       setApiKey(settings.apiKey);
+      setApiKeyAlt(settings.apiKeyAlt);
       setRegion(settings.region);
       setRefreshSeconds(settings.refreshSeconds);
       setDemoMode(settings.demoMode);
@@ -192,6 +197,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   const handleSave = () => {
     onSave({
       apiKey: apiKey.trim(),
+      apiKeyAlt: apiKeyAlt.trim(),
       region,
       refreshSeconds,
       demoMode: demoMode || !apiKey.trim(),
@@ -340,6 +346,40 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                   </Select>
                   <p className="text-[11px] text-zinc-500">Richieste frequenti possono innescare limiti</p>
                 </div>
+              </div>
+
+              {/* I53 — seconda chiave per il monitoraggio PARALLELO dell'altra regione.
+                  L'etichetta segue la select: la secondaria è sempre la regione opposta. */}
+              <div className="space-y-2">
+                <Label htmlFor="api-key-alt" className="text-xs font-medium text-zinc-300">
+                  Seconda regione — {REGION_LABELS[regioneAlt(region)]}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="api-key-alt"
+                    type={showKey ? "text" : "password"}
+                    placeholder="Chiave dell'altra regione (opzionale)"
+                    value={apiKeyAlt}
+                    onChange={(e) => setApiKeyAlt(e.target.value)}
+                    className="border-white/10 bg-white/[0.05] pr-10 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey((v) => !v)}
+                    aria-label={showKey ? "Nascondi seconda chiave" : "Mostra seconda chiave"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300"
+                  >
+                    {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-zinc-500">
+                  <ShieldCheck className="mt-0.5 size-3 shrink-0 text-emerald-500" />
+                  Con una chiave qui, ogni aggiornamento interroga ENTRAMBE le regioni in parallelo
+                  (panoramica della seconda nella sezione Panoramica); storico, avvisi e analisi
+                  restano della regione primaria. Lascia vuoto per monitorare solo {REGION_LABELS[region]}.
+                </p>
               </div>
 
               <div className="flex items-start justify-between gap-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
