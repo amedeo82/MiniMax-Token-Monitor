@@ -833,3 +833,17 @@ Stage Summary:
 - Lezione operativa: i run lunghi in background muoiono tra i comandi (V6 perso a metà) → le verifiche lunghe vanno in FOREGROUND; la cattura chiave «solo se il file manca» rende ADR-13 idempotente e sicura contro sovrascritture con chiavi finte
 - docs/04 dopo questa sessione: NESSUNA riga ⬜ implementabile — resta solo V1 aperta (richiede consumare la finestra 5h fino a esaurimento durante l'osservazione)
 - Suite: 324 test / 924 asserzioni, audit 278/278 (+3 check I49/I56, 2 I86 condizionali); docs allineati (02 §5, 03 §5.23+§3+§9, 04 §3+§4+§5+§8, 05 §10+§11, README)
+
+---
+Task ID: 30
+Agent: Super Z (main)
+Task: Configurare l'indirizzo email git per i push effettuati con il PAT (richiesta utente: amedeo.vecchi82@gmail.com)
+
+Work Log:
+- Verificata config esistente: user.name "Z User" / user.email "z@container" (locale e globale, default container)
+- Impostato git config locale (repo): user.email = amedeo.vecchi82@gmail.com
+- Verificata persistenza in .git/config sezione [user]; remote origin già con PAT nell'URL (github.com/amedeo82/MiniMax-Token-Monitor.git)
+
+Stage Summary:
+- I prossimi commit del repo saranno attribuiti a amedeo.vecchi82@gmail.com (GitHub li assocerà all'account amedeo82)
+- user.name resta "Z User" (non richiesto dall'utente; modificabile su richiesta)
