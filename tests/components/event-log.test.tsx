@@ -6,8 +6,8 @@
  * all'archivio COMPLETO (già coperto da tests/lib), qui si verifica la vista.
  */
 import "./setup-dom";
-import { describe, test, expect } from "bun:test";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, test, expect, beforeEach } from "bun:test";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { EventLog } from "@/components/event-log";
 import type { UsageEvent } from "@/lib/usage-events";
 
@@ -28,6 +28,13 @@ const EVENTI: UsageEvent[] = [
 ];
 
 describe("I81 componenti: EventLog", () => {
+  // I79 — cleanup esplicito tra i test (stesso pattern di nav-boundary): senza,
+  // i render si accumulano nel document condiviso di happy-dom e da un certo
+  // ordine di discovery in poi «getByRole» trova istanze duplicate
+  beforeEach(() => {
+    cleanup();
+  });
+
   test("senza filtri: descrizione di default e tutti gli eventi visibili", () => {
     render(<EventLog events={EVENTI} onClear={() => {}} />);
     // il contatore «N di M» appare solo con filtri attivi (design I77)

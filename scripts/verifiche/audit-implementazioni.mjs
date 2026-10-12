@@ -340,6 +340,16 @@ const CHECKS = [
   check.simbolo("I85", "src/app/page.tsx", "\\{!compact \\? <SectionNav /> : null\\}", "nav figlia DIRETTA di main: contenitore sticky = tutta la pagina"),
   check.assenza("I85", "src/app/page.tsx", "<div className=\"hidden md:block\">\\s*<SectionNav", "niente wrapper attorno alla nav (limiterebbe la corsa dello sticky)"),
   check.simbolo("I85", "src/components/section-nav.tsx", "className=\"sticky z-30 hidden .* md:block\"", "sticky + hidden md:block sulla nav stessa (desktop ≥md)"),
+  /* --- I79 — audit di accessibilità sistematico (docs/03 §5.18) --- */
+  check.simbolo("I79", "src/lib/a11y.ts", "export function descrizioneHeatmap", "descrizione heatmap per screen reader (modulo puro)"),
+  check.simbolo("I79", "src/lib/a11y.ts", "export function descrizioneCalendario", "descrizione calendario per screen reader"),
+  check.simbolo("I79", "src/lib/a11y.ts", "export function descrizioneResetClock", "descrizione reset clock per screen reader"),
+  check.simbolo("I79", "src/components/analysis-panel.tsx", "className=\"sr-only\">\\{descrizioneHeatmap", "sr-only heatmap + griglia aria-hidden"),
+  check.simbolo("I79", "src/components/analysis-panel.tsx", "className=\"sr-only\">\\{descrizioneCalendario", "sr-only calendario + griglia aria-hidden"),
+  check.simbolo("I79", "src/components/diagnostica-panel.tsx", "aria-label=\\{descrizioneResetClock", "reset clock: aria-label DINAMICO dai dati (role=img)"),
+  check.simbolo("I79", "src/app/page.tsx", "aria-live=\"polite\"", "regione live del polling nell'header (orologio degradato ad aria-hidden)"),
+  check.simbolo("I79", "src/app/globals.css", "nav a:focus-visible", "focus visibile sui link nav (famiglia scuro)"),
+  check.simbolo("I79", "src/app/globals.css", "html:not\\(\\.dark\\) nav a:focus-visible", "focus visibile sui link nav (famiglia chiaro)"),
 ];
 
 /* ------------------------------------------------------------------ */

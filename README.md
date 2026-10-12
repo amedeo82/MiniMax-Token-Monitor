@@ -42,6 +42,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Error boundary per sezione** (I76): un crash in un pannello non porta più giù la pagina — skeleton di fallback con «Riprova» per ogni sezione
 - **Modalità compatta / widget** (I73): apri `/?compact=1` per solo anelli + countdown + ritmo (schermi secondari, compatibile con la PWA)
 - **Tema chiaro opzionale** (I78): toggle sole/luna nell'header o tab «Aspetto» delle impostazioni (Sistema/Chiaro/Scuro, default scuro invariato); il tema scuro resta quello di progetto, il JSON grezzo resta scuro anche in chiaro
+- **Accessibilità sistematica** (I79): contrasto WCAG AA misurato con probe automatico su entrambi i temi (0 fallimenti), annunci `aria-live` degli aggiornamenti del polling, focus visibile da tastiera sulla navigazione, descrizioni testuali `sr-only`/`aria-label` per heatmap, calendario e orologio dei reset
 - **Report settimanale stampabile** (I75): voce «Stampa report settimanale» nel menu Esporta → il foglio contiene SOLO il report (verdetto lineare+EWMA, cicli e spreco, consumo per giorno, calendario); Ctrl+P diretto produce comunque una pagina leggibile senza cromo
 
 **Analisi di utilizzo**

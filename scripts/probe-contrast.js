@@ -141,7 +141,12 @@
     { id: 'tab.active', sel: '[data-slot="tabs-trigger"][data-state="active"]' },
     { id: 'tab.inactive', sel: '[data-slot="tabs-trigger"][data-state="inactive"]' },
     { id: 'chip.on', sel: '[data-slot="toggle-group-item"][data-state="on"]' },
-    { id: 'chip.off', sel: '[data-slot="toggle-group-item"][data-state="off"]' }
+    { id: 'chip.off', sel: '[data-slot="toggle-group-item"][data-state="off"]' },
+    /* I79 — superfici della nav (I66/I85 sticky e I74 barra mobile) */
+    { id: 'nav.active', sel: 'nav[aria-label="Sezioni della dashboard"] a[aria-current="true"]' },
+    { id: 'nav.inactive', sel: 'nav[aria-label="Sezioni della dashboard"] a:not([aria-current="true"])' },
+    { id: 'nav.mobile.active', sel: 'nav[aria-label*="mobile"] a[aria-current="true"]' },
+    { id: 'nav.mobile.inactive', sel: 'nav[aria-label*="mobile"] a:not([aria-current="true"])' }
   ];
 
   const out = [];
