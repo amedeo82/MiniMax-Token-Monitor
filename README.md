@@ -86,6 +86,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | [`docs/03-piano-implementazione.md`](docs/03-piano-implementazione.md) | Architettura, mappa del codice, modelli dati, flussi, gestione errori, sicurezza, fasi di lavoro con criteri di accettazione | Prima di implementare nuove funzionalità |
 | [`docs/04-stato-avanzamento.md`](docs/04-stato-avanzamento.md) | Tracking dello stato di avanzamento: checklist attività, registro decisioni (ADR), verifiche empiriche da completare, changelog | **All'inizio e alla fine di ogni sessione di lavoro** |
 | [`docs/05-verifiche-empiriche.md`](docs/05-verifiche-empiriche.md) | Runbook delle verifiche empiriche V1–V6 con il toolkit `scripts/verifiche/`: prerequisiti, comandi, verdetti automatici, piano di esecuzione in una giornata, registro delle esecuzioni | Prima di eseguire o interpretare le verifiche V1–V6 |
+| [`docs/06-abbellimenti-dashboard.md`](docs/06-abbellimenti-dashboard.md) | Catalogo degli abbellimenti UI I57–I67 (spreco per ciclo, calendario, ritmo %/h, orologio dei reset, istogramma, salute del monitor, prevedibilità, anelli continui, nav sticky con scrollspy, identità del tab) | Prima di toccare anelli, analisi di lungo periodo o navigazione |
+| [`docs/07-analisi-miglioramenti-aggiuntivi.md`](docs/07-analisi-miglioramenti-aggiuntivi.md) | Catalogo dei miglioramenti I68–I82 (downsampling, selettore intervallo, anomalie, campionamento, EWMA, modalità compatta, nav mobile, vista stampa, error boundary, filtri eventi, tema chiaro, audit a11y, `/api/summary`, test di componente, multi-modello) — **15 di 15 implementate** | Prima di estendere analisi o UX; le note di implementazione rimandano a `docs/03` §5.x |
 
 > **Protocollo per le prossime sessioni**: leggere prima `docs/04-stato-avanzamento.md`
 > (e questo README), lavorare, poi aggiornare lo stato e il changelog. In più
@@ -139,35 +141,64 @@ analizzare una risposta reale catturata altrove (curl, browser, CLI `mmx quota`)
 ```
 src/
 ├── app/
-│   ├── page.tsx                     # Pagina dashboard (stato, polling, import JSON, demo, avvisi, sync server)
-│   ├── api/minimax/usage/route.ts   # Proxy server-side verso token_plan/remains
-│   ├── api/history/route.ts         # I16: persistenza storico (POST upsert+pruning, GET, DELETE)
-│   └── api/events/route.ts          # I27: persistenza registro eventi (upsert per id, filtri, DELETE)
+│   ├── page.tsx                     # Dashboard: stato, polling con backoff (I51), import JSON, demo,
+│   │                                #   avvisi, sync server, pivot modelli (I82), aria-live (I79)
+│   ├── layout.tsx                   # ThemeProvider (I78) + Service Worker (I52) + classe dark
+│   ├── manifest.ts                  # PWA manifest (I52)
+│   ├── globals.css                  # Tema scuro di progetto + famiglie chiaro/scuro (I78/I83/I84)
+│   │                                #   + regole print (I75) + focus nav (I79)
+│   ├── api/minimax/usage/route.ts   # Proxy token_plan/remains con retry transitori (I51) + fallback (I18)
+│   ├── api/history/route.ts         # I16: storico (upsert+pruning, GET, DELETE) + downsample (I68)
+│   ├── api/history/models/route.ts  # I82: storico per-modello (ModelUsagePoint)
+│   ├── api/events/route.ts          # I27: archivio eventi (upsert, filtri, DELETE)
+│   └── api/summary/route.ts         # I80: KPI aggregati read-only per widget esterni
 ├── components/
-│   ├── quota-cards.tsx              # ModelCard, MainWindows, badge di stato, windowKindLabel
-│   ├── quota-ring.tsx               # Anello percentuale (QuotaRing)
-│   ├── history-chart.tsx            # HistoryChart (+ media mobile SMA-10, fasce cicli/reset, export locale+server), StatsPanel, verdetto proiezione, pace + quota sprecata
-│   ├── analysis-panel.tsx           # I26: Analisi di lungo periodo (cicli, per giorno, heatmap per ora I32, KPI)
+│   ├── quota-cards.tsx              # ModelCard, MainWindows, badge, windowKindLabel/windowShortLabel (I82)
+│   ├── quota-ring.tsx               # Anello percentuale (+ colore continuo/glow/count-up I65)
+│   ├── history-chart.tsx            # HistoryChart (media mobile, cicli I32, EWMA I72, verdetto I23,
+│   │                                #   pace I31, export, stampa I75), StatsPanel, RateChart (I59)
+│   ├── analysis-panel.tsx           # I26/I32/I57/I58/I61/I63/I64: cicli, per giorno, heatmap,
+│   │                                #   calendario, distribuzione — fonte per-modello (I82, I79 sr-only)
+│   ├── diagnostica-panel.tsx        # I60/I62/I70/I71: reset clock, salute, anomalie, campionamento
+│   ├── section-nav.tsx              # I66/I85: nav sezioni sticky con scrollspy condiviso (retry)
+│   ├── bottom-nav.tsx               # I74: barra navigazione fissa su mobile
+│   ├── section-boundary.tsx         # I76: error boundary per sezione
+│   ├── event-log.tsx                # Registro eventi (timeline, filtri I77, export, svuota)
+│   ├── settings-dialog.tsx          # Impostazioni su 4 tab (connessione/avvisi/dati/aspetto I78)
+│   ├── theme-toggle.tsx             # I78: toggle tema chiaro/scuro
+│   ├── print-report.tsx             # I75: report settimanale stampabile
+│   ├── pwa-register.tsx             # I52: registrazione Service Worker
 │   ├── model-table.tsx              # PanoramicTable: tutte le finestre a confronto
-│   ├── event-log.tsx                # Registro eventi (timeline, export locale+archivio, svuota)
-│   ├── tech-panels.tsx              # RawJsonPanel, TechInfo (diagnostica, endpoint, ora server)
-│   ├── settings-dialog.tsx          # Impostazioni (3 tab) + soglie per finestra (I28) + import JSON
+│   ├── tech-panels.tsx              # RawJsonPanel, TechInfo
 │   └── ui/                          # Componenti shadcn/ui
 └── lib/
-    ├── minimax.ts                   # Tipi, parser, normalizzazione, stati, endpoint
+    ├── minimax.ts                   # Tipi, parser, stati, endpoint primario+fallback (I18)
     ├── time.ts                      # Europe/Rome + it-IT: formattazioni, countdown
-    ├── usage-events.ts              # Avvisi soglia per finestra, rilevamento reset, registro eventi
-    ├── server-history.ts            # I16: sync storico browser↔server (replica + merge offline-first)
-    ├── server-events.ts             # I27: sync registro eventi browser↔server
-    ├── cycles.ts                    # I26/I32: rilevamento cicli, drawdown, per giorno, heatmap 7×24, SMA
-    ├── export.ts                    # Esportazione CSV/JSON di storico ed eventi
-    └── demo.ts                      # Generatore dati demo
-prisma/schema.prisma                 # Modelli UsagePoint + UsageEventRecord (SQLite)
+    ├── backoff.ts                   # I51: backoff esponenziale con jitter
+    ├── usage-events.ts              # Avvisi soglia per finestra (I28), reset, registro eventi
+    ├── model-history.ts             # I82: storico per-modello (localStorage + sync)
+    ├── server-history.ts / server-events.ts / server-model-history.ts  # Sync offline-first I16/I27/I82
+    ├── cycles.ts                    # I26/I32/I57/I58/I61/I63/I64: cicli, heatmap, calendario, distribuzione
+    ├── rate.ts / rate-anomalies.ts / ewma.ts / sampling.ts / health.ts  # I59/I70/I72/I71/I62
+    ├── interval.ts / event-filters.ts / compact.ts / print.ts           # I69/I77/I73/I75
+    ├── downsample.ts / a11y.ts      # I68 bucket orari · I79 descrizioni sr-only
+    ├── ring-color.ts / tab-identity.ts                                  # I65/I67
+    └── export.ts / demo.ts / db.ts / utils.ts                           # Export CSV/JSON, demo, Prisma
+prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
-docs/          # Questa documentazione (01–05)
-scripts/       # Artefatti delle ricerche + toolkit verifiche (scripts/verifiche/)
+public/                              # sw.js + sw-shared.js + icone PWA (I52)
+tests/                               # Suite bun: lib/ (21 file) + components/ (5 file) = 272 test / 811 asserzioni
+docs/          # Questa documentazione (01–07)
+scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
+               #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro
 ```
+
+> **Residui tracciati ma non cablati** (fuori dalla struttura funzionale; analisi e decisione
+> in `docs/04` §3, item I86 ⬜): `src/lib/kiosk.ts` + `src/components/kiosk-bar.tsx` (modalità
+> kiosk/TV, I45), `src/lib/version.ts` (marcatore versione, I46), `src/lib/campione.ts`
+> (campionatore passivo, I49), `src/app/api/verifiche/route.ts` (route temporanea del Task 7,
+> inerte), `src/app/api/route.ts` (scaffold).
 
 ## Verifiche empiriche (toolkit)
 
