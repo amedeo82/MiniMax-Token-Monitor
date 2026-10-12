@@ -1,0 +1,1616 @@
+{
+  "id": "V6",
+  "domanda": "C'è rate limit sul polling della quota?",
+  "avvio": "08/10/26, 15:16:07",
+  "fine": "08/10/26, 15:21:07",
+  "config": {
+    "comando": "v6",
+    "regione": "eu",
+    "chiave": "—",
+    "intervalloS": 10,
+    "durataMin": 5,
+    "endpoint": "https://www.minimax.io/v1/token_plan/remains",
+    "modello": null
+  },
+  "campioni": [
+    {
+      "t": 1791465367187,
+      "tRoma": "08/10/26, 15:16:07",
+      "http": 200,
+      "ok": true,
+      "ms": 359,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 49,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6232621,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297832621,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38632621,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297832621,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465377187,
+      "tRoma": "08/10/26, 15:16:17",
+      "http": 200,
+      "ok": true,
+      "ms": 305,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 49,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6222666,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297822666,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38622666,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297822666,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465387188,
+      "tRoma": "08/10/26, 15:16:27",
+      "http": 200,
+      "ok": true,
+      "ms": 280,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 49,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6212645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297812645,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38612645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297812645,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465397189,
+      "tRoma": "08/10/26, 15:16:37",
+      "http": 200,
+      "ok": true,
+      "ms": 315,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 49,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6202611,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297802611,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38602611,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297802611,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465407190,
+      "tRoma": "08/10/26, 15:16:47",
+      "http": 200,
+      "ok": true,
+      "ms": 334,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6192653,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297792653,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38592653,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297792653,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465417191,
+      "tRoma": "08/10/26, 15:16:57",
+      "http": 200,
+      "ok": true,
+      "ms": 276,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6182645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297782645,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38582645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297782645,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465427192,
+      "tRoma": "08/10/26, 15:17:07",
+      "http": 200,
+      "ok": true,
+      "ms": 317,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6172656,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297772656,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38572656,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297772656,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465437193,
+      "tRoma": "08/10/26, 15:17:17",
+      "http": 200,
+      "ok": true,
+      "ms": 941,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6161982,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297761982,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38561982,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297761982,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465447193,
+      "tRoma": "08/10/26, 15:17:27",
+      "http": 200,
+      "ok": true,
+      "ms": 321,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6152650,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297752650,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38552650,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297752650,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465457194,
+      "tRoma": "08/10/26, 15:17:37",
+      "http": 200,
+      "ok": true,
+      "ms": 261,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6142658,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297742658,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38542658,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297742658,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465467195,
+      "tRoma": "08/10/26, 15:17:47",
+      "http": 200,
+      "ok": true,
+      "ms": 273,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6132645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297732645,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38532645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297732645,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465477195,
+      "tRoma": "08/10/26, 15:17:57",
+      "http": 200,
+      "ok": true,
+      "ms": 272,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6122645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297722645,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38522645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297722645,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465487196,
+      "tRoma": "08/10/26, 15:18:07",
+      "http": 200,
+      "ok": true,
+      "ms": 274,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 48,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6112641,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297712641,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38512641,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297712641,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465497196,
+      "tRoma": "08/10/26, 15:18:17",
+      "http": 200,
+      "ok": true,
+      "ms": 267,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6102649,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297702649,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38502649,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297702649,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465507197,
+      "tRoma": "08/10/26, 15:18:27",
+      "http": 200,
+      "ok": true,
+      "ms": 497,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6092544,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297692544,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38492544,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297692544,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465517198,
+      "tRoma": "08/10/26, 15:18:37",
+      "http": 200,
+      "ok": true,
+      "ms": 280,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6082634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297682634,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38482634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297682634,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465527199,
+      "tRoma": "08/10/26, 15:18:47",
+      "http": 200,
+      "ok": true,
+      "ms": 262,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6072650,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297672650,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38472650,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297672650,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465537200,
+      "tRoma": "08/10/26, 15:18:57",
+      "http": 200,
+      "ok": true,
+      "ms": 278,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6062634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297662634,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38462634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297662634,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465547202,
+      "tRoma": "08/10/26, 15:19:07",
+      "http": 200,
+      "ok": true,
+      "ms": 312,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6052656,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297652656,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38452656,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297652656,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465557203,
+      "tRoma": "08/10/26, 15:19:17",
+      "http": 200,
+      "ok": true,
+      "ms": 275,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6042634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297642634,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38442634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297642634,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465567204,
+      "tRoma": "08/10/26, 15:19:27",
+      "http": 200,
+      "ok": true,
+      "ms": 356,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6032596,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297632596,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38432596,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297632596,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465577205,
+      "tRoma": "08/10/26, 15:19:37",
+      "http": 200,
+      "ok": true,
+      "ms": 278,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6022629,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297622629,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38422629,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297622629,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465587205,
+      "tRoma": "08/10/26, 15:19:47",
+      "http": 200,
+      "ok": true,
+      "ms": 271,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6012636,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297612636,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38412636,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297612636,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465597205,
+      "tRoma": "08/10/26, 15:19:57",
+      "http": 200,
+      "ok": true,
+      "ms": 338,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 6002610,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297602610,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38402610,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297602610,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465607206,
+      "tRoma": "08/10/26, 15:20:07",
+      "http": 200,
+      "ok": true,
+      "ms": 303,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 47,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 5992645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297592645,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38392645,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297592645,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465617206,
+      "tRoma": "08/10/26, 15:20:17",
+      "http": 200,
+      "ok": true,
+      "ms": 336,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 46,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 5982622,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297582622,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38382622,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297582622,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465627207,
+      "tRoma": "08/10/26, 15:20:27",
+      "http": 200,
+      "ok": true,
+      "ms": 378,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 46,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 5972648,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 57,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297572648,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38372648,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297572648,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465637207,
+      "tRoma": "08/10/26, 15:20:37",
+      "http": 200,
+      "ok": true,
+      "ms": 316,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 46,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 5962646,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 56,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297562646,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38362646,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297562646,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465647208,
+      "tRoma": "08/10/26, 15:20:47",
+      "http": 200,
+      "ok": true,
+      "ms": 313,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 46,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 5952634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 56,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297552634,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38352634,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297552634,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "t": 1791465657209,
+      "tRoma": "08/10/26, 15:20:57",
+      "http": 200,
+      "ok": true,
+      "ms": 273,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 46,
+            "status": "1",
+            "start": 1791453600000,
+            "end": 1791471600000,
+            "remainsMs": 5942629,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 56,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297542629,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791417600000,
+            "end": 1791504000000,
+            "remainsMs": 38342629,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 297542629,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    }
+  ],
+  "esito": {
+    "verdetto": "NESSUN RATE LIMIT OSSERVATO — 30 richieste a 10s tutte OK (latenza media 329ms).",
+    "note": [
+      "distribuzione HTTP: HTTP 200×30",
+      "distribuzione status_code: 0×30",
+      "latenza ms min/med/p95/max: 261/329/497/941",
+      "completata: 5 min × 10s"
+    ]
+  }
+}

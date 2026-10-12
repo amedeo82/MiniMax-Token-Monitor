@@ -1,0 +1,74 @@
+{
+  "id": "V5",
+  "domanda": "I conteggi si popolano su alcuni piani (legacy a conteggi) e che semantica hanno?",
+  "avvio": "09/10/26, 13:50:35",
+  "fine": "09/10/26, 13:50:35",
+  "config": {
+    "comando": "v5",
+    "regione": "eu",
+    "chiave": "—",
+    "intervalloS": null,
+    "durataMin": null,
+    "endpoint": "https://www.minimax.io/v1/token_plan/remains",
+    "modello": null
+  },
+  "campioni": [
+    {
+      "t": 1791546635071,
+      "tRoma": "09/10/26, 13:50:35",
+      "http": 200,
+      "ok": true,
+      "ms": 317,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 79,
+            "status": "1",
+            "start": 1791540000000,
+            "end": 1791558000000,
+            "remainsMs": 11364739,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 40,
+            "status": "1",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 216564739,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791504000000,
+            "end": 1791590400000,
+            "remainsMs": 43764739,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791158400000,
+            "end": 1791763200000,
+            "remainsMs": 216564739,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    }
+  ],
+  "esito": {
+    "verdetto": "NON APPLICABILE A QUESTA CHIAVE — conteggi tutti a 0/assenti (piano non «legacy a conteggi»): le percentuali restano la metrica primaria (ADR-1).",
+    "note": []
+  }
+}
