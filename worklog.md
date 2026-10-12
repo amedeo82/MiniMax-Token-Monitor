@@ -863,3 +863,27 @@ Stage Summary:
 - Identità git completa e persistente nel repo: Amedeo Vecchi <amedeo.vecchi82@gmail.com> — i commit verranno attribuiti all'account GitHub amedeo82
 - Nessun codice toccato, nessuna attività I/V impattata; docs/04 §3 invariato (nessun item da aggiornare)
 - Prossimo commit: documentazione (worklog + docs/04 §8); DB separato solo se il poller ha scritto (lezione I30)
+
+---
+Task ID: 32
+Agent: Super Z (main)
+Task: I88 + I89 — richiesta utente «possiamo aggiornare lo stack tecnologico attuale alle ultime versioni senza introdurre bug o regressioni? verifica, poi commit e push»
+
+Work Log:
+- BASELINE TROVATA ROSSA (321/324): 3 test ThemeToggle (I78) falliti con «localStorage is not defined» — prima indagine, poi aggiornamento
+- Diagnosi I88: tests/lib/kiosk.test.ts (I87) fa defineProperty(window,"localStorage")+delete in afterEach; con happy-dom window===globalThis (falsificato con scripts/verifiche/prova-bug-localstorage.ts → {"prima":true,"durante":true,"dopo":false}) il delete distrugge la proprietà own PER SEMRE; bug LATENTE che emerge solo se l'ordine di discovery mette kiosk prima di theme-toggle (le sessioni precedenti erano verdi per ordine favorevole); secondo polluter: mock di usage-events senza ripristino e senza clear()
+- Fix I88: salva/ripristino del descrittore originale in kiosk.test.ts (afterEach) e usage-events.test.ts (afterAll, mock completato clear/length/key); riprodotto l'ordine patologico kiosk→usage-events→theme-toggle = 43/43 PASS; suite 324/324 ×2 ordine naturale; commit 0e9fcd3
+- Analisi outdated: bun outdated completo; classificazione in range-compatible / major a rischio zero (non importati) / major usati / tenuti indietro
+- FASE 1 (bun update): next 16.4.0, react 19.3.0, prisma 6.19.3, tailwind 4.3.3, zod 4.6.6, radix minor, ecc. — attrito: eslint-config-next 16.4 porta plugin react-hooks v7 (regole compiler set-state-in-effect/refs) → 18 violazioni pre-esistenti su 11 file; DISATTIVATE con motivazione in eslint.config.mjs (baseline lint effettivo ripristinato, refactoring futuro in §7) + warning no-location-assign-relative-destination disabilitato mirato su uscita compatta I73 (full reload intenzionale); tsc 0, lint 0, 324/324, audit 278 PASS; commit 128799c
+- FASE 2a (major non importati/dev): happy-dom+registrator 21, uuid 14, @mdxeditor 4, react-syntax-highlighter 16, sharp 0.35, bun-types 1.4.3, @types/react 19.3; tsc ha scoperto che react-day-picker 10 e react-resizable-panels 4 rompono i wrapper shadcn stock (calendar/resizable, NON importati) → tenuti a ^9/^3 con motivo
+- FASE 2b (major usati): lucide-react 1.55 (32 file, tsc pulito), framer-motion 14 (quota-ring), recharts 3.10 (history-chart/analysis-panel diretti); ui/chart.tsx shadcn (353 righe, zero riferimenti, incompatibile v3) RIMOSSO — precedente I86; tsc 0, lint 0, 324/324, audit 278 PASS; commit 2420967
+- TENUTI INDIETRO con motivo documentato in docs/04 I89: TypeScript 7 (compilatore nativo), Prisma 7/8 (DB SQLite live), eslint 10 (compat eslint-config-next)
+- Verifica browser (:3000, restart doppio fork setsid dopo install, rotte **/api/history e **/api/events bloccate ADR-8): dashboard scura (anelli 38%/78% framer-motion 14 + glow), Grafico recharts 3 (1128 punti, area+gradiente+fasi+reset), tema chiaro OK, mobile 390 zero overflow + barra I74, 0 errori console/pagina; screenshot verify-stack-*.png (dark/light/grafico/mobile)
+- Documentazione: docs/04 (§3 I88 ✅ + I89 ✅, §7 apertura refactoring react-hooks, §8 riga), questo worklog; incidente durante l'editing: la sostituzione della riga I87 l'ha cancellata — ripristinata dal HEAD con ordine I86→I87→I88→I89 verificato
+
+Stage Summary:
+- Stack aggiornato alle ultime versioni SENZA regressioni: tsc 0 su src/+tests, lint 0, suite 324/324 (924 asserzioni) ordine-indipendente, audit 278/278 PASS, browser verificato su tutti i sottosistemi toccati (grafici/anelli/icone/temi/mobile)
+- I88: la suite è ora immunitaria all'ordine di discovery — bug latente I87 falsificato e corretto con prova meccanista commessa
+- I89: 4 commit a checkpoint (I88 → fase 1 → fase 2) per bisecabilità; le uniche voci tenute indietro (TS 7, Prisma 7/8, eslint 10) hanno motivo documentato; react-day-picker/react-resizable-panels in attesa di rigenerazione shadcn se mai serviranno
+- Apertura nuova: passata «React Compiler-ready» (§7) per riattivare le 2 regole v7 con refactoring dedicato
+- Lezione: l'ordine di discovery dei test di bun NON è garantito — ogni test che sostituisce globali deve salvare/ripristinare i descrittori, mai fare delete
