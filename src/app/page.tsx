@@ -1037,6 +1037,10 @@ export default function DashboardPage() {
                   aria-label="Torna alla vista completa"
                   title="Torna alla vista completa"
                   onClick={() => {
+                    // I73: ricarica completa INTENZIONALE per uscire dalla compatta
+                    // (remount pulito di sezioni, grafici e osservatori) — non è
+                    // navigazione SPA, quindi la regola @next/next non si applica.
+                    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                     window.location.href = "/";
                   }}
                   className="h-9 w-9 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]!"
