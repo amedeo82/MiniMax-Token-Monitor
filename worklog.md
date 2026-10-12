@@ -847,3 +847,19 @@ Work Log:
 Stage Summary:
 - I prossimi commit del repo saranno attribuiti a amedeo.vecchi82@gmail.com (GitHub li assocerà all'account amedeo82)
 - user.name resta "Z User" (non richiesto dall'utente; modificabile su richiesta)
+
+---
+Task ID: 31
+Agent: Super Z (main)
+Task: Completare l'identità git richiesta dall'utente («aggiorna anche user.name con il mio Amedeo Vecchi, poi aggiorna la documentazione, commit e push»)
+
+Work Log:
+- Impostato git config locale (repo): user.name = Amedeo Vecchi (si aggiunge a user.email = amedeo.vecchi82@gmail.com del Task 30)
+- Verificato: `git config user.name` → Amedeo Vecchi, `git config user.email` → amedeo.vecchi82@gmail.com; persistenza in .git/config sezione [user]
+- Ricercati riferimenti alla vecchia identità in tutto il repo (grep «Z User|z@container|amedeo.vecchi82»): solo worklog.md — nessun doc da correggere
+- Aggiornata documentazione: worklog (questa sezione), docs/04 §8 (riga changelog di sessione)
+
+Stage Summary:
+- Identità git completa e persistente nel repo: Amedeo Vecchi <amedeo.vecchi82@gmail.com> — i commit verranno attribuiti all'account GitHub amedeo82
+- Nessun codice toccato, nessuna attività I/V impattata; docs/04 §3 invariato (nessun item da aggiornare)
+- Prossimo commit: documentazione (worklog + docs/04 §8); DB separato solo se il poller ha scritto (lezione I30)
