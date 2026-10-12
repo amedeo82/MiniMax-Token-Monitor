@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">> ## Documentation Index\n> Fetch the complete documentation index at: https://platform.minimax.io/docs/llms.txt\n> Use this file to discover all available pages before exploring further.\n\n# Subscribe to M Plan\n\n> Subscribe to M Plan, get your Subscription Key, and test an API call.\n\n## 1. Subscribe to M Plan\n\nGo to [Plan Details](https://platform.minimax.io/console/plan), choose a tier, and complete payment.\n\n<Tip>\n  If you only use M Plan in MiniMax Code, sign in to MiniMax Code after completing step 1. You do not need to configure a Subscription Key.\n</Tip>\n\n## 2. Get your Subscription Key\n\nAfter subscribing, find your Subscription Key in [Plan Details](https://platform.minimax.io/console/plan). You need this Key to use M Plan in AI tools such as Claude Code and Cursor.\n\nNote:\n\n* Your Subscription Key only uses your M Plan usage and is not interchangeable with a pay-as-you-go API Key.\n* Keep your Subscription Key secure. Do not share it with others or commit it to a code repository. Use an environment variable or configuration file to store it.\n\n## 3. Test an API call (optional)\n\nFor example, use the Anthropic SDK to quickly test MiniMax-M3.1-Flash-Preview.\n\n**Install the SDK**\n\n<CodeGroup>\n  ```bash Python theme={null}\n  pip install anthropic\n  ```\n\n  ```bash Node.js theme={null}\n  npm install @anthropic-ai/sdk\n  ```\n</CodeGroup>\n\n**Configure environment variables**\n\nReplace `${YOUR_API_KEY}` with your Subscription Key:\n\n```bash theme={null}\nexport ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic\nexport ANTHROPIC_API_KEY=${YOUR_API_KEY}\n```\n\n**Call the API**\n\n```python Python theme={null}\nimport anthropic\n\nclient = anthropic.Anthropic()\n\nmessage = client.messages.create(\n    model=\"MiniMax-M3.1-Flash-Preview\",\n    output_config={\"effort\": \"max\"},\n    max_tokens=4096,\n    system=\"You are a helpful assistant.\",\n    messages=[\n        {\n            \"role\": \"user\",\n            \"content\": [\n                {\n                    \"type\": \"text\",\n                    \"text\": \"Hi, how are you?\"\n                }\n            ]\n        }\n    ]\n)\n\nfor block in message.content:\n    if block.type == \"thinking\":\n        print(f\"Thinking:\\n{block.thinking}\\n\")\n    elif block.type == \"text\":\n        print(f\"Text:\\n{block.text}\\n\")\n```\n</pre></body></html>",
+    "httpStatus": 200,
+    "httpStatusText": "",
+    "publishedTime": "Fri, 09 Oct 2026 06:54:11 GMT",
+    "title": "",
+    "url": "https://platform.minimax.io/docs/m-plan/quickstart.md",
+    "usage": {
+      "measuredTokens": 0,
+      "outputTokens": 0,
+      "scaledTokens": 586,
+      "tokens": 586
+    }
+  },
+  "meta": {
+    "usage": {
+      "measuredTokens": 0,
+      "outputTokens": 0,
+      "scaledTokens": 586,
+      "tokens": 586
+    }
+  },
+  "status": 20000
+}

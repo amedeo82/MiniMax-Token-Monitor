@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://platform.minimax.io/docs/token-plan/intro",
+    "name": "Token Plan Overview - Models - MiniMax API Docs",
+    "snippet": "The Token Plan extends upon our former Coding Plan by providing included Token Plan usage beyond language models, allowing more creative agents and applications Missing:  remains  monitoring",
+    "host_name": "platform.minimax.io",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/token-plan/faq",
+    "name": "FAQs - Models - MiniMax API Docs",
+    "snippet": "Token Plan supports flagship models on the API Platform. You can check your Token Plan usage in two ways: Method 1: Visit the Subscription Management page to ... Missing:  monitoring  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/m-plan/faq",
+    "name": "FAQ - Models - MiniMax API Docs",
+    "snippet": "​. How can I check M Plan usage? · Method 1: Visit the usage page · Method 2: Use MiniMax CLI · Method 3: Use the API endpoint. Missing:  monitoring  | Show results with:",
+    "host_name": "platform.minimax.io",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/api-reference/api-overview",
+    "name": "API Overview - Models - MiniMax API Docs",
+    "snippet": "Overview of MiniMax API capabilities including language, speech, video, image, music, and file management. Missing:  token_plan  remains  monitoring",
+    "host_name": "platform.minimax.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/MiniMax-AI/MiniMax-M2/issues/88",
+    "name": "API endpoint /coding_plan/remains requires cookie session",
+    "snippet": "Token Plan usage does not work with API Key authentication. Users need programmatic access to check Token Plan usage without manual web login. ... Missing:  monitoring  | Show results with:",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://platform.minimax.io/docs/token-plan/quickstart",
+    "name": "Quick Start - Models - MiniMax API Docs",
+    "snippet": "Quick guide to Token Plan subscription and integration. Token Plan to view your Subscription Key. Learn how to configure and use Token Plan. Review common ... Missing:  remains  endpoint  monitoring",
+    "host_name": "platform.minimax.io",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://minimax-ai.chat/docs/minimax-api-key-base-url",
+    "name": "MiniMax API Key: Base URLs, Regions & Authentication",
+    "snippet": "Monitor balance, Token Plan usage, and unexpected errors after deployments. MiniMax's public documentation does not specify a mandatory 30-, 60 ... Missing:  remains  | Show results with:",
+    "host_name": "minimax-ai.chat",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://mastra.ai/models/providers/minimax-coding-plan",
+    "name": "MiniMax Token Plan (minimax.io) Models: IDs, Context & Usage",
+    "snippet": "Browse MiniMax Token Plan (minimax.io) model IDs, capabilities, and context windows. Learn more in the MiniMax Token Plan (minimax.io) documentation. Missing:  remains  monitoring",
+    "host_name": "mastra.ai",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://apidog.com/blog/how-to-use-minimax-m3-api",
+    "name": "How to Use the MiniMax M3 API? - Apidog",
+    "snippet": "How to use the MiniMax M3 API: get a key, make your first call, toggle thinking, handle 1M-token context, and test requests in Apidog. Missing:  monitoring  | Show results with:",
+    "host_name": "apidog.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://llmbase.ai/openclaw/minimax-token-plan-tool",
+    "name": "MiniMax Token Plan Tool - OpenClaw AI Agent Skill | LLMBase",
+    "snippet": "A lightweight MiniMax Token Plan Tool skill that directly calls official MCP APIs using pure JavaScript. No external MCP servers.",
+    "host_name": "llmbase.ai",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]
