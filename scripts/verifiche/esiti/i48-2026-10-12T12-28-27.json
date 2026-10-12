@@ -1,0 +1,245 @@
+{
+  "item": "I48",
+  "eseguita": "2026-10-12T12:28:27.428Z",
+  "verdetto": "Demo fedele al 100% sullo schema e sulle invarianti osservate (29 campi: 23 fedeli, 6 differenze dichiarate, 0 falliti). Differenze SOLO nei valori simulati e nelle semplificazioni dichiarate (allineamento settimanale non simulato, marcatore «(demo)», campi radice opzionali sempre presenti); 1 incoerenza della simulazione trovata e corretta in itinere (stato settimanale del video, riga V8).",
+  "conteggi": {
+    "campi": 29,
+    "fedeli": 23,
+    "differenzeDichiarate": 6,
+    "falliti": 0
+  },
+  "righe": [
+    {
+      "id": "R1",
+      "campo": "base_resp.status_code",
+      "reale": "0 (success)",
+      "demo": "0 (success)",
+      "esito": "fedele",
+      "nota": "envelope identico; il raw mostrato in pagina in demo aggiunge SOLO il marcatore «success (demo)» (dichiarato)"
+    },
+    {
+      "id": "R2",
+      "campo": "base_resp.status_msg",
+      "reale": "«success»",
+      "demo": "«success» (in pagina «success (demo)»)",
+      "esito": "fedele",
+      "nota": "marcatore di fonte voluto, documentato"
+    },
+    {
+      "id": "R3",
+      "campo": "model_remains[] (categorie)",
+      "reale": "general, video",
+      "demo": "general, video",
+      "esito": "fedele",
+      "nota": "stesse categorie d'uso nello stesso ordine"
+    },
+    {
+      "id": "R4",
+      "campo": "campi radice opzionali (current_subscribe_title, credits_balance)",
+      "reale": "assenti nel campione 02/10 (documentati in docs/02 §2, alias gestiti dal parser)",
+      "demo": "«M Plan · Explore (Demo)», 42.75",
+      "esito": "differenza dichiarata",
+      "nota": "la demo esercita SEMPRE anche i campi opzionali che il reale può omettere"
+    },
+    {
+      "id": "G1",
+      "campo": "general: model_name",
+      "reale": "general",
+      "demo": "general",
+      "esito": "fedele",
+      "nota": "identificatore identico"
+    },
+    {
+      "id": "G2",
+      "campo": "general: current_interval_remaining_percent",
+      "reale": "100 (nessun consumo nella finestra osservata)",
+      "demo": "38.8 (calo simulato: finestra in corso da 3,2h su 5h)",
+      "esito": "differenza dichiarata",
+      "nota": "valori diversi per costruzione; semantica identica (0–100, fonte della verità)"
+    },
+    {
+      "id": "G3",
+      "campo": "general: durata finestra breve (end − start)",
+      "reale": "18000000 ms = 5h",
+      "demo": "18000000 ms = 5h",
+      "esito": "fedele",
+      "nota": "18.000.000 ms su ENTRAMBE le sorgenti (docs/02 §4.1)"
+    },
+    {
+      "id": "G4",
+      "campo": "general: finestra breve: invariante remains",
+      "reale": "end − remains = 1790939878714 (dentro la finestra)",
+      "demo": "remains = end − now (esatto al ms)",
+      "esito": "fedele",
+      "nota": "remains_time ≡ fine finestra − istante di lettura, su ENTRAMBE le sorgenti (docs/02 §4.2)"
+    },
+    {
+      "id": "G5",
+      "campo": "general: current_interval_status",
+      "reale": "1 → «Attiva · in uso»",
+      "demo": "1 → «Attiva · in uso»",
+      "esito": "fedele",
+      "nota": "stesso codice, stessa normalizzazione (1 = attiva)"
+    },
+    {
+      "id": "G6",
+      "campo": "general: conteggi finestra breve",
+      "reale": "0 / 0 (non dichiarati)",
+      "demo": "0 / 0 (non dichiarati)",
+      "esito": "fedele",
+      "nota": "piano tracciato a percentuali: la UI mostra «non dichiarati» su entrambe"
+    },
+    {
+      "id": "G7",
+      "campo": "general: current_weekly_remaining_percent",
+      "reale": "64 (36% consumato)",
+      "demo": "77.3 (calo simulato su 2,7 giorni)",
+      "esito": "differenza dichiarata",
+      "nota": "semantica identica: consumato = 100 − residuo"
+    },
+    {
+      "id": "G8",
+      "campo": "general: durata finestra settimanale",
+      "reale": "604800000 ms = 7 giorni",
+      "demo": "604800000 ms = 7 giorni",
+      "esito": "fedele",
+      "nota": "604.800.000 ms su ENTRAMBE le sorgenti"
+    },
+    {
+      "id": "G9",
+      "campo": "general: allineamento settimanale",
+      "reale": "lunedì 00:00 UTC esatto (2026-09-28T00:00:00.000Z)",
+      "demo": "rolling (start = now − 2,7 giorni): ancoraggio NON simulato",
+      "esito": "differenza dichiarata",
+      "nota": "semplificazione dichiarata: l'ancoraggio è una proprietà del SERVER (docs/02 §5); parser e UI non ne dipendono (la durata 7g determina la finestra)"
+    },
+    {
+      "id": "G10",
+      "campo": "general: finestra settimanale: invariante remains",
+      "reale": "end − remains = 1790939878714 (dentro la finestra)",
+      "demo": "remains = end − now (esatto al ms)",
+      "esito": "fedele",
+      "nota": "remains_time ≡ fine finestra − istante di lettura, su ENTRAMBE le sorgenti (docs/02 §4.2)"
+    },
+    {
+      "id": "G11",
+      "campo": "general: current_weekly_status",
+      "reale": "1 → «Attiva · in uso»",
+      "demo": "1 → «Attiva · in uso»",
+      "esito": "fedele",
+      "nota": "stesso codice (1 = attiva)"
+    },
+    {
+      "id": "G12",
+      "campo": "general: conteggi settimanali",
+      "reale": "0 / 0 (non dichiarati)",
+      "demo": "0 / 0 (non dichiarati)",
+      "esito": "fedele",
+      "nota": "come G6"
+    },
+    {
+      "id": "V1",
+      "campo": "video: model_name",
+      "reale": "video",
+      "demo": "video",
+      "esito": "fedele",
+      "nota": "identificatore identico"
+    },
+    {
+      "id": "V2",
+      "campo": "video: finestra giornaliera, remaining_percent",
+      "reale": "100 (mai usata nel periodo osservato)",
+      "demo": "100 (mai usata OGGI nella simulazione)",
+      "esito": "fedele",
+      "nota": "100% piatto + stato 3 su ENTRAMBE le sorgenti"
+    },
+    {
+      "id": "V3",
+      "campo": "video: durata finestra giornaliera",
+      "reale": "86400000 ms = 24h",
+      "demo": "86400000 ms = 24h",
+      "esito": "fedele",
+      "nota": "86.400.000 ms su ENTRAMBE le sorgenti (il video non ha la 5h)"
+    },
+    {
+      "id": "V4",
+      "campo": "video: allineamento a mezzanotte UTC",
+      "reale": "start ≡ mezzanotte UTC (02:00 Roma CEST)",
+      "demo": "start ≡ mezzanotte UTC (per costruzione)",
+      "esito": "fedele",
+      "nota": "docs/02 §5 osservazione 2: tetto giornaliero video ancorato a UTC"
+    },
+    {
+      "id": "V5",
+      "campo": "video: finestra giornaliera: invariante remains",
+      "reale": "end − remains = 1790939878714 (dentro la finestra)",
+      "demo": "remains = end − now (esatto al ms)",
+      "esito": "fedele",
+      "nota": "remains_time ≡ fine finestra − istante di lettura, su ENTRAMBE le sorgenti (docs/02 §4.2)"
+    },
+    {
+      "id": "V6",
+      "campo": "video: current_interval_status",
+      "reale": "3 → «Inattiva · mai usata»",
+      "demo": "3 → «Inattiva · mai usata»",
+      "esito": "fedele",
+      "nota": "stesso codice (3 = inattiva/mai usata)"
+    },
+    {
+      "id": "V7",
+      "campo": "video: current_weekly_remaining_percent",
+      "reale": "100 (mai usato nel periodo osservato)",
+      "demo": "73.3 (uso settimanale simulato, consumo più elevato del general)",
+      "esito": "differenza dichiarata",
+      "nota": "la demo racconta un video USATO nella settimana (per popolare le analisi per-modello I82)"
+    },
+    {
+      "id": "V8",
+      "campo": "video: current_weekly_status",
+      "reale": "3 → «Inattiva · mai usata» (mai usato nel periodo reale)",
+      "demo": "1 → «Attiva · in uso» (usato nel periodo simulato)",
+      "esito": "differenza dichiarata",
+      "nota": "CORREZIONE DELLA VERIFICA (12/10): la demo aveva stato «3» CON consumo simulato — incoerente; ora «1», coerente col consumo. I due valori riflettono storie diverse, entrambe interne alla semantica dei codici"
+    },
+    {
+      "id": "V9",
+      "campo": "video: conteggi settimanali",
+      "reale": "0 / 0 (non dichiarati)",
+      "demo": "0 / 0 (non dichiarati)",
+      "esito": "fedele",
+      "nota": "come G6"
+    },
+    {
+      "id": "S1",
+      "campo": "finestra settimanale condivisa tra i modelli",
+      "reale": "start/end/remains IDENTICI tra general e video",
+      "demo": "start/end/remains IDENTICI tra general e video",
+      "esito": "fedele",
+      "nota": "docs/02 §6: confini condivisi, percentuale per modello (64 vs 100 nel reale)"
+    },
+    {
+      "id": "N1",
+      "campo": "parser sulla risposta REALE",
+      "reale": "parseUsageResponse(JSON_REALE) → 2 modelli, stati «1», «3»",
+      "demo": "nessun errore di parsing",
+      "esito": "fedele",
+      "nota": "il parser legge il JSON reale senza eccezioni (stesso percorso del vivo)"
+    },
+    {
+      "id": "N2",
+      "campo": "parser sulla risposta DEMO",
+      "reale": "—",
+      "demo": "makeDemoSnapshot() → 2 modelli, source «demo», planTitle «M Plan · Explore (Demo)»",
+      "esito": "fedele",
+      "nota": "stessa struttura normalizzata di UsageSnapshot"
+    },
+    {
+      "id": "N3",
+      "campo": "consumato = 100 − residuo (consumedPercent)",
+      "reale": "reale: 36%",
+      "demo": "demo: 22.7%",
+      "esito": "fedele",
+      "nota": "stessa formula su entrambe le sorgenti (docs/02 §7)"
+    }
+  ]
+}

@@ -1,0 +1,383 @@
+{
+  "item": "I54",
+  "eseguita": "2026-10-12T12:27:29.037Z",
+  "verdetto": "live ⊇ demo su tutte le 29 dimensioni ricostruite: 27 condivise (stesso codice; marcatore di fonte dove previsto) + 2 gruppi live-only per costruzione (notifiche SW disiscritte in demo; percorsi d'errore/rete inesistenti in demo). La demo non mostra NULLA che il live non copra; il live copre tutto ciò che la demo mostra e in più ha la gestione del mondo reale. Matrice originale (23 dimensioni, 09/10) persa col rollback: ricostruzione onesta con conteggio aggiornato.",
+  "conteggi": {
+    "dimensioni": 29,
+    "condivise": 27,
+    "liveOnly": 2,
+    "fallite": 0
+  },
+  "righe": [
+    {
+      "id": "D01",
+      "nome": "Parser della risposta",
+      "demo": "demo.ts costruisce il raw simulato e passa dallo STESSO parser",
+      "live": "page.tsx parsa la risposta del proxy con parseUsageResponse (primaria + secondaria)",
+      "tipo": "condivisa",
+      "nota": "un solo percorso di normalizzazione: nessuna divergenza possibile di schema/semantica",
+      "evidenze": [
+        "presenza src/lib/demo.ts /parseUsageResponse\\(raw, \\{ source: \"demo\"/",
+        "presenza src/app/page.tsx /parseUsageResponse\\(r\\.data, \\{/",
+        "presenza src/app/page.tsx /parseUsageResponse\\(r?\\.data|parseUsageResponse\\(json\\.data/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D02",
+      "nome": "Envelope base_resp",
+      "demo": "demo: base_resp { status_code: 0, status_msg: \"success\" }",
+      "live": "live: passthrough del proxy (base_resp upstream intatto, 0 = ok)",
+      "tipo": "condivisa",
+      "nota": "stessa semantica dell'envelope (0 = ok, altri codici = errore di business)",
+      "evidenze": [
+        "presenza src/lib/demo.ts /base_resp: \\{ status_code: 0, status_msg: \"success\" \\}/",
+        "presenza src/app/api/minimax/usage/route.ts /base_resp/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D03",
+      "nome": "Normalizzazione stati finestra (1/2/3)",
+      "demo": "demo produce codici numerici 1/3 come il reale",
+      "live": "statusLabel/normalizeStatus in minimax.ts senza alcun fork demo",
+      "tipo": "condivisa",
+      "nota": "stessa codifica e stesse etichette («Attiva · in uso», «Inattiva · mai usata», «Esaurita (ipotesi)»)",
+      "evidenze": [
+        "presenza src/lib/minimax.ts /export function statusLabel/",
+        "ASSENZA src/lib/minimax.ts /demoMode/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D04",
+      "nome": "Percentuali come fonte della verità",
+      "demo": "demo: percentuali simulate nella stessa forma",
+      "live": "live: percentuali upstream; stessa QuotaWindow.remainingPercent",
+      "tipo": "condivisa",
+      "nota": "nessuna elaborazione diversa per fonte (issue #99: i conteggi non sono attendibili)",
+      "evidenze": [
+        "presenza src/components/quota-cards.tsx /remainingPercent/",
+        "presenza src/lib/minimax.ts /remainingPercent: /"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D05",
+      "nome": "Conteggi «non dichiarati»",
+      "demo": "demo: conteggi a 0 come nel piano reale osservato",
+      "live": "live: conteggi a 0 → stessa dicitura",
+      "tipo": "condivisa",
+      "nota": "nota esplicativa identica su entrambe le fonti",
+      "evidenze": [
+        "presenza src/components/quota-cards.tsx /CountsRow/",
+        "presenza src/components/quota-cards.tsx /Conteggi non dichiarati/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D06",
+      "nome": "Etichette finestre per-modello (5h/24h/7g)",
+      "demo": "demo: general 5h, video 24h (stesse durate del reale — verifica I48)",
+      "live": "live: windowShortLabel deriva dall'API, stessa formula",
+      "tipo": "condivisa",
+      "nota": "etichette adattive per modello (I82) indipendenti dalla fonte",
+      "evidenze": [
+        "presenza src/components/quota-cards.tsx /export function windowShortLabel/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D07",
+      "nome": "Countdown vivi",
+      "demo": "demo: tick `now` di 1 s sulla stessa pagina",
+      "live": "live: ricalcolo locale da end_time, stesso tick",
+      "tipo": "condivisa",
+      "nota": "un solo orologio per la pagina: i countdown non dipendono dalla fonte (docs/02 §4.4)",
+      "evidenze": [
+        "presenza src/app/page.tsx /setInterval\\(\\(\\) => setNow\\(Date\\.now\\(\\)\\), 1000\\)/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D08",
+      "nome": "Storico flat + replica server (I16)",
+      "demo": "demo: pushHistory(snap) nel ramo demo (riga ~465)",
+      "live": "live: pushHistory(snap) nel ramo live (riga ~615); stesso merge/locale+server",
+      "tipo": "condivisa",
+      "nota": "lo storico demo entra nella STESSA storia (source «demo») con la stessa replica server",
+      "evidenze": [
+        "presenza src/app/page.tsx /pushHistory\\(snap\\);/",
+        "presenza src/lib/server-history.ts /export/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D09",
+      "nome": "Storico per-modello (I82)",
+      "demo": "demo: backfill makeDemoModelHistory al primo avvio",
+      "live": "live: punti per-modello inglobati da pushHistory, stessa FIFO + server",
+      "tipo": "condivisa",
+      "nota": "le analisi per-modello sono sensate in demo fin dal primo avvio (stesse curve dei tick)",
+      "evidenze": [
+        "presenza src/app/page.tsx /makeDemoModelHistory/",
+        "presenza src/lib/model-history.ts /export/",
+        "presenza src/app/api/history/models/route.ts /export/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D10",
+      "nome": "Registro eventi + transizioni",
+      "demo": "demo: evaluateTransitions sullo snapshot demo (soglie, reset)",
+      "live": "live: stessa chiamata su ogni snapshot, indipendente dalla fonte",
+      "tipo": "condivisa",
+      "nota": "avvisi di soglia e rilevamento reset: stesso motore (lezione I18: eventi di sola transizione)",
+      "evidenze": [
+        "presenza src/app/page.tsx /evaluateTransitions\\(prevSnapRef\\.current, snapshot, settings\\)/",
+        "presenza src/lib/usage-events.ts /export function evaluateTransitions/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D11",
+      "nome": "Avvisi di soglia",
+      "demo": "demo: soglie sugli stessi campi",
+      "live": "live: soglie identiche (AlertThresholds)",
+      "tipo": "condivisa",
+      "nota": "banner e titolo tab seguono lo snapshot, qualunque sia la fonte (solo primaria — design I53)",
+      "evidenze": [
+        "presenza src/lib/usage-events.ts /thresholds: AlertThresholds/",
+        "presenza src/app/page.tsx /Soglia di attenzione superata/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D12",
+      "nome": "Scheduler di polling + backoff (I51)",
+      "demo": "demo: inclusa nello stesso scheduler (gate = demo OPPURE chiave)",
+      "live": "live: backoff esponenziale + Retry-After sugli errori",
+      "tipo": "condivisa",
+      "nota": "il gate dello scheduler INCLUDE la demo (nessun percorso parallelo); il backoff è un percorso live-only che non tocca la demo (mai in errore per costruzione)",
+      "evidenze": [
+        "presenza src/app/page.tsx /if \\(!settings\\.demoMode && !settings\\.apiKey\\) return;/",
+        "presenza src/lib/backoff.ts /export function delayAfterFailure|export function/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D13",
+      "nome": "Seconda regione (I53)",
+      "demo": "demo: snapshot simulato della regione opposta con badge «dati simulati», senza eventi né storico",
+      "live": "live: campagna parallela Promise.allSettled, eventi di sola transizione",
+      "tipo": "condivisa (con marcatore)",
+      "nota": "stesso pannello, stessa integrità (mai storico/analisi): il fork è SOLO la fonte dei dati, dichiarata dal badge",
+      "evidenze": [
+        "presenza src/app/page.tsx /setSnapshotAlt\\(makeDemoSnapshot\\(regioneAlt\\(s\\.region\\)\\)\\)/",
+        "presenza src/app/page.tsx /Promise\\.allSettled/",
+        "presenza src/components/region-alt-panel.tsx /export function RegionAltPanel/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D14",
+      "nome": "Import JSON manuale",
+      "demo": "demo: disponibile (non gated)",
+      "live": "live: disponibile — stesso handleImportJson",
+      "tipo": "condivisa",
+      "nota": "nessun ramo demo nell'import: parse identico, pushHistory identico",
+      "evidenze": [
+        "presenza src/app/page.tsx /const handleImportJson = \\(raw: unknown\\)/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D15",
+      "nome": "Export CSV/JSON",
+      "demo": "demo: stessi dati esportabili (source «demo» nel contenuto)",
+      "live": "live: stesso lib/export.ts",
+      "tipo": "condivisa",
+      "nota": "formato identico (separatore «;», BOM UTF-8, Excel it-IT)",
+      "evidenze": [
+        "presenza src/lib/export.ts /export function/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D16",
+      "nome": "Grafico storico + ritmo di consumo (I59)",
+      "demo": "demo: curva simulata + backfill",
+      "live": "live: curva dai punti reali, stesso HistoryChart/RateChart",
+      "tipo": "condivisa",
+      "nota": "gap e reset trattati identicamente (buchi onesti)",
+      "evidenze": [
+        "presenza src/components/history-chart.tsx /export function HistoryChart|export const HistoryChart/",
+        "presenza src/lib/rate.ts /export function rateSeries/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D17",
+      "nome": "Analisi di lungo periodo + cicli/spreco/prevedibilità (I26/I57/I63)",
+      "demo": "demo: cicli simulati analizzati allo stesso modo",
+      "live": "live: stesso analysis-panel sulle stesse lib",
+      "tipo": "condivisa",
+      "nota": "nessuna statistica dipende dalla fonte",
+      "evidenze": [
+        "presenza src/components/analysis-panel.tsx /CycleWaste/",
+        "presenza src/lib/cycles.ts /export function/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D18",
+      "nome": "Calendario (I58) / distribuzione (I61) / oggi vs media (I64)",
+      "demo": "demo: griglia e fasce sui dati simulati",
+      "live": "live: stesse componenti",
+      "tipo": "condivisa",
+      "nota": "DST-safe via date stringhe, identico per fonte",
+      "evidenze": [
+        "presenza src/components/analysis-panel.tsx /CalendarSection/",
+        "presenza src/components/analysis-panel.tsx /DistributionSection|TodayComparison/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D19",
+      "nome": "Anomalie del ritmo / EWMA / qualità campionamento (I70/I71/I72)",
+      "demo": "demo: z-score, EWMA e copertura sui tick simulati",
+      "live": "live: stesse lib rate-anomalies/ewma/sampling",
+      "tipo": "condivisa",
+      "nota": "regimi e soglie identici",
+      "evidenze": [
+        "presenza src/lib/rate-anomalies.ts /export function/",
+        "presenza src/lib/ewma.ts /export function/",
+        "presenza src/lib/sampling.ts /export function/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D20",
+      "nome": "Diagnostica e salute del monitor (I60/I62)",
+      "demo": "demo: episodi simulati dal registro eventi",
+      "live": "live: episodi reali, stesso health.ts",
+      "tipo": "condivisa",
+      "nota": "in demo il monitor non ha guasti: la salute mostra l'assenza di episodi (comportamento corretto, non un fork)",
+      "evidenze": [
+        "presenza src/components/diagnostica-panel.tsx /export function/",
+        "presenza src/lib/health.ts /export function/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D21",
+      "nome": "Modalità kiosk/TV (I87)",
+      "demo": "demo: viste identiche (nessun fork)",
+      "live": "live: identiche — kiosk.ts non menziona la demo",
+      "tipo": "condivisa",
+      "nota": "rotazione, dimming e barra sticky sopra qualunque fonte",
+      "evidenze": [
+        "ASSENZA src/lib/kiosk.ts /demo/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D22",
+      "nome": "Modalità compatta (I73)",
+      "demo": "demo: widget con anelli simulati",
+      "live": "live: stesso compact.ts",
+      "tipo": "condivisa",
+      "nota": "nessun fork",
+      "evidenze": [
+        "presenza src/lib/compact.ts /export/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D23",
+      "nome": "Tema chiaro/scuro (I78/I84)",
+      "demo": "demo: stesse superfici",
+      "live": "live: identico (next-themes)",
+      "tipo": "condivisa",
+      "nota": "nessun fork",
+      "evidenze": [
+        "presenza src/components/theme-toggle.tsx /useTheme/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D24",
+      "nome": "Nav sezioni + scrollspy (I66/I74/I85)",
+      "demo": "demo: stessa nav",
+      "live": "live: stessa useScrollSpySezioni",
+      "tipo": "condivisa",
+      "nota": "nessun fork",
+      "evidenze": [
+        "presenza src/components/section-nav.tsx /useScrollSpySezioni/",
+        "presenza src/components/bottom-nav.tsx /useScrollSpySezioni/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D25",
+      "nome": "Vista stampa (I75)",
+      "demo": "demo: report con marcatore «dati simulati»",
+      "live": "live: stesso PrintReport con prop demo",
+      "tipo": "condivisa (con marcatore)",
+      "nota": "stesso report; la fonte è dichiarata nel documento",
+      "evidenze": [
+        "presenza src/app/page.tsx /<PrintReport[^>]*demo=\\{settings\\.demoMode\\}/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D26",
+      "nome": "Titolo tab + favicon (I67)",
+      "demo": "demo: TabIdentity con prop demo",
+      "live": "live: stesso tab-identity.ts",
+      "tipo": "condivisa (con marcatore)",
+      "nota": "stesso comportamento; suffisso demo dichiarato",
+      "evidenze": [
+        "presenza src/app/page.tsx /<TabIdentity[^>]*demo=\\{settings\\.demoMode\\}/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D27",
+      "nome": "TechInfo: sorgente dati",
+      "demo": "demo: endpoint «demo://token_plan/remains» + «Modalità demo (nessuna chiamata reale)»",
+      "live": "live: endpoint reale interrogato",
+      "tipo": "condivisa (con marcatore)",
+      "nota": "stessa riga diagnostica, fonte dichiarata",
+      "evidenze": [
+        "presenza src/app/page.tsx /demo://token_plan/remains/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D28",
+      "nome": "Notifiche SW a tab chiuso (I52, ADR-14)",
+      "demo": "demo: DISISCRIZIONE esplicita (demoMode → apiKey null → il SW cancella)",
+      "live": "live: sottoscrizione con chiave in IndexedDB",
+      "tipo": "live-only per costruzione",
+      "nota": "documentato in docs/03 §5.10: in demo non ci sono dati reali da notificare — il percorso demo è gestito ESPPLICITAMENTE (disiscrizione), non abbandonato",
+      "evidenze": [
+        "presenza src/components/pwa-register.tsx /s\\.demoMode \\|\\| !s\\.apiKey/"
+      ],
+      "esito": "OK"
+    },
+    {
+      "id": "D29",
+      "nome": "Percorsi d'errore: rete, fallback I18, Retry-After, ora server dedotta",
+      "demo": "demo: non esistono (nessuna rete, nessun guasto possibile)",
+      "live": "live: inferServerTime, fallback coding_plan/remains, backoff con Retry-After",
+      "tipo": "live-only per costruzione",
+      "nota": "il live è un SUPERINSIEME: tutto ciò che la demo mostra esiste nel live, e il live aggiunge la gestione del mondo reale",
+      "evidenze": [
+        "presenza src/lib/minimax.ts /inferServerTime|export function shouldTryFallback/",
+        "presenza src/app/api/minimax/usage/route.ts /fallback|fallbackUsed|used/"
+      ],
+      "esito": "OK"
+    }
+  ]
+}

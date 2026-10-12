@@ -6,7 +6,7 @@
 > ✅ *confermato* (fonte ufficiale o test empirico) · 🔶 *verosimile* (fonte secondaria/
 > open-source) · ❓ *da verificare*.
 >
-> Ultimo aggiornamento: 2026-10-02 (rimozione del contatore token reale — ADR-8) · Fonti salvate in `scripts/` (vedi §9).
+> Ultimo aggiornamento: 2026-10-12 (ri-creato §11: verifica «demo ↔ API ufficiale» I48 con esito su file) · Fonti salvate in `scripts/` (vedi §9).
 
 ---
 
@@ -235,3 +235,58 @@ Strategie, in ordine di utilità:
 - Console usage: <https://platform.minimax.io/console/usage>
 - Issue #88: <https://github.com/MiniMax-AI/MiniMax-M2/issues/88>
 - Issue #99: <https://github.com/MiniMax-AI/MiniMax-M2/issues/99>
+
+---
+
+## 11. Verifica «demo ↔ API ufficiale» (I48)
+
+> **Storia**: la verifica fu eseguita il 09/10 con esito «demo fedele al 100% sui campi
+> osservati»; matrice e nota erano in §11.2 di questo file e sono **perse col secondo
+> rollback dell'11/10**. Qui ri-eseguita il 12/10 con metodo rafforzato: la matrice è
+> prodotta da uno script riproducibile (`scripts/verifiche/verifica-i48-demo-vs-api.ts`,
+> bun, zero rete, zero chiavi) e l'esito è su **file** in `scripts/verifiche/esiti/`
+> (lezione del rollback: nessun verdetto senza artefatto persistente).
+
+### 11.1 Metodo e definizione di fedeltà
+
+La risposta REALE dell'endpoint (riportata verbatim in `docs/02` §1, catturata il
+02/10/2026 con Subscription Key) viene confrontata campo per campo con lo snapshot
+demo di `src/lib/demo.ts` (`makeDemoSnapshot`), sia allo stato grezzo sia al livello
+normalizzato (`parseUsageResponse` — lo stesso parser usato dal vivo).
+
+**Fedeltà = stesso schema + stesse invarianti + semantica coerente con la storia
+simulata.** I valori sono per costruzione simulati (curve di consumo con easing e
+jitter): le differenze di valore attese sono registrate come «differenza dichiarata»,
+mai come infedeltà. Le invarianti verificate programmaticamente:
+
+- durate delle finestre: 18.000.000 ms (5h, general), 86.400.000 ms (24h, video),
+  604.800.000 ms (7g, settimanale) — identiche su entrambe le sorgenti;
+- `remains_time ≡ end_time − istante di lettura`: nel reale via triangolazione
+  (`t_query = 1.790.939.878.714`, identico su 3 campi — `docs/02` §4.2), nella demo
+  per costruzione;
+- finestra settimanale condivisa tra i modelli (start/end/remains identici);
+- finestra video allineata a mezzanotte UTC (02:00 Roma in CEST);
+- conteggi a 0 su entrambe le sorgenti («non dichiarati», piano tracciato a
+  percentuali — issue #99);
+- codici di stato 1 (attiva) e 3 (inattiva/mai usata) coerenti con il consumo.
+
+### 11.2 Matrice (esito 12/10/2026)
+
+**Verdetto: demo fedele al 100% sullo schema e sulle invarianti osservate** —
+29 campi: 23 fedeli, 6 differenze dichiarate, 0 falliti. La matrice completa
+(29 righe con evidenze) è nell'esito su file `scripts/verifiche/esiti/i48-demo-vs-api-latest.md`;
+sintesi delle differenze dichiarate:
+
+| # | Campo | API reale (02/10) | Demo | Natura della differenza |
+|---|-------|-------------------|------|-------------------------|
+| R4 | `current_subscribe_title` / `credits_balance` | assenti nel campione (documentati come opzionali, alias gestiti dal parser) | sempre presenti («M Plan · Explore (Demo)», 42,75) | la demo esercita SEMPRE anche i campi opzionali |
+| G2 | `current_interval_remaining_percent` (general) | 100 (nessun consumo nella finestra osservata) | calo simulato (finestra in corso da 3,2h su 5h) | valori simulati, semantica identica |
+| G7 | `current_weekly_remaining_percent` (general) | 64 | calo simulato su 2,7 giorni | valori simulati, semantica identica |
+| G9 | allineamento settimanale | lunedì 00:00 UTC esatto | rolling (start = now − 2,7g) | semplificazione dichiarata: l'ancoraggio è proprietà del SERVER (`docs/02` §5); parser e UI non ne dipendono |
+| V7 | `current_weekly_remaining_percent` (video) | 100 (mai usato nel periodo) | uso settimanale simulato (consumo > general) | la demo racconta un video usato, per popolare le analisi per-modello (I82) |
+| V8 | `current_weekly_status` (video) | 3 («Inattiva · mai usata», coerente: mai usato) | **1 («Attiva · in uso»)** — CORREZIONE DELLA VERIFICA | la demo aveva stato «3» CON consumo simulato (incoerente): corretto in `src/lib/demo.ts` il 12/10 |
+
+La riga V8 è l'unico reperto attivo della verifica: una vera incoerenza della
+simulazione (stato «mai usata» su una finestra con percentuale consumata) trovata
+dalla matrice e corretta in itinere. Nessun test la definiva: suite invariata
+(311/311, 897 asserzioni).
