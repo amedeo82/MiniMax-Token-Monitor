@@ -302,6 +302,7 @@ vanno poi riportati in `docs/04` §4 (stato della verifica), `docs/01` (semantic
 | 2026-10-06 | Chiusura amministrativa (I30) | — | Meccanismo di cattura RIMOSSO dal proxy (ritiro ADR-13, proxy ritestato 200 e senza scritture); DB controllato (351 punti: 126 api 02/10 + 225 demo, integro); toolkit e watcher restano pronti per una nuova campagna | — |
 | 2026-10-09 | Campagna completa con chiave reale (V4 · V5 · V6 · V8 con campionatore I49) | reale | ⚠️ **Verdetti prodotti ma esiti PERSI col secondo rollback dell'11/10**: V4 = IDENTICI · V5 non applicabile (M Plan senza conteggi, esito valido) · V6 nessun rate limit (48/48 @10s) · V8 «blocchi fissi UTC» con offset 0 ms (115 campioni, transizione delle 12:00 Roma osservata, start pre-armata non riancorata dall'uso). Unica evidenza superstite: il transcript chat (non citabile come artefatto formale) → campagne fresche necessarie per esiti su file (`docs/04` §4); V4 ha comunque sbloccato I18 via accettazione documentale | nessuno (perso) |
 | 2026-10-11 | Verifica proxy I18 (curl, chiave finta) | finta | ✓ fallback NON innescato su errore di autenticazione: risposta `ok:true` con passthrough `status_code 1004` sul primario `token_plan` (messaggio «login fail…», coerente con l'evidenza del 02/10), nessun campo `fallback`; trigger validati nei test (156/156) e audit 126/126 | — |
+| 2026-10-12 | Campagna V8 completa con chiave reale (V4 · V5 · V6 · V1 `--once` · V8 con campionatore I49 ri-cablato) | reale (recuperata: `scripts/verifiche/.chiave-sessione` del 05/10 superstite su disco, validata con V1 `--once`) | ✓ **V4 = IDENTICI su esiti freschi** (`v4-2026-10-12T12-56-18.*`) — conferma formale del verdetto del 09/10 · **V5 non applicabile** (M Plan senza conteggi, `v5-2026-10-12T12-56-24.*`) · **V6 nessun rate limit** (54/54 @10s, latenza med 292 ms, `v6-2026-10-12T13-19-29.*`) · **V8 «blocchi fissi UTC» con offset 0 ms** (analizzatore ri-creato `analisi-reset-timezone.mjs`, esiti `v8-fuso-reset-latest.md`): era 09/10 RECUPERATA su disco (122 campioni con transizione in medias res 10:22:44 UTC → start 10:00:00.000Z esatto) + era fresca 12/10 (83 campioni 12:50–14:05 UTC, 4 serie tutte allineate, video/interval start 00:00:00.000Z con status 3 = pre-armata senza uso) · V1 `--once` non conclusiva (stato 2 mai osservato, resta aperta per consumo fino a esaurimento) | `esiti/v4/v5/v6-2026-10-12*`, `esiti/v8-analisi-reset-2026-10-12*`, `campione-live.jsonl` |
 
 > Le righe «non valida» servono a validare il toolkit e a raccogliere indizi; il
 > **verdetto definitivo** di ogni verifica richiede la Subscription Key reale (§9).
@@ -321,10 +322,73 @@ rimuovere di nuovo il blocco ed eliminare il file chiave. La lezione appresa del
 un riavvio a metà campagna li perde) e lanciare le verifiche lunghe in più spezzoni
 con `--durata` breve.
 
-**Nota sul campionatore passivo (I49, V8)**: la sezione §11 con la procedura di
-montaggio/smontaggio del campionatore (ADR-13-R2: una riga JSONL per risposta valida
-su `scripts/verifiche/campione-live.jsonl`, cap 12 MB, nessuna chiave mai scritta,
-rimozione a campagna chiusa) è stata **persa col rollback**. Il contratto completo
-sopravvive nell'header della lib `src/lib/campione.ts` (sopravvissuta non cablata —
-vedi `docs/04` §3 I49 e I86): una nuova campagna V8 richiede il re-cablaggio
-documentato nel proxy e la sua successiva rimozione, come da protocollo ADR-13/ADR-13-R.
+**Nota sul campionatore passivo (I49, V8)**: la procedura completa è in **§11 (ri-creata il
+12/10 dopo il secondo rollback)**. Il contratto vive nell'header della lib
+`src/lib/campione.ts`; la campagna del 12/10 ha ri-cablato il campionatore con un blocco
+marcato nel proxy e lo ha smontato a campagna chiusa (I56), committando
+`scripts/verifiche/campione-live.jsonl` come prova grezza — con la scoperta che il file del
+09/10 (122 campioni, creduto perso col rollback) era sopravvissuto su disco.
+
+---
+
+## 11. Campionatore passivo I49 (ADR-13-R2) — procedura di montaggio e smontaggio
+
+> Sezione ri-creata il 12/10/2026 in occasione della campagna V8 eseguita (l'originale è
+> persa col rollback dell'11/10); contenuto ricalcato sul contratto superstite nell'header
+> di `src/lib/campione.ts` e sull'esperienza diretta della campagna.
+
+**Scopo**: rispondere a V8 («il fuso di reset delle finestre») con payload REALI grezzi,
+senza mai scrivere la chiave su disco. Il dashboard polla già ogni ~60 s: il campionamento
+è a costo zero (nessuna chiamata extra, nessun consumo quota aggiuntivo).
+
+**Montaggio** (per una nuova campagna):
+1. ri-cablare il campionatore nel proxy con un BLOCCO MARCATO `CAMPAGNA V8` in
+   `src/app/api/minimax/usage/route.ts`: import di `campionaRisposta` da `@/lib/campione`
+   + chiamata `void campionaRisposta(data, region, endpoint)` dopo OGNI risposta OK del
+   primario e del fallback I18 (fire-and-forget, mai eccezioni verso il proxy);
+2. (opzionale, per le V1–V6 con chiave reale) ri-armare la cattura ADR-13 nello stesso
+   blocco marcato: la chiave ricevuta dal browser viene scritta su
+   `scripts/verifiche/.chiave-sessione` (0600, SOLO se il file manca — minimizzazione)
+   ed eliminata a fine campagna;
+3. l'audit I55 tollera il wiring SOLO se il blocco marcato è presente (check condizionale
+   I86/I49: fuori campagna il campionatore DEVE essere dormiente);
+4. il dev server ricarica la route al primo poll del browser: entro ~1–2 minuti la prima
+   riga appare su `scripts/verifiche/campione-live.jsonl`.
+
+**Disciplina del file** (`src/lib/campione.ts`, cap 12 MB):
+- una riga JSONL per risposta VALIDA (`base_resp.status_code = 0`, `model_remains` non
+  vuoto) con `{ts, region, endpoint, payload}` — MAI la chiave (non entra nemmeno nella
+  firma della funzione: garanzia strutturale, testata in `tests/lib/campione.test.ts`);
+- risposte in errore (es. 1004) e payload malformati NON campionati;
+- a campagna aperta il file è una prova grezza: NON modificarlo, NON filtrarlo.
+
+**Analisi** (V8): `node scripts/verifiche/analisi-reset-timezone.mjs [--da YYYY-MM-DD] [--a
+YYYY-MM-DD]` — estrae gli start distinti per modello/finestra, li verifica contro le griglie
+teoriche (blocchi 5h ancorati alla mezzanotte UTC del giorno — NON multipli di 5h
+ dall'epoca: 24h non è multiplo di 5h e i confini slitterebbero di giorno in giorno; 24h
+per la finestra giornaliera del video, mezzanotte UTC; lunedì 00:00 UTC per la
+settimanale), rileva le transizioni e confronta il nuovo start col confine di griglia e
+con l'istante d'uso. Esiti JSON+MD con copia stabile `esiti/v8-fuso-reset-latest.md`.
+
+**Smontaggio** (I56, a campagna chiusa):
+1. rimuovere l'INTERO blocco marcato da `route.ts` (import incluso) e i punti di chiamata;
+2. eliminare `scripts/verifiche/.chiave-sessione` (se la cattura era stata ri-armata);
+3. committare `scripts/verifiche/campione-live.jsonl` (prova grezza della campagna) e gli
+   esiti dell'analizzatore;
+4. l'audit torna a verificare il DORMIENTO del campionatore (check condizionale I86/I49);
+5. aggiornare `docs/04` §4 (V8) e `docs/02` §5 con il verdetto, `docs/05` §10 con l'esito.
+
+**Lezioni della campagna 12/10**:
+- i file «persi col rollback» possono essere sopravvissuti su DISCO (come `campione.ts`
+  nel Task 32): prima di ri-proporre una campagna, cercare i vecchi artefatti nel tree;
+- la cattura ADR-13 «solo se il file manca» rende la cattura idempotente e immune da
+  sovrascritture con chiavi finte (verificato in opera: chiamata proxy con chiave finta
+  durante la campagna NON ha toccato il file); il file del 05/10 (perms 0755) è stato
+  riportato a 0600 e il pattern è difeso anche da `.gitignore`;
+- i processi lunghi in background muoiono tra i comandi della shell persistente (V6
+  lanciato con `setsid` è morto senza esiti a metà run): le verifiche lunghe vanno
+  eseguite in FOREGROUND (V6: 9 min @10s = 54 richieste, entro il timeout di 10 min);
+- la griglia 5h è ancorata alla mezzanotte UTC del giorno, non all'epoca: la prima
+  versione dell'analizzatore (multipli di 5h dall'epoca) falsava l'allineamento del 12/10
+  mantenendo quello del 09/10 — le due ere su giorni diversi hanno DISCRIMINATO la
+  formula giusta.

@@ -19,10 +19,12 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 > invoca mai modelli, quindi non consuma mai la quota che misura (ADR-8).
 >
 > **Verifiche empiriche V1–V6**: il toolkit è pronto e validato (`scripts/verifiche/` + runbook
-> `docs/05`). La campagna con chiave reale del 04–05/10 è stata **interrotta dal riavvio del
-> workspace del 06/10** e i verdetti non sono recuperabili dagli artefatti; il meccanismo di
-> delega è stato chiuso (ADR-13/ADR-13-R). Le verifiche tornano **da rieseguire** secondo il
-> piano `docs/05` §9; l'esito di V4 sblocca il fallback I18.
+> `docs/05`). La **campagna del 12/10 con chiave reale** ha prodotto esiti commessi: **V4 =
+> IDENTICI** (conferma formale dell'equivalenza `coding_plan`), **V5 non applicabile** (M Plan
+> senza conteggi), **V6 nessun rate limit** (54/54 @10s) e **V8 «blocchi fissi UTC» offset 0
+> ms** con il campionatore passivo I49 (205 campioni su due ere: 122 del 09/10 RECUPERATI su
+> disco + 83 freschi; verdetto in `docs/02` §5 e `docs/04` §4, procedura in `docs/05` §11).
+> Resta aperta solo V1 (richiede un consumo fino a esaurimento della finestra 5h).
 >
 > Dettagli e checklist aggiornata: [`docs/04-stato-avanzamento.md`](docs/04-stato-avanzamento.md)
 
@@ -74,9 +76,10 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 311 test / 897 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 275 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 324 test / 924 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 278 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
+- **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
 
 ---
 
@@ -195,20 +198,22 @@ src/
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (23 file) + components/ (8 file) = 311 test / 897 asserzioni
+tests/                               # Suite bun: lib/ (24 file) + components/ (8 file) = 324 test / 924 asserzioni
 docs/          # Questa documentazione (01–07)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro
 ```
 
-> **Residuo tracciato ma volutamente non cablato** (decisione I86 del 12/10; dettagli in
-> `docs/03` §5.20 e `docs/04` §3): `src/lib/campione.ts` (campionatore passivo I49) resta
-> nell'albero DORMIENTE, pronto al re-cablaggio nel proxy per la campagna V8 (verdetto sul
-> fuso dei reset); l'audit verifica che non sia importato da alcun file. Gli altri residui
-> dell'era 08/10 sono stati riconciliati: route Task 7 `api/verifiche` e scaffold
-> `api/route.ts` RIMOSSI, versione I46 riattivata nel footer (`APP_VERSION`), kiosk I45
-> riattivato come item proprio **I87** (modalità `?kiosk=1`).
+> **Campionatore I49 — campagna V8 ESEGUITA e smontata (12/10; dettagli in `docs/03` §5.23 e
+> `docs/05` §11)**: `src/lib/campione.ts` è stato ri-cablato nel proxy per la giornata di
+> campagna con un blocco marcato (ADR-13-R2, chiave mai campionata) e riportato DORMIENTE a
+> campagna chiusa (I56); l'audit verifica il dormiento con check condizionale. Il file
+> `campione-live.jsonl` (205 righe: 122 del 09/10 recuperate su disco + 83 fresche) è
+> commesso come prova della campagna. Gli altri residui dell'era 08/10 sono stati
+> riconciliati: route Task 7 `api/verifiche` e scaffold `api/route.ts` RIMOSSI, versione I46
+> riattivata nel footer (`APP_VERSION`), kiosk I45 riattivato come item proprio **I87**
+> (modalità `?kiosk=1`).
 
 ## Verifiche empiriche (toolkit)
 

@@ -369,11 +369,56 @@ const CHECKS = [
   /* --- I86 — riconciliazione dei residui dell'era 08/10 (docs/03 §5.20) --- */
   check.nessunFile("I86", "src/app/api", "^verifiche$", "route Task 7 api/verifiche RIMOSSA (coerenza ADR-13-R: nessun endpoint che spawn di processi)"),
   check.nessunFile("I86", "src/app/api", "^route\\.ts$", "scaffold api/route.ts rimosso"),
-  check.assenza("I86", "src", "lib/campione", "campionatore I49 conservato DORMIENTE: nessun wiring (re-cablaggio solo per la campagna V8)"),
+  /* I86/I49 — campionatore CONDIZIONALE: fuori campagna DEVE essere dormiente (nessun wiring);
+     durante la campagna V8 il wiring è ammesso SOLO dentro il blocco marcato «CAMPAGNA V8»
+     (protocollo ADR-13-R2, montaggio/smontaggio docs/05 §11). */
+  {
+    item: "I86",
+    what: "campionatore I49 dormiente FUORI campagna / ri-cablato SOLO con blocco marcato CAMPAGNA V8 (ADR-13-R2)",
+    kind: "condizione",
+    run: () => {
+      const route = read("src/app/api/minimax/usage/route.ts");
+      if (route === null) return "file assente: src/app/api/minimax/usage/route.ts";
+      const wiring = /lib\/campione/.test(route);
+      const marcato = /CAMPAGNA V8/.test(route);
+      if (wiring && !marcato) return "wiring del campionatore presente SENZA blocco marcato CAMPAGNA V8 (violazione ADR-13-R2: smontaggio a fine campagna)";
+      if (!wiring && marcato) return "blocco marcato CAMPAGNA V8 presente ma wiring assente (blocco incompleto)";
+      return null; // dormiente (nessuno dei due) o campagna attiva ben formata: entrambi OK
+    },
+  },
   check.simbolo("I86", "src/lib/campione.ts", "export (async )?function campionaRisposta", "contratto del campionatore superstite (dormiente, per la campagna V8)"),
   check.simbolo("I86", "src/lib/version.ts", "export const APP_VERSION", "marcatore versione (I46): fonte unica"),
   check.simbolo("I86", "src/app/page.tsx", "APP_VERSION", "versione renderizzata nel footer"),
-  check.assenza("I86", "src/app", "chiave-sessione|spawn\\(\\s*[\"']node", "nessun endpoint che spawn del toolkit né lettura file chiave (ADR-13-R intatto)"),
+  /* I86/I49 — cattura chiave TEMPORANEA: il riferimento a .chiave-sessione in src/app è
+     ammesso SOLO durante la campagna V8 marcata (ADR-13 ri-armato su autorizzazione
+     utente 12/10); fuori campagna l'app non deve né leggere né scrivere file chiave. */
+  {
+    item: "I86",
+    what: "nessun riferimento a file chiave in src/app FUORI dal blocco marcato CAMPAGNA V8 (ADR-13-R intatto)",
+    kind: "condizione",
+    run: () => {
+      const route = read("src/app/api/minimax/usage/route.ts");
+      if (route === null) return "file assente: src/app/api/minimax/usage/route.ts";
+      const routeHasChiave = /chiave-sessione/.test(route);
+      const marcato = /CAMPAGNA V8/.test(route);
+      if (routeHasChiave && !marcato) return "riferimento a .chiave-sessione senza blocco marcato CAMPAGNA V8 (violazione ADR-13-R)";
+      if (!routeHasChiave) {
+        // fuori campagna: verifica estesa su src/app (spawn processi e file chiave)
+        const rx = /chiave-sessione|spawn\(\s*["']node/;
+        const SKIP = /node_modules|\.next|^\./;
+        const walk = (dir) =>
+          readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+            if (SKIP.test(d.name)) return [];
+            const full = join(dir, d.name);
+            return d.isDirectory() ? walk(full) : [full];
+          });
+        for (const f of walk(join(ROOT, "src", "app"))) {
+          if (rx.test(readFileSync(f, "utf8"))) return `riferimento non ammesso in ${f}: /chiave-sessione|spawn("node…)/`;
+        }
+      }
+      return null;
+    },
+  },
   /* --- I87 — modalità kiosk/TV (docs/03 §5.20) --- */
   check.files("I87", ["src/lib/kiosk.ts", "src/components/kiosk-bar.tsx"], "modulo kiosk (puro) + barra di controllo"),
   check.simbolo("I87", "src/lib/kiosk.ts", "export function readKioskMode", "parsing ?kiosk=1 (semantica readCompactMode)"),
@@ -409,6 +454,10 @@ const CHECKS = [
   check.simbolo("I54", "scripts/verifiche/verifica-i54-live-vs-demo.mjs", "live ⊇ demo", "script di verifica riproducibile (evidenze statiche su file)"),
   check.simbolo("I54", "scripts/verifiche/verifica-i54-live-vs-demo.mjs", "tipo: \"assenza\"", "assenze richieste verificate esplicitamente (nessun fork nel parser/kiosk)"),
   check.file("I54", "scripts/verifiche/esiti/i54-live-vs-demo-latest.md", "esito persistente a nome stabile"),
+  /* --- I49/I56 — campagna campionatore V8 con chiave reale (docs/03 §5.23, docs/05 §11) --- */
+  check.files("I49", ["scripts/verifiche/analisi-reset-timezone.mjs", "scripts/verifiche/campione-live.jsonl"], "analizzatore fuso reset ri-creato + file campione commesso come prova grezza (205 righe: 122 del 09/10 recuperate + 83 fresche)"),
+  check.file("I56", "scripts/verifiche/esiti/v8-fuso-reset-latest.md", "verdetto V8 «blocchi fissi UTC» su esito stabile a nome persistente"),
+  check.files("I56", ["scripts/verifiche/esiti/v4-2026-10-12T12-56-18.json", "scripts/verifiche/esiti/v5-2026-10-12T12-56-24.json", "scripts/verifiche/esiti/v6-2026-10-12T13-19-29.json"], "esiti rapidi con chiave reale commessi (V4/V5/V6, 12/10)"),
 ];
 
 /* ------------------------------------------------------------------ */
