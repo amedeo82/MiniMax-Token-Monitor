@@ -82,7 +82,11 @@ export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()
         current_weekly_remaining_percent: Math.round(videoWeeklyRemaining * 10) / 10,
         current_weekly_total_count: 0,
         current_weekly_usage_count: 0,
-        current_weekly_status: 3,
+        // I48 — stato 1 («attiva · in uso»): la simulazione ha un consumo
+        // settimanale del video, quindi la finestra DEVE risultare in uso
+        // (stato «3» con percentuale < 100 era incoerente; la verifica
+        // «demo ↔ API ufficiale» del 12/10 l'ha corretta — vedi docs/01 §11).
+        current_weekly_status: 1,
         weekly_start_time: weeklyStart,
         weekly_end_time: weeklyEnd,
         weekly_remains_time: Math.max(0, weeklyEnd - now),

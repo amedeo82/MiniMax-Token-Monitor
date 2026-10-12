@@ -397,6 +397,18 @@ const CHECKS = [
   check.simbolo("I53", "src/app/page.tsx", "<RegionAltPanel", "pannello cablato nella sezione Panoramica"),
   check.simbolo("I53", "src/components/tech-panels.tsx", "Seconda regione", "riga TechInfo con stato della secondaria"),
   check.assenza("I53", "src/app/page.tsx", "pushHistory\\(snapAlt\\)", "lo snapshot secondario NON entra nello storico (integrità analisi §5.21)"),
+  /* --- I48 — verifica «demo ↔ API ufficiale» (docs/01 §11, esiti su file) --- */
+  check.simbolo("I48", "docs/01-api-minimax-ricerca.md", "^## 11\\. ", "matrice demo ↔ API ri-creata (era §11.2, persa col rollback)"),
+  check.simbolo("I48", "docs/01-api-minimax-ricerca.md", "fedele al 100%", "verdetto della verifica registrato nella docs"),
+  check.simbolo("I48", "scripts/verifiche/verifica-i48-demo-vs-api.ts", "makeDemoSnapshot", "script di verifica riproducibile (bun, zero rete, zero chiavi)"),
+  check.simbolo("I48", "scripts/verifiche/verifica-i48-demo-vs-api.ts", "1790939878714", "t_query reale derivato (triangolazione docs/02 §4.2) incorporato"),
+  check.file("I48", "scripts/verifiche/esiti/i48-demo-vs-api-latest.md", "esito persistente a nome stabile (lezione rollback: nessun verdetto senza artefatto)"),
+  /* --- I54 — verifica coerenza inversa «live ↔ demo» (docs/03 §5.22) --- */
+  check.simbolo("I54", "docs/03-piano-implementazione.md", "^### 5\\.22 ", "matrice live ↔ demo ricostruita (era §5.9, persa col rollback)"),
+  check.simbolo("I54", "docs/03-piano-implementazione.md", "live ⊇ demo", "verdetto della verifica registrato nella docs"),
+  check.simbolo("I54", "scripts/verifiche/verifica-i54-live-vs-demo.mjs", "live ⊇ demo", "script di verifica riproducibile (evidenze statiche su file)"),
+  check.simbolo("I54", "scripts/verifiche/verifica-i54-live-vs-demo.mjs", "tipo: \"assenza\"", "assenze richieste verificate esplicitamente (nessun fork nel parser/kiosk)"),
+  check.file("I54", "scripts/verifiche/esiti/i54-live-vs-demo-latest.md", "esito persistente a nome stabile"),
 ];
 
 /* ------------------------------------------------------------------ */

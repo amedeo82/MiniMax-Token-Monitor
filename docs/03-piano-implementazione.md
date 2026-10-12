@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-12 (**I86 + I87 — §5.20**: riconciliazione dei residui dell'era 08/10 con decisioni utente — route Task 7 e scaffold rimossi, versione nel footer, campionatore conservato dormiente — e **modalità kiosk/TV riattivata come item proprio**: ?kiosk=1 + toggle header, viste Quote/Grafico/Analisi con rotazione e dimming notturno 22:00–06:59 Roma, KioskBar sticky al posto del footer, superficie barra rimappata nel tema chiaro). Precedente: 2026-10-12 (passata di allineamento documentale: §3 mappa integrata con i file delle estensioni I50–I85 e nota sui residui non cablati, §4 settings `thresholds` I28 e snippet Prisma a 4 modelli, §7 layout riportato alla pagina attuale, §9 nota sui residui della catena di verifica, §11 roadmap aggiornata — I18/I52 implementate). Precedente: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68).
+> Ultimo aggiornamento: 2026-10-12 (**I54 — §5.22**: verifica di coerenza inversa «live ↔ demo» RI-eseguita come ricostruzione — matrice a 29 dimensioni con evidenze statiche su file, verdetto «live ⊇ demo», 0 fallimenti; la matrice originale a 23 dimensioni era persa col rollback). Precedente: 2026-10-12 (**I86 + I87 — §5.20**: riconciliazione dei residui dell'era 08/10 con decisioni utente — route Task 7 e scaffold rimossi, versione nel footer, campionatore conservato dormiente — e **modalità kiosk/TV riattivata come item proprio**: ?kiosk=1 + toggle header, viste Quote/Grafico/Analisi con rotazione e dimming notturno 22:00–06:59 Roma, KioskBar sticky al posto del footer, superficie barra rimappata nel tema chiaro). Precedente: 2026-10-12 (passata di allineamento documentale: §3 mappa integrata con i file delle estensioni I50–I85 e nota sui residui non cablati, §4 settings `thresholds` I28 e snippet Prisma a 4 modelli, §7 layout riportato alla pagina attuale, §9 nota sui residui della catena di verifica, §11 roadmap aggiornata — I18/I52 implementate). Precedente: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68).
 
 ---
 
@@ -1088,6 +1088,45 @@ transizione compaiono una sola volta per cambiamento di stato, lo storico e le a
 restano della primaria (verifica audit: nessun `pushHistory` sullo snapshot secondario);
 demo coerente; tema chiaro leggibile (famiglia I78/I83/I84); zero overflow mobile;
 console pulita.
+
+### 5.22 I54 — Verifica di coerenza inversa «live ↔ demo» (matrice ricostruita) — 12/10
+
+> **Storia**: la verifica fu eseguita il 09/10 con esito «live ⊇ demo su tutte le
+> dimensioni»; la sezione con la matrice a 23 dimensioni era in §5.9 di questo file ed è
+> **persa col secondo rollback dell'11/10** (§5.9 è ora la sezione del fallback I18).
+> Qui RI-eseguita come RICOSTRUZIONE dal codice attuale, con esito su file
+> (`scripts/verifiche/esiti/i54-live-vs-demo-latest.md`, prodotto da
+> `scripts/verifiche/verifica-i54-live-vs-demo.mjs`) e conteggio onestamente aggiornato.
+
+**Domanda della verifica**: ogni dimensione di comportamento visibile in demo ha una
+controparte live con la STESSA logica condivisa, salvo le dimensioni live-only per
+costruzione? **Verdetto: live ⊇ demo su tutte le 29 dimensioni ricostruite** —
+27 condivise + 2 gruppi live-only per costruzione, 0 evidenze fallite.
+
+- **Condivise (24)**: parser unico (`parseUsageResponse` su demo/live/import), envelope
+  `base_resp`, normalizzazione stati 1/2/3 (`statusLabel` senza fork demo — assenza
+  verificata), percentuali come fonte della verità, conteggi «non dichiarati»
+  (`CountsRow`), etichette finestre per-modello (`windowShortLabel`), countdown vivi
+  (tick `now` unico a 1 s), storico flat + replica server I16 (`pushHistory` nei DUE
+  rami), storico per-modello I82 (backfill demo + ingestione live), registro eventi
+  (`evaluateTransitions` su OGNI snapshot), avvisi di soglia, scheduler+backoff I51
+  (il gate dello scheduler INCLUDE la demo), seconda regione I53 (stesso pannello,
+  fork solo sulla fonte), import JSON (non gated), export CSV/JSON, grafico+ritmo I59,
+  analisi lungo periodo/cicli/spreco/prevedibilità I26/I57/I63, calendario/distribuzione/
+  oggi-vs-media I58/I61/I64, anomalie/EWMA/campionamento I70/I71/I72, diagnostica/salute
+  I60/I62, kiosk I87 (assenza «demo» verificata), compatta I73, tema I78/I84, nav I66/I74/I85.
+- **Condivise con marcatore (3)**: vista stampa I75 e titolo tab/favicon I67 (prop
+  `demo` = dichiarazione di fonte, non fork logico), TechInfo (endpoint
+  `demo://token_plan/remains` vs reale).
+- **Live-only per costruzione (2)**: notifiche SW I52 (in demo DISISCRIZIONE esplicita
+  in `pwa-register.tsx`: `demoMode → apiKey null` → il SW cancella — percorso gestito,
+  non abbandonato) e percorsi d'errore (rete, fallback I18, Retry-After, ora server
+  dedotta — in demo inesistenti: nessun guasto possibile). Sono i punti in cui
+  «live ⊇ demo» è volutamente tautologico: il live è un SUPERINSIEME della demo.
+
+**Lettura**: la demo non mostra nulla che il live non copra; ogni divergenza futura
+tra i due percorsi richiederebbe di toccare un simbolo condiviso, sorvegliato
+dall'audit I55 (check di presenza e di assenza).
 
 ---
 
