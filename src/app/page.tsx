@@ -9,6 +9,7 @@ import { ModelCard, MainWindows, windowShortLabel } from "@/components/quota-car
 import { HistoryChart, StatsPanel, computeTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
 import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/components/settings-dialog";
 import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
+import { RegionAltPanel } from "@/components/region-alt-panel";
 import { EventLog } from "@/components/event-log";
 import { PanoramicTable } from "@/components/model-table";
 import { LongTermAnalysis } from "@/components/analysis-panel";
@@ -51,7 +52,7 @@ import {
   type UsageEvent,
   type BannerInfo,
 } from "@/lib/usage-events";
-import { Region, UsageSnapshot, ApiError, findModel, parseUsageResponse, inferServerTime } from "@/lib/minimax";
+import { Region, REGION_LABELS, UsageSnapshot, ApiError, chiaviPerRegione, findModel, parseUsageResponse, inferServerTime, regioneAlt } from "@/lib/minimax";
 import { delayAfterFailure } from "@/lib/backoff";
 import { makeDemoSnapshot, makeDemoHistory, makeDemoModelHistory } from "@/lib/demo";
 import {
@@ -104,6 +105,23 @@ const SETTINGS_KEY = "mm-dash-settings-v1";
 const HISTORY_KEY = "mm-dash-history-v1";
 const HISTORY_MAX = 600;
 
+/** Risposta del proxy /api/minimax/usage (forma storica I3 + estensioni I18/I51/I53). */
+interface RispostaProxy {
+  ok: boolean;
+  status?: number;
+  data?: unknown;
+  error?: ApiError;
+  fetchedAt?: number;
+  endpoint?: string;
+  fallback?: { used: boolean; primaryEndpoint?: string; reason?: string };
+  fallbackTried?: boolean;
+}
+
+/** I53 — messaggio di errore sintetico quando la fetch verso il proxy si rifiuta. */
+function motivoRifiuto(reason: unknown): string {
+  return reason instanceof Error ? reason.message : "Errore imprevisto nella richiesta al proxy.";
+}
+
 function loadSettings(): DashboardSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -137,6 +155,11 @@ export default function DashboardPage() {
   const [mounted, setMounted] = React.useState(false);
   const [settings, setSettings] = React.useState<DashboardSettings>(DEFAULT_SETTINGS);
   const [snapshot, setSnapshot] = React.useState<UsageSnapshot | null>(null);
+  /* I53 — seconda regione (solo VISUALIZZAZIONE: mai storico, analisi né avvisi soglia).
+     Il successo/fallimento complessivo del polling resta deciso dalla primaria. */
+  const [snapshotAlt, setSnapshotAlt] = React.useState<UsageSnapshot | null>(null);
+  const [altError, setAltError] = React.useState<string | null>(null);
+  const [altFetch, setAltFetch] = React.useState<number | null>(null);
   const [rawJson, setRawJson] = React.useState<unknown | null>(null);
   const [lastEndpoint, setLastEndpoint] = React.useState<string>("");
   const [lastOk, setLastOk] = React.useState<boolean | null>(null);
@@ -172,6 +195,8 @@ export default function DashboardPage() {
   /* Riferimenti per il confronto tra rilevamenti consecutivi (transizioni) */
   const prevSnapRef = React.useRef<UsageSnapshot | null>(null);
   const prevOkRef = React.useRef<boolean | null>(null);
+  /* I53 — stato connessione precedente della SECONDA regione (eventi solo su transizione). */
+  const prevOkAltRef = React.useRef<boolean | null>(null);
 
   /* I51 — stato dello scheduler con backoff: tentativi consecutivi falliti,
      ultimo Retry-After ricevuto e ritardo attualmente programmato. */
@@ -387,6 +412,10 @@ export default function DashboardPage() {
       setError(null);
 
       try {
+        /* I53 — coppie {region, key} da interrogare in questa campagna: la primaria
+           SEMPRE, la secondaria solo con chiave dedicata diversa (dedup in lib). */
+        const coppie = chiaviPerRegione(s);
+
         if (s.demoMode) {
           // Piccolo ritardo per realismo
           await new Promise((r) => setTimeout(r, 350));
@@ -443,25 +472,110 @@ export default function DashboardPage() {
             setModelHistory(merged);
             saveModelHistory(merged);
           }
+          /* I53 — demo coerente: anche la seconda regione (se configurata) mostra
+             dati simulati nel suo pannello. Nessun evento, nessuno storico per
+             la secondaria (solo visualizzazione, design docs/03 §5.21). */
+          if (coppie.length > 1) {
+            setSnapshotAlt(makeDemoSnapshot(regioneAlt(s.region)));
+            setAltError(null);
+            setAltFetch(Date.now());
+            prevOkAltRef.current = true;
+          } else {
+            setSnapshotAlt(null);
+            setAltError(null);
+            prevOkAltRef.current = null;
+          }
           if (!silent) setLoading(false);
           return true;
         }
 
-        const res = await fetch("/api/minimax/usage", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ apiKey: s.apiKey, region: s.region }),
-        });
-        const json = (await res.json()) as {
-          ok: boolean;
-          status?: number;
-          data?: unknown;
-          error?: ApiError;
-          fetchedAt?: number;
-          endpoint?: string;
-          fallback?: { used: boolean; primaryEndpoint?: string; reason?: string };
-          fallbackTried?: boolean;
-        };
+        /* I53 — campagna PARALLELA: una chiamata al proxy per ogni regione
+           configurata. Il proxy per-regione resta INVARIATO: fallback I18 e
+           ritenti transitori I51 vivono dentro ogni singola chiamata.
+           allSettled: il guasto di una regione non nega mai l'esito dell'altra. */
+        const esiti = await Promise.allSettled(
+          coppie.map((c) =>
+            fetch("/api/minimax/usage", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ apiKey: c.key, region: c.region }),
+            }).then((res) => res.json() as Promise<RispostaProxy>),
+          ),
+        );
+
+        /* Smistamento per regione: la primaria è SEMPRE la prima coppia
+           (contratto di chiaviPerRegione); una fetch rifiutata (server locale
+           irraggiungibile) diventa una risposta d'errore sintetica. */
+        const esitoPrimario = esiti[0];
+        const json: RispostaProxy =
+          esitoPrimario.status === "fulfilled"
+            ? esitoPrimario.value
+            : {
+                ok: false,
+                fetchedAt: Date.now(),
+                error: { code: "client", message: motivoRifiuto(esitoPrimario.reason) },
+              };
+
+        let esitoAlt: { region: Region; risposta: RispostaProxy | null; motivo: string | null } | null = null;
+        if (esiti.length > 1 && esiti[1]) {
+          const e = esiti[1];
+          esitoAlt = {
+            region: coppie[1].region,
+            risposta: e.status === "fulfilled" ? e.value : null,
+            motivo: e.status === "rejected" ? motivoRifiuto(e.reason) : null,
+          };
+        }
+
+        /* ---- I53 — SECONDA regione: solo visualizzazione + eventi di transizione.
+             Nessun pushHistory, nessun impatto su backoff/banner/avvisi soglia. */
+        if (esitoAlt) {
+          setAltFetch(esitoAlt.risposta?.fetchedAt ?? Date.now());
+          const r = esitoAlt.risposta;
+          const regionAlt = esitoAlt.region;
+          let msgAlt: string | null = null;
+          let snapAlt: UsageSnapshot | null = null;
+          if (r && r.ok && r.data) {
+            try {
+              snapAlt = parseUsageResponse(r.data, {
+                source: "api",
+                region: regionAlt,
+                fetchedAt: r.fetchedAt,
+              });
+            } catch (e) {
+              /* Errore di business dell'API secondaria (es. 1004: chiave della
+                 regione sbagliata) o risposta non interpretabile. */
+              msgAlt = e instanceof Error ? e.message : "Risposta della seconda regione non interpretabile.";
+            }
+          } else if (r && !r.ok) {
+            msgAlt = r.error?.message ?? "Errore sconosciuto della seconda regione.";
+          } else if (!r) {
+            msgAlt = esitoAlt.motivo ?? "Errore imprevisto della seconda regione.";
+          }
+          setSnapshotAlt(snapAlt);
+          setAltError(msgAlt);
+          /* Eventi SOLO sulle transizioni di stato connessione (lezione I18). */
+          if (snapAlt !== null) {
+            if (prevOkAltRef.current !== true) {
+              addEvents(
+                makeEvent("info", `Seconda regione (${REGION_LABELS[regionAlt]}) connessa: monitoraggio parallelo attivo`),
+              );
+            }
+            prevOkAltRef.current = true;
+          } else if (msgAlt !== null) {
+            if (prevOkAltRef.current !== false) {
+              addEvents(
+                makeEvent("error", `Rilevamento della seconda regione (${REGION_LABELS[regionAlt]}) fallito: ${msgAlt}`),
+              );
+            }
+            prevOkAltRef.current = false;
+          }
+        } else {
+          /* Secondaria non configurata (o chiave duplicata della primaria):
+             il pannello si azzera, senza eventi. */
+          setSnapshotAlt(null);
+          setAltError(null);
+          prevOkAltRef.current = null;
+        }
 
         setLastEndpoint(json.endpoint ?? "");
         setLastFetch(json.fetchedAt ?? Date.now());
@@ -552,11 +666,13 @@ export default function DashboardPage() {
   const lastConnKeyRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!mounted) return;
-    const connKey = settings.demoMode ? "demo" : `${settings.apiKey}|${settings.region}`;
+    /* I53 — anche la chiave secondaria fa parte della connessione: cambiarla
+       rifà UN fetch (come primaria/regione). */
+    const connKey = settings.demoMode ? "demo" : `${settings.apiKey}|${settings.region}|${settings.apiKeyAlt}`;
     if (lastConnKeyRef.current === connKey) return;
     lastConnKeyRef.current = connKey;
     void fetchData(settingsRef.current);
-  }, [mounted, settings.demoMode, settings.apiKey, settings.region, fetchData]);
+  }, [mounted, settings.demoMode, settings.apiKey, settings.region, settings.apiKeyAlt, fetchData]);
 
   /* I51 — Aggiornamento automatico con backoff: al successo si torna
      all'intervallo scelto dall'utente; a ogni fallimento il ritardo cresce
@@ -629,7 +745,8 @@ export default function DashboardPage() {
        serve alcun rifetch immediato, lo scheduler si adatta da solo. */
     const connChanged =
       s.demoMode !== settings.demoMode ||
-      (!s.demoMode && (s.apiKey !== settings.apiKey || s.region !== settings.region));
+      (!s.demoMode &&
+        (s.apiKey !== settings.apiKey || s.region !== settings.region || s.apiKeyAlt !== settings.apiKeyAlt));
     setSettings(s);
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
@@ -642,6 +759,11 @@ export default function DashboardPage() {
     if (connChanged) {
       setSnapshot(null);
       setError(null);
+      /* I53 — azzera anche la seconda regione: il prossimo fetch rigenera il pannello. */
+      setSnapshotAlt(null);
+      setAltError(null);
+      setAltFetch(null);
+      prevOkAltRef.current = null;
     }
   };
 
@@ -730,6 +852,10 @@ export default function DashboardPage() {
       : null;
 
   const needsSetup = !settings.demoMode && !settings.apiKey;
+
+  /* I53 — seconda regione attiva SOLO con chiave dedicata diversa dalla primaria
+     (la stessa chiave incollata due volte produrrebbe 1004: dedup, pannello assente). */
+  const altConfigurata = chiaviPerRegione(settings).length > 1;
 
   /* I67 — identità del tab: residuo 5h nel titolo + favicon dinamica */
   const residuoPerTab = general?.interval?.remainingPercent ?? null;
@@ -1186,6 +1312,19 @@ export default function DashboardPage() {
                 <SectionBoundary title="Vista panoramica" fallbackHeight="h-48">
                   <PanoramicTable models={snapshot.models} now={now} />
                 </SectionBoundary>
+                {/* I53 — panoramica della SECONDA regione (solo con 2ª chiave configurata):
+                    solo visualizzazione, nessun impatto su storico/analisi/avvisi. */}
+                {altConfigurata ? (
+                  <div className="mt-4">
+                    <RegionAltPanel
+                      region={regioneAlt(settings.region)}
+                      snapshot={snapshotAlt}
+                      errore={altError}
+                      fetchedAt={altFetch}
+                      now={now}
+                    />
+                  </div>
+                ) : null}
               </div>
 
               {/* Analisi di lungo periodo: cicli, calendario, distribuzione, heatmap (I26 + batch abbellimenti)
@@ -1245,6 +1384,8 @@ export default function DashboardPage() {
                     refreshSeconds={settings.refreshSeconds}
                     serverTime={serverTime}
                     sourceLabel={sourceLabel}
+                    altRegion={altConfigurata ? regioneAlt(settings.region) : null}
+                    altOk={altConfigurata ? (altError ? false : snapshotAlt !== null ? true : null) : null}
                   />
                 </div>
               </SectionBoundary>

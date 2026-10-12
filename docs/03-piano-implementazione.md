@@ -65,7 +65,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 
 | File | Responsabilità |
 |------|----------------|
-| `src/lib/minimax.ts` | Tipi (`UsageSnapshot`, `ModelQuota`, `QuotaWindow`, `ApiError`), `REGION_ENDPOINTS`, **I18**: `CODING_PLAN_ENDPOINTS` (endpoint alternativo per regione), `FALLBACK_TRIGGER_HTTP` {404,405,410,501}, `PrimaryFailureKind`, `shouldTryFallback()` (decisione pura di fallback), `parseUsageResponse()` (tollerante: risposta piatta o sotto `data`, epoch s/ms, status numerici o testuali), `statusLabel()`, `consumedPercent()`, `inferServerTime()`, `quotaLevel()`, `modelLabel()`, `EXTRA_ENDPOINTS` |
+| `src/lib/minimax.ts` | Tipi (`UsageSnapshot`, `ModelQuota`, `QuotaWindow`, `ApiError`), `REGION_ENDPOINTS`, **I18**: `CODING_PLAN_ENDPOINTS` (endpoint alternativo per regione), `FALLBACK_TRIGGER_HTTP` {404,405,410,501}, `PrimaryFailureKind`, `shouldTryFallback()` (decisione pura di fallback), `parseUsageResponse()` (tollerante: risposta piatta o sotto `data`, epoch s/ms, status numerici o testuali), `statusLabel()`, `consumedPercent()`, `inferServerTime()`, `quotaLevel()`, `modelLabel()`, `EXTRA_ENDPOINTS`, **I53**: `regioneAlt()` + `chiaviPerRegione()` (coppie {region,key} per la campagna parallela eu+cn, dedup chiave doppia) |
 | `src/lib/time.ts` | `TZ_ROME`, `LOCALE_IT`, `toDate()` (accetta epoch s/ms, ISO, Date), `formatFullRome/DateTimeRome/TimeRome/DateRome/ShortRome`, `romeZoneInfo()`, `formatCountdown()`, `formatDuration()`, `msUntil()`, `windowProgress()` |
 | `src/lib/usage-events.ts` | Motore di monitoraggio: registro eventi (`mm-dash-events-v1`, max 200: `loadEvents/appendEvents/clearEvents/replaceEvents/makeEvent`), `deriveBanner()` (banner quota bassa stateless), `evaluateTransitions()` (soglie warn/crit + reset tra due snapshot), `canNotify()/notifyBrowser()` (Notification API), `AlertConfig` con **soglie per tipo di finestra** (I28: `AlertThresholds {h5,h24,weekly}`, `windowThresholdKey()` risolve il tipo dalla durata reale start→end, `migrateLegacyThresholds()` per il vecchio formato globale) |
 | `src/lib/export.ts` | Esportazione locale: `historyToCsv()/eventsToCsv()` (CSV «;» + BOM UTF-8, Excel it-IT), `exportHistoryCsv/Json()`, `exportEventsCsv()`, `downloadTextFile()` |
@@ -73,7 +73,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/server-events.ts` | I27 sync client↔server del registro eventi (stesso schema di I16): `pushEventsToServer()` (fire-and-forget batch), `fetchServerEvents()`, `mergeEvents()` (dedup per id, vince il locale), `serverEventsToEvents()`, `clearServerEvents()` |
 | `src/lib/cycles.ts` | I26 analisi di lungo periodo: `detectCycles()` (segmenta lo storico nei cicli di finestra: reset = salto ≥+15 punti che riporta a ≥85 — `RESET_JUMP`/`RESET_TARGET` — robusto contro sorgenti miste), `summarizeCycles()` (medie sui cicli completati), `weekdayConsumption()` (consumo per giorno Europe/Rome sul calo del minimo progressivo), `heatmapConsumption()` (I32: griglia 7×24 giorno × ora, stessa semantica drawdown, attribuzione alla cella del punto medio), `movingAverage()` (SMA) |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
-| `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
+| `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling **parallelo multi-regione (I53: `Promise.allSettled`, secondaria solo visualizzata)**, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
 | `prisma/schema.prisma` | 4 modelli SQLite — `UsagePoint` (storico general: t unique, interval, weekly, source, region), `UsageEventRecord` (archivio eventi), `DownsampledPoint` (I68: bucket orari derivati, ricostruibili con backfill), `ModelUsagePoint` (I82: storico per-modello, chiave model+win+t) — nessun dato sensibile |
 | `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano; **I18**: campagna di fetch `tryEndpoint()` riusabile (ritenti transitori I51) per primario e fallback `coding_plan/remains` — sul fallimento definitivo per endpoint scomparso tenta l'alternativo e risponde con `fallback {used, primaryEndpoint, reason}` (o `fallbackTried: true`), mai su auth né su errori transitori |
 | `src/app/api/history/route.ts` | I16 persistenza storico (SQLite/Prisma): POST (upsert per `t`, validazione input, pruning FIFO a 10.000 punti + cutoff 90 giorni), GET (`?limit=&since=`, ordinato per `t`), DELETE (svuota). La chiave API non transita mai qui |
@@ -84,8 +84,9 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/components/model-table.tsx` | `PanoramicTable`: tabella comparativa di tutte le finestre del piano (modello × finestra: residuo con mini-barra, stato, countdown reset) |
 | `src/components/analysis-panel.tsx` | I26 `LongTermAnalysis`: pannello «Analisi di lungo periodo» con 4 tab (Cicli 5 ore / Cicli settimanali / Per giorno / **Per ora — I32**) — KPI (cicli, durata media, consumo medio, ritmo %/h), tabella ultimi 8 cicli con ciclo in corso evidenziato, grafico a barre consumo medio per giorno della settimana (5h + settimanale), **heatmap 7×24 (I32)** con selettore finestra, KPI (consumo attribuito, ora di picco, celle attive su 168), scala viola con radice quadrata e tooltip per cella (consumo + n° cali attribuiti); scarica automaticamente fino a 10.000 punti dal server al mount e li fonde con lo storico locale |
 | `src/components/event-log.tsx` | `EventLog`: timeline del registro eventi raggruppata per giorno (Europe/Rome), badge per tipo, menu Esporta (CSV/JSON locale + archivio COMPLETO dal server I27), svuotamento locale+server |
-| `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
-| `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode, alertsEnabled, **thresholds** (AlertThresholds {h5,h24,weekly} — I28, matrice 3×2 nel tab «Avvisi» con migrazione legacy ADR-12), notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
+| `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, **seconda regione I53**, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
+| `src/components/region-alt-panel.tsx` | **I53** `RegionAltPanel`: panoramica della SECONDA regione (solo con 2ª chiave configurata): stato connessione, piano, crediti, ultimo rilevamento, errore con messaggio, `PanoramicTable` dei modelli della regione alternativa — solo visualizzazione, mai storico/analisi |
+| `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, **apiKeyAlt (I53)**, region, refreshSeconds, demoMode, alertsEnabled, **thresholds** (AlertThresholds {h5,h24,weekly} — I28, matrice 3×2 nel tab «Avvisi» con migrazione legacy ADR-12), notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
 
 **Mappa integrata — file aggiunti dalle estensioni (ottobre 2026, I50–I85).** La tabella sopra
 descrive il nucleo originario (02/10) con le patch I18/I28/I31/I32; i file aggiunti dalle
@@ -156,7 +157,8 @@ interface UsageSnapshot { planTitle: string | null; credits: number | null; mode
 // src/components/settings-dialog.tsx
 interface DashboardSettings {
   apiKey: string;
-  region: "eu" | "cn";
+  apiKeyAlt: string;       // I53: chiave della SECONDA regione (regioneAlt), "" = singola regione
+  region: "eu" | "cn";     // regione PRIMARIA (storico/avvisi/analisi)
   refreshSeconds: number;  // 0 = off
   demoMode: boolean;
   alertsEnabled: boolean;          // motore avvisi (banner + toast)
@@ -1005,6 +1007,88 @@ barra kiosk sticky a fondo pagina su qualsiasi scroll; dimming disattivo di gior
 overlay opacità 0 (percorso notturno coperto da test puri su `isNightRome`); zero overflow
 desktop/mobile; console pulita; nav/footer/barra mobile assenti in kiosk.
 
+### 5.21 I53 — Multi-regione simultanea (query parallela eu+cn, settings multi-chiave) — 12/10
+
+**Contesto**: il piano MiniMax esiste in due regioni con host e console distinte —
+Europa (`minimax.io`, chiavi europee) e Cina (`minimaxi.com`, chiavi cinesi); una
+Subscription Key funziona SOLO nella regione che l'ha emessa (chiave sbagliata →
+business `status_code 1004`). Chi possiede piani in ENTRAMBE le regioni doveva finora
+sceglierne una e cambiare chiave a mano per vedere l'altra. I53 porta il monitoraggio
+PARALLELO delle due regioni con una seconda chiave opzionale.
+
+**Decisioni di design**:
+
+1. **Settings multi-chiave simmetriche e retrocompatibili**: `DashboardSettings` guadagna
+   `apiKeyAlt: string` (default `""`) — la chiave della SECONDA regione, cioè quella
+   opposta a `region` (`regioneAlt`). La coppia esistente `apiKey`+`region` resta la
+   PRIMARIA (sorgente di verità per storico, avvisi, titolo tab): chi non compila la
+   seconda chiave vede la dashboard IDENTICA a prima (zero regressioni, nessuna
+   migrazione necessaria — il campo manca solo nel localStorage vecchio ed è colto dal
+   default). Scelta della forma simmetrica (`apiKeyAlt` invece di `apiKeyCn`): anche un
+   utente con primaria cn può aggiungere l'eu senza eccezioni nel codice.
+2. **Helper puri in `lib/minimax.ts`** (testati): `regioneAlt(region)` (eu↔cn) e
+   `chiaviPerRegione(settings)` → lista di 1 o 2 coppie `{region, key}`:
+   secondaria inclusa SOLO se `apiKeyAlt` non è vuota e DIVERSA dalla primaria
+   (la stessa chiave incollata due volte produrrebbe 1004 sull'host sbagliato:
+   dedup = una sola query, nessun rumore).
+3. **Query parallela client-side, proxy INVARIATO**: `fetchData` esegue le chiamate al
+   proxy `/api/minimax/usage` (una per coppia) con `Promise.allSettled` — il proxy
+   per-regione non cambia un riga: fallback I18, ritenti transitori I51 e timeout
+   12 s funzionano IDENTICI per entrambe le regioni perché vivono DENTRO ogni chiamata.
+4. **Integrità delle analisi (decisione chiave)**: lo snapshot della SECONDA regione
+   NON entra né nello storico flat `HistoryPoint[]` né nello storico per-modello
+   (`ModelHistoryPoint`/`ModelUsagePoint` non hanno campo regione lato client:
+   mescolare «general» eu e «general» cn corromperebbe trend, EWMA, cicli, ritmo e
+   proiezioni). Lo storico e TUTTE le analisi restano narrativa della regione primaria;
+   la secondaria è VISUALIZZATA (pannello dedicato) e basta. Solo lo snapshot primario
+   alimenta `pushHistory`.
+5. **Eventi di sola transizione (lezione I18)**: per la secondaria SI registra un evento
+   tecnico SOLO sul cambio di stato connessione — prima riuscita («Seconda regione
+   (Cina) connessa…»), passaggio ok→errore («Rilevamento secondaria fallito…»), ritorno
+   ok. Nessuno spam a ogni poll; nessun avviso di soglia per la secondaria (il pannello
+   mostra le percentuali con la scala colore di `quotaLevel`).
+6. **Scheduler e backoff seguono SOLO la primaria**: il successo/fallimento complessivo
+   del ciclo di polling resta deciso dalla regione primaria (una secondaria in errore
+   NON rallenta il polling né arma il backoff I51 — eviterebbe di penalizzare la
+   primaria per un guasto dell'altra regione).
+7. **Avvisi soglia / banner / SW (I52) / titolo tab (I67) / Diagnostica: primaria
+   soltanto** — il Service Worker legge `apiKey` per la sua poll a tab chiuso e segue la
+   regione primaria per design (documento qui, nessun cambio al SW).
+8. **Demo coerente**: con la secondaria configurata, la demo genera anche
+   `makeDemoSnapshot(regioneAlt(region))` per il pannello (nessun backfill storico).
+
+**Componenti**:
+
+- `src/lib/minimax.ts` — `regioneAlt()`, `chiaviPerRegione()` (puri).
+- `src/components/settings-dialog.tsx` — `apiKeyAlt` in `DashboardSettings` +
+  `DEFAULT_SETTINGS` + campo password nel tab «Connessione» con etichetta DINAMICA
+  («Seconda regione — Cina (minimaxi.com)» / «— Europa (minimax.io)») che segue la
+  select regione; nota privacy (stessa coppia chiave→localStorage→solo proxy).
+- `src/components/region-alt-panel.tsx` (NUOVO) — `RegionAltPanel`: card della seconda
+  regione resa nella sezione «Panoramica» SOLO quando la secondaria è configurata:
+  header con regione, endpoint, badge stato (connessa/errore/in attesa), piano,
+  crediti, ultimo rilevamento (Roma), eventuale errore con messaggio, e la
+  `PanoramicTable` dei modelli della seconda regione. Niente nuova sezione nella nav
+  (le 8 sezioni I66/I85 restano tali): il pannello VIVE dentro «Panoramica» ed è
+  assente in compatta/kiosk come il resto della sezione.
+- `src/components/tech-panels.tsx` — riga «Seconda regione» in TechInfo (regione +
+  stato; «—» se non configurata).
+- `src/app/page.tsx` — stati `snapshotAlt`/`altError`/`altFetch` (+ ref transizione
+  `prevOkAltRef`); `fetchData` riscritta a campagna parallela `Promise.allSettled`
+  (esiti smistati per regione: primaria = comportamento storico INVARIATO fino al
+  fallback/ref scheduler; secondaria = stati dedicati); `connKey` e `connChanged`
+  includono `apiKeyAlt` (cambiare la chiave secondaria rifà UN fetch, come la primaria);
+  rendering di `RegionAltPanel` nella sezione panoramica; `TechInfo` con la nuova prop.
+
+**Criteri di accettazione**: con `apiKeyAlt` vuoto la dashboard è byte-identica al
+comportamento precedente (una sola chiamata, stessi eventi); con secondaria configurata
+le due chiamate partono IN PARALLELO ad ogni ciclo, il pannello seconda regione mostra
+piano/modelli/percentuali (o l'errore con messaggio 1004 dedicato), gli eventi di
+transizione compaiono una sola volta per cambiamento di stato, lo storico e le analisi
+restano della primaria (verifica audit: nessun `pushHistory` sullo snapshot secondario);
+demo coerente; tema chiaro leggibile (famiglia I78/I83/I84); zero overflow mobile;
+console pulita.
+
 ---
 
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro
@@ -1037,6 +1121,8 @@ desktop/mobile; console pulita; nav/footer/barra mobile assenti in kiosk.
 ├ StatsPanel: consumo medio · esaurimento previsto · rilevamenti · VERDETTO vs reset (I23)   │
 │             · PACE + QUOTA SPRECATA (I31) · Proiezione EWMA A/B (I72)                      │
 ├ PanoramicTable: tutte le finestre del piano a confronto (modello × finestra, stato, reset) │
+├ RegionAltPanel (I53, solo con 2ª chiave): panoramica della SECONDA regione — piano,        │
+│         crediti, stato connessione, PanoramicTable dei suoi modelli (dentro «Panoramica»)  │
 ├ LongTermAnalysis (pivot I82): Cicli (+spreco I57, prevedibilità I63) · Per giorno           │
 │         (+oggi vs media I64) · Per ora (heatmap I32) · Calendario (I58) · Distribuzione (I61)│
 ├ Altri modelli: ModelCard dinamica per ogni voce ≠ general                                  │
@@ -1135,8 +1221,12 @@ con i calcoli manuali, pannello endpoint, console pulita.
    rete/timeout; evento tecnico solo sulla transizione primario↔fallback. Sbloccato
    dall'accettazione documentale del verdetto V4 = IDENTICI del 09/10 (`docs/04` §4);
    una V4 fresca con chiave reale può solo CONFERMARE l'equivalenza (runbook `docs/05` §6).
-3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe
-   (registrata come **I53 ⬜** in `docs/04` §3).
+3. ~~**Multi-regione simultanea**~~ — **implementato (I53, 12/10)**: query parallela
+   eu+cn con `Promise.allSettled` per chi possiede chiavi in entrambe le regioni
+   (`apiKeyAlt` opzionale nelle impostazioni, simmetrica e retrocompatibile); la
+   secondaria è visualizzata nel pannello `RegionAltPanel` dentro «Panoramica» e NON
+   entra nello storico né nelle analisi (integrità: nessuna mescolanza di regioni —
+   design completo in §5.21).
 4. ~~**PWA/offline**~~ — **implementato (I52, 11/10)**: manifest + icone + shell e ultimo
    snapshot in cache offline; notifiche soglia anche a tab chiuso via Service Worker con
    chiave in IndexedDB (ADR-14). La modalità compatta per schermi secondari/widget è I73.

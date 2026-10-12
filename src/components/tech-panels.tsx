@@ -131,10 +131,18 @@ interface TechInfoProps {
   serverTime: number | null;
   /** Descrizione della sorgente dati (endpoint reale, demo o JSON importato). */
   sourceLabel?: string;
+  /** I53 — regione della secondaria; null = seconda chiave non configurata. */
+  altRegion?: Region | null;
+  /** I53 — stato della secondaria: true = connessa, false = errore, null = in attesa. */
+  altOk?: boolean | null;
 }
 
 /** Scheda con i dettagli tecnici della connessione. */
-export function TechInfo({ region, demoMode, lastFetch, refreshSeconds, serverTime, sourceLabel }: TechInfoProps) {
+export function TechInfo({ region, demoMode, lastFetch, refreshSeconds, serverTime, sourceLabel, altRegion, altOk }: TechInfoProps) {
+  /** I53 — valore della riga «Seconda regione». */
+  const altValue = !altRegion
+    ? "—"
+    : `${REGION_LABELS[altRegion]} · ${altOk === null || altOk === undefined ? "in attesa" : altOk ? "connessa" : "errore"}`;
   const rows: { icon: React.ReactNode; label: string; value: React.ReactNode }[] = [
     {
       icon: <Globe className="size-3.5 text-zinc-400" />,
@@ -145,6 +153,11 @@ export function TechInfo({ region, demoMode, lastFetch, refreshSeconds, serverTi
       icon: <Server className="size-3.5 text-zinc-400" />,
       label: "Regione",
       value: demoMode ? "—" : REGION_LABELS[region],
+    },
+    {
+      icon: <Globe className="size-3.5 text-sky-400" />,
+      label: "Seconda regione",
+      value: demoMode ? "—" : altValue,
     },
     {
       icon: <Clock className="size-3.5 text-zinc-400" />,

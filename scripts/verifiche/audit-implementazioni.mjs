@@ -386,6 +386,17 @@ const CHECKS = [
   check.simbolo("I87", "src/app/page.tsx", "aria-label=\"Attiva modalità kiosk\"", "toggle di ingresso nell'header"),
   check.simbolo("I87", "src/components/kiosk-bar.tsx", "Esci dal kiosk", "uscita sempre disponibile dalla barra sticky"),
   check.simbolo("I87", "src/components/kiosk-bar.tsx", "APP_VERSION", "versione resa anche nella barra kiosk (I46)"),
+  /* --- I53 — multi-regione simultanea (docs/03 §5.21) --- */
+  check.simbolo("I53", "src/lib/minimax.ts", "export function regioneAlt", "regione opposta (eu↔cn)"),
+  check.simbolo("I53", "src/lib/minimax.ts", "export function chiaviPerRegione", "coppie {region,key} della campagna parallela (dedup chiave doppia)"),
+  check.simbolo("I53", "src/components/settings-dialog.tsx", "apiKeyAlt", "settings multi-chiave (seconda chiave opzionale, retrocompatibile)"),
+  check.simbolo("I53", "src/components/settings-dialog.tsx", "regioneAlt\\(region\\)", "etichetta dinamica della seconda regione nel dialog"),
+  check.simbolo("I53", "src/components/region-alt-panel.tsx", "export function RegionAltPanel", "pannello della seconda regione (solo visualizzazione)"),
+  check.simbolo("I53", "src/app/page.tsx", "Promise\\.allSettled", "campagna di fetch PARALLELA per regione"),
+  check.simbolo("I53", "src/app/page.tsx", "chiaviPerRegione", "coppie di interrogazione derivate dalle impostazioni"),
+  check.simbolo("I53", "src/app/page.tsx", "<RegionAltPanel", "pannello cablato nella sezione Panoramica"),
+  check.simbolo("I53", "src/components/tech-panels.tsx", "Seconda regione", "riga TechInfo con stato della secondaria"),
+  check.assenza("I53", "src/app/page.tsx", "pushHistory\\(snapAlt\\)", "lo snapshot secondario NON entra nello storico (integrità analisi §5.21)"),
 ];
 
 /* ------------------------------------------------------------------ */

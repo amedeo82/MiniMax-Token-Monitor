@@ -62,6 +62,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Qualità del campionamento** (I71): copertura attesa/osservata per giorno (Europe/Rome, DST-safe) e buchi > 15 min — quanto lo storico è «buono» prima di fidarsi delle analisi
 - **Proiezione EWMA (A/B)** (I72): secondo parere esponenzialmente pesato (mezza vita 2h) affiancato al verdetto lineare — mostra quanto il ritmo recente si discosta dalla media della finestra
 - **Panoramica modelli**: tabella comparativa di tutte le finestre del piano (residuo, stato, countdown reset)
+- **Multi-regione simultanea** (I53): con una seconda chiave opzionale (regione opposta) ogni aggiornamento interroga eu+cn IN PARALLELO e la seconda regione appare con il suo pannello dentro «Panoramica» (piano, crediti, stato, modelli); storico, avvisi e analisi restano della regione primaria
 - **Analisi multi-modello** (I82): selettore del modello pivot (general/video…) per grafico, ritmo e analisi di lungo periodo — storico per-modello persistito (locale + server) con etichette finestra adattive («24 ore» per il video); la Diagnostica resta sul monitor «general»
 - **Export CSV/JSON** dello storico e del registro eventi (locale e archivio completo dal server; formato compatibile Excel it-IT)
 - **Export orario** (I68): storico aggregato per ora (ultimo valore per ora, grana derivata) dal server
@@ -73,8 +74,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 293 test / 861 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 255 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 311 test / 897 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 265 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 
 ---
 
@@ -119,7 +120,9 @@ bun run build        # build di produzione
 Alla prima apertura la dashboard parte in **modalità demo**. Per usare i dati reali:
 1. Apri **Impostazioni** (icona ingranaggio).
 2. Incolla la **Subscription Key** del Token Plan (Console → *Plan Details*, vedi `docs/01` §2).
-3. Scegli la regione (**Europa** = minimax.io, **Cina** = minimaxi.com).
+3. Scegli la regione (**Europa** = minimax.io, **Cina** = minimaxi.com). Se possiedi un
+   piano anche nell'altra regione, incolla la sua chiave in **Seconda regione** per il
+   monitoraggio parallelo (I53) — lasciala vuota per la sola regione primaria.
 4. Disattiva la demo e salva.
 
 In alternativa, senza chiave: **Impostazioni → "Incolla una risposta JSON"** per
@@ -165,6 +168,7 @@ src/
 │   ├── section-nav.tsx              # I66/I85: nav sezioni sticky con scrollspy condiviso (retry)
 │   ├── bottom-nav.tsx               # I74: barra navigazione fissa su mobile
 │   ├── kiosk-bar.tsx                # I87: barra di controllo kiosk/TV sticky (viste, rotazione, dimming, uscita)
+│   ├── region-alt-panel.tsx         # I53: panoramica della SECONDA regione (solo con 2ª chiave)
 │   ├── section-boundary.tsx         # I76: error boundary per sezione
 │   ├── event-log.tsx                # Registro eventi (timeline, filtri I77, export, svuota)
 │   ├── settings-dialog.tsx          # Impostazioni su 4 tab (connessione/avvisi/dati/aspetto I78)
@@ -175,7 +179,7 @@ src/
 │   ├── tech-panels.tsx              # RawJsonPanel, TechInfo
 │   └── ui/                          # Componenti shadcn/ui
 └── lib/
-    ├── minimax.ts                   # Tipi, parser, stati, endpoint primario+fallback (I18)
+    ├── minimax.ts                   # Tipi, parser, stati, endpoint primario+fallback (I18), regioneAlt/chiaviPerRegione (I53)
     ├── time.ts                      # Europe/Rome + it-IT: formattazioni, countdown
     ├── backoff.ts                   # I51: backoff esponenziale con jitter
     ├── usage-events.ts              # Avvisi soglia per finestra (I28), reset, registro eventi
@@ -190,7 +194,7 @@ src/
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (22 file) + components/ (7 file) = 293 test / 861 asserzioni
+tests/                               # Suite bun: lib/ (23 file) + components/ (8 file) = 311 test / 897 asserzioni
 docs/          # Questa documentazione (01–07)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)

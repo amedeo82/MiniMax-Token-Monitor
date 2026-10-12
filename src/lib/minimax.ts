@@ -43,6 +43,38 @@ export const REGION_LABELS: Record<Region, string> = {
 };
 
 /**
+ * I53 — La regione opposta a quella data: con la secondaria configurata la
+ * campagna di polling interroga PRIMARIA + ALTRA in parallelo.
+ */
+export function regioneAlt(region: Region): Region {
+  return region === "eu" ? "cn" : "eu";
+}
+
+/** Impostazioni minime necessarie a `chiaviPerRegione` (disaccoppiata da DashboardSettings). */
+interface SettingsMultiRegione {
+  apiKey: string;
+  apiKeyAlt: string;
+  region: Region;
+}
+
+/**
+ * I53 — Coppie {region, key} da interrogare in una campagna di polling:
+ * - sempre la PRIMARIA (`settings.region` + `settings.apiKey`);
+ * - la SECONDA (`regioneAlt` + `apiKeyAlt`) SOLO se la chiave è non vuota e
+ *   DIVERSA dalla primaria: la stessa chiave incollata due volte risponderebbe
+ *   1004 sull'host sbagliato (le chiavi sono per-regione) — dedup = una query
+ *   sola, nessun rumore nel registro eventi.
+ * Funzione PURA, testata in tests/lib/regioni.test.ts.
+ */
+export function chiaviPerRegione(settings: SettingsMultiRegione): { region: Region; key: string }[] {
+  const primaria = { region: settings.region, key: settings.apiKey.trim() };
+  const altRegion = regioneAlt(settings.region);
+  const altKey = settings.apiKeyAlt.trim();
+  if (!altKey || altKey === primaria.key) return [primaria];
+  return [primaria, { region: altRegion, key: altKey }];
+}
+
+/**
  * I18 — Endpoint alternativo `coding_plan/remains` (host API, origine console/openplatform;
  * riferimenti: issue #88, CodexBar, dsh-provider-usage → docs/01 §4).
  *
