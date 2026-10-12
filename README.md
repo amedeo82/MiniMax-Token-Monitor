@@ -41,6 +41,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Selettore intervallo temporale** (I69): preset 6h/24h/3g/7g/30g/tutto che restringono grafico, statistiche, ritmo e analisi (la diagnostica resta sull'intero storico)
 - **Error boundary per sezione** (I76): un crash in un pannello non porta più giù la pagina — skeleton di fallback con «Riprova» per ogni sezione
 - **Modalità compatta / widget** (I73): apri `/?compact=1` per solo anelli + countdown + ritmo (schermi secondari, compatibile con la PWA)
+- **Modalità kiosk/TV** (I87): apri `/?kiosk=1` (o il toggle Monitor nell'header) per la vista da monitor dedicato — viste Quote/Grafico/Analisi con **rotazione automatica** configurabile (15 s–5 min) e **dimming notturno** (22:00–06:59, Europe/Rome); barra di controllo sticky a fondo pagina con uscita sempre disponibile (bottone o Esc), stato conservato tra le visite
 - **Tema chiaro opzionale** (I78): toggle sole/luna nell'header o tab «Aspetto» delle impostazioni (Sistema/Chiaro/Scuro, default scuro invariato); il tema scuro resta quello di progetto, il JSON grezzo resta scuro anche in chiaro
 - **Accessibilità sistematica** (I79): contrasto WCAG AA misurato con probe automatico su entrambi i temi (0 fallimenti), annunci `aria-live` degli aggiornamenti del polling, focus visibile da tastiera sulla navigazione, descrizioni testuali `sr-only`/`aria-label` per heatmap, calendario e orologio dei reset
 - **Report settimanale stampabile** (I75): voce «Stampa report settimanale» nel menu Esporta → il foglio contiene SOLO il report (verdetto lineare+EWMA, cicli e spreco, consumo per giorno, calendario); Ctrl+P diretto produce comunque una pagina leggibile senza cromo
@@ -72,8 +73,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 272 test / 811 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 237 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 293 test / 861 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 255 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 
 ---
 
@@ -142,7 +143,8 @@ analizzare una risposta reale catturata altrove (curl, browser, CLI `mmx quota`)
 src/
 ├── app/
 │   ├── page.tsx                     # Dashboard: stato, polling con backoff (I51), import JSON, demo,
-│   │                                #   avvisi, sync server, pivot modelli (I82), aria-live (I79)
+│   │                                #   avvisi, sync server, pivot modelli (I82), aria-live (I79),
+│   │                                #   kiosk/TV (I87), versione nel footer (I46/I86)
 │   ├── layout.tsx                   # ThemeProvider (I78) + Service Worker (I52) + classe dark
 │   ├── manifest.ts                  # PWA manifest (I52)
 │   ├── globals.css                  # Tema scuro di progetto + famiglie chiaro/scuro (I78/I83/I84)
@@ -162,6 +164,7 @@ src/
 │   ├── diagnostica-panel.tsx        # I60/I62/I70/I71: reset clock, salute, anomalie, campionamento
 │   ├── section-nav.tsx              # I66/I85: nav sezioni sticky con scrollspy condiviso (retry)
 │   ├── bottom-nav.tsx               # I74: barra navigazione fissa su mobile
+│   ├── kiosk-bar.tsx                # I87: barra di controllo kiosk/TV sticky (viste, rotazione, dimming, uscita)
 │   ├── section-boundary.tsx         # I76: error boundary per sezione
 │   ├── event-log.tsx                # Registro eventi (timeline, filtri I77, export, svuota)
 │   ├── settings-dialog.tsx          # Impostazioni su 4 tab (connessione/avvisi/dati/aspetto I78)
@@ -180,25 +183,27 @@ src/
     ├── server-history.ts / server-events.ts / server-model-history.ts  # Sync offline-first I16/I27/I82
     ├── cycles.ts                    # I26/I32/I57/I58/I61/I63/I64: cicli, heatmap, calendario, distribuzione
     ├── rate.ts / rate-anomalies.ts / ewma.ts / sampling.ts / health.ts  # I59/I70/I72/I71/I62
-    ├── interval.ts / event-filters.ts / compact.ts / print.ts           # I69/I77/I73/I75
+    ├── interval.ts / event-filters.ts / compact.ts / kiosk.ts / version.ts / print.ts  # I69/I77/I73/I87/I46/I75
     ├── downsample.ts / a11y.ts      # I68 bucket orari · I79 descrizioni sr-only
     ├── ring-color.ts / tab-identity.ts                                  # I65/I67
     └── export.ts / demo.ts / db.ts / utils.ts                           # Export CSV/JSON, demo, Prisma
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (21 file) + components/ (5 file) = 272 test / 811 asserzioni
+tests/                               # Suite bun: lib/ (22 file) + components/ (7 file) = 293 test / 861 asserzioni
 docs/          # Questa documentazione (01–07)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro
 ```
 
-> **Residui tracciati ma non cablati** (fuori dalla struttura funzionale; analisi e decisione
-> in `docs/04` §3, item I86 ⬜): `src/lib/kiosk.ts` + `src/components/kiosk-bar.tsx` (modalità
-> kiosk/TV, I45), `src/lib/version.ts` (marcatore versione, I46), `src/lib/campione.ts`
-> (campionatore passivo, I49), `src/app/api/verifiche/route.ts` (route temporanea del Task 7,
-> inerte), `src/app/api/route.ts` (scaffold).
+> **Residuo tracciato ma volutamente non cablato** (decisione I86 del 12/10; dettagli in
+> `docs/03` §5.20 e `docs/04` §3): `src/lib/campione.ts` (campionatore passivo I49) resta
+> nell'albero DORMIENTE, pronto al re-cablaggio nel proxy per la campagna V8 (verdetto sul
+> fuso dei reset); l'audit verifica che non sia importato da alcun file. Gli altri residui
+> dell'era 08/10 sono stati riconciliati: route Task 7 `api/verifiche` e scaffold
+> `api/route.ts` RIMOSSI, versione I46 riattivata nel footer (`APP_VERSION`), kiosk I45
+> riattivato come item proprio **I87** (modalità `?kiosk=1`).
 
 ## Verifiche empiriche (toolkit)
 

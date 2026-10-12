@@ -336,8 +336,9 @@ const CHECKS = [
   check.simbolo("I84", "src/app/globals.css", "\\.dark \\.placeholder\\\\:text-zinc-600::placeholder", "famiglia scuro: placeholder leggibile"),
   check.simbolo("I84", "src/app/globals.css", "background-color: #ecfdf5", "tinte forti → toni 50 pieni (strato chiaro)"),
   check.simbolo("I84", "src/app/globals.css", "@layer utilities \\{\\s*\\.dark \\.text-zinc-500\\\\!", "etichette menu text-zinc-500! in famiglia scuro"),
-  /* --- I85 — nav sezioni sempre visibile durante lo scrolling (docs/03 §5.17) --- */
-  check.simbolo("I85", "src/app/page.tsx", "\\{!compact \\? <SectionNav /> : null\\}", "nav figlia DIRETTA di main: contenitore sticky = tutta la pagina"),
+  /* --- I85 — nav sezioni sempre visibile durante lo scrolling (docs/03 §5.17; condizione
+         riallineata a I87: la nav è nascosta anche nel kiosk) --- */
+  check.simbolo("I85", "src/app/page.tsx", "\\{!compact && !kioskAttivo \\? <SectionNav /> : null\\}", "nav figlia DIRETTA di main: contenitore sticky = tutta la pagina (nascosta in compact e kiosk)"),
   check.assenza("I85", "src/app/page.tsx", "<div className=\"hidden md:block\">\\s*<SectionNav", "niente wrapper attorno alla nav (limiterebbe la corsa dello sticky)"),
   check.simbolo("I85", "src/components/section-nav.tsx", "className=\"sticky z-30 hidden .* md:block\"", "sticky + hidden md:block sulla nav stessa (desktop ≥md)"),
   /* --- I79 — audit di accessibilità sistematico (docs/03 §5.18) --- */
@@ -365,6 +366,26 @@ const CHECKS = [
   check.simbolo("I82", "src/components/quota-cards.tsx", "export function windowShortLabel", "etichetta breve della finestra interval dalla durata osservata"),
   check.simbolo("I82", "src/components/history-chart.tsx", "intervalLabel = \"5 ore\"", "etichette finestra parametriche su grafico/statistiche/ritmo"),
   check.simbolo("I82", "src/lib/demo.ts", "export function makeDemoModelHistory", "storico demo per-modello coerente con i tick dal vivo"),
+  /* --- I86 — riconciliazione dei residui dell'era 08/10 (docs/03 §5.20) --- */
+  check.nessunFile("I86", "src/app/api", "^verifiche$", "route Task 7 api/verifiche RIMOSSA (coerenza ADR-13-R: nessun endpoint che spawn di processi)"),
+  check.nessunFile("I86", "src/app/api", "^route\\.ts$", "scaffold api/route.ts rimosso"),
+  check.assenza("I86", "src", "lib/campione", "campionatore I49 conservato DORMIENTE: nessun wiring (re-cablaggio solo per la campagna V8)"),
+  check.simbolo("I86", "src/lib/campione.ts", "export (async )?function campionaRisposta", "contratto del campionatore superstite (dormiente, per la campagna V8)"),
+  check.simbolo("I86", "src/lib/version.ts", "export const APP_VERSION", "marcatore versione (I46): fonte unica"),
+  check.simbolo("I86", "src/app/page.tsx", "APP_VERSION", "versione renderizzata nel footer"),
+  check.assenza("I86", "src/app", "chiave-sessione|spawn\\(\\s*[\"']node", "nessun endpoint che spawn del toolkit né lettura file chiave (ADR-13-R intatto)"),
+  /* --- I87 — modalità kiosk/TV (docs/03 §5.20) --- */
+  check.files("I87", ["src/lib/kiosk.ts", "src/components/kiosk-bar.tsx"], "modulo kiosk (puro) + barra di controllo"),
+  check.simbolo("I87", "src/lib/kiosk.ts", "export function readKioskMode", "parsing ?kiosk=1 (semantica readCompactMode)"),
+  check.simbolo("I87", "src/lib/kiosk.ts", "export function isNightRome", "finestra notturna dimming 22:00–06:59 Europe/Rome"),
+  check.simbolo("I87", "src/app/page.tsx", "<KioskBar", "barra kiosk cablata (sostituisce footer e nav mobile)"),
+  check.simbolo("I87", "src/app/page.tsx", "nextKioskView", "rotazione automatica delle viste"),
+  check.simbolo("I87", "src/app/page.tsx", "isNightRome", "dimming notturno cablato (overlay z-45 sotto la barra)"),
+  check.simbolo("I87", "src/app/page.tsx", "kioskHref\\(", "URL sincronizzato via history.replaceState"),
+  check.simbolo("I87", "src/app/page.tsx", "e\\.key === \"Escape\"", "uscita con Esc"),
+  check.simbolo("I87", "src/app/page.tsx", "aria-label=\"Attiva modalità kiosk\"", "toggle di ingresso nell'header"),
+  check.simbolo("I87", "src/components/kiosk-bar.tsx", "Esci dal kiosk", "uscita sempre disponibile dalla barra sticky"),
+  check.simbolo("I87", "src/components/kiosk-bar.tsx", "APP_VERSION", "versione resa anche nella barra kiosk (I46)"),
 ];
 
 /* ------------------------------------------------------------------ */

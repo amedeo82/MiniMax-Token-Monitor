@@ -17,7 +17,20 @@ import { SectionNav } from "@/components/section-nav";
 import { BottomNav } from "@/components/bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PrintReport } from "@/components/print-report";
+import { KioskBar } from "@/components/kiosk-bar";
 import { stampaReportSettimanale } from "@/lib/print";
+import { APP_VERSION } from "@/lib/version";
+import {
+  isNightRome,
+  kioskHref,
+  KIOSK_DEFAULTS,
+  loadKioskState,
+  nextKioskView,
+  readKioskMode,
+  saveKioskState,
+  type KioskState,
+  type KioskView,
+} from "@/lib/kiosk";
 import { SectionBoundary } from "@/components/section-boundary";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TabIdentity } from "@/lib/tab-identity";
@@ -84,6 +97,7 @@ import {
   AlertTriangle,
   AlertOctagon,
   Maximize2,
+  Monitor,
 } from "lucide-react";
 
 const SETTINGS_KEY = "mm-dash-settings-v1";
@@ -136,6 +150,12 @@ export default function DashboardPage() {
   const [rangePreset, setRangePreset] = React.useState<RangePreset>("all");
   /* I73 — modalità compatta ?compact=1 (widget: anelli + countdown + ritmo) */
   const [compact, setCompact] = React.useState(false);
+  /* I87 — modalità kiosk/TV (vista per monitor dedicato): stato persistito in una
+     chiave localStorage SEPARATA dalle impostazioni (mm-dash-kiosk-v1: il dialog
+     «Salva» riscrive l'intero oggetto settings e cancellerebbe le preferenze) +
+     vista corrente della rotazione (quote/grafico/analisi). */
+  const [kioskState, setKioskState] = React.useState<KioskState>(KIOSK_DEFAULTS);
+  const [kioskView, setKioskView] = React.useState<KioskView>("quote");
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [now, setNow] = React.useState<number>(() => Date.now());
   /** I16: punti conservati sul server; null = server non ancora raggiunto. */
@@ -180,6 +200,15 @@ export default function DashboardPage() {
     setNow(Date.now());
     /* I73 — la querystring si legge solo lato client (non esiste in SSR) */
     setCompact(readCompactMode(window.location.search));
+
+    /* I87 — stato kiosk da localStorage; il parametro URL ?kiosk=1 FORZA
+       l'attivazione (bookmark/direct-link sul monitor dedicato). */
+    const ks = loadKioskState();
+    if (readKioskMode(window.location.search) && !ks.enabled) {
+      ks.enabled = true;
+      saveKioskState(ks);
+    }
+    setKioskState(ks);
 
     /* I16: scarica lo storico conservato sul server e fondilo con quello locale,
        così la cronologia sopravvive a cache svuotate e resta disponibile a lungo. */
@@ -236,6 +265,42 @@ export default function DashboardPage() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  /* --------------------------- kiosk (I87) --------------------------- */
+  const kioskAttivo = mounted && !compact && kioskState.enabled;
+  /* Dimming EFFETTIVO: kiosk + preferenza + finestra notturna 22:00–06:59 Roma. */
+  const nightDimAttivo = kioskAttivo && kioskState.nightDim && isNightRome(now);
+
+  /* Persistenza dello stato kiosk a ogni cambio. */
+  React.useEffect(() => {
+    if (!mounted) return;
+    saveKioskState(kioskState);
+  }, [mounted, kioskState]);
+
+  /* Barra indirizzi coerente con lo stato (replaceState: nessuna navigazione). */
+  React.useEffect(() => {
+    if (!mounted || compact) return;
+    const href = kioskHref(window.location.href, kioskState.enabled);
+    if (href !== window.location.href) window.history.replaceState(null, "", href);
+  }, [mounted, compact, kioskState.enabled]);
+
+  /* Uscita con Esc (criterio di accettazione: uscita sempre disponibile). */
+  React.useEffect(() => {
+    if (!kioskAttivo) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setKioskState((s) => ({ ...s, enabled: false }));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [kioskAttivo]);
+
+  /* Rotazione automatica delle viste (solo con la rotazione attiva). */
+  React.useEffect(() => {
+    if (!kioskAttivo || !kioskState.rotation) return;
+    const ms = Math.max(5, kioskState.rotationSeconds) * 1000;
+    const id = setInterval(() => setKioskView((v) => nextKioskView(v)), ms);
+    return () => clearInterval(id);
+  }, [kioskAttivo, kioskState.rotation, kioskState.rotationSeconds]);
 
   /* --------------------------- fetching ---------------------------- */
   const pushHistory = React.useCallback((snap: UsageSnapshot) => {
@@ -704,6 +769,34 @@ export default function DashboardPage() {
     </div>
   );
 
+  /* Banner quota bassa come JSX condiviso (vista completa + kiosk I87). */
+  const bannerAlert = banner ? (
+    <Alert
+      className={
+        banner.level === "crit"
+          ? "border-rose-500/30 bg-rose-950/40 text-rose-100"
+          : "border-amber-500/30 bg-amber-950/40 text-amber-100"
+      }
+    >
+      {banner.level === "crit" ? <AlertOctagon className="size-4" /> : <AlertTriangle className="size-4" />}
+      <AlertTitle>
+        {banner.level === "crit"
+          ? "Quota quasi esaurita"
+          : "Soglia di attenzione superata"}
+      </AlertTitle>
+      <AlertDescription>
+        <ul className={`mt-1 space-y-0.5 ${banner.level === "crit" ? "text-rose-200/90" : "text-amber-200/90"}`}>
+          {banner.items.map((item) => (
+            <li key={`${item.model}-${item.win}`}>
+              {item.modelLabel} · {item.winLabel}{" "}
+              al <strong>{item.remaining.toFixed(1)}%</strong> (soglia {item.threshold}%)
+            </li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
+  ) : null;
+
   /* I82 — selettore del modello pivot (grafico/ritmo/analisi); nascosto con un solo modello osservato. */
   const modelSelector =
     modelli.length > 1 ? (
@@ -795,6 +888,19 @@ export default function DashboardPage() {
               >
                 <Settings2 className="size-4" />
               </Button>
+              {/* I87 — ingresso nella modalità kiosk/TV (fuori da compact e kiosk) */}
+              {!compact && !kioskAttivo ? (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Attiva modalità kiosk"
+                  title="Modalità kiosk/TV (?kiosk=1)"
+                  onClick={() => setKioskState((s) => ({ ...s, enabled: true }))}
+                  className="h-9 w-9 border-white/10 bg-white/[0.04] hover:bg-white/[0.08]!"
+                >
+                  <Monitor className="size-4" />
+                </Button>
+              ) : null}
               {/* I78 — alternanza rapida tema chiaro/scuro */}
               <ThemeToggle />
               {/* I73 — uscita dalla modalità compatta (torna alla dashboard completa) */}
@@ -878,7 +984,7 @@ export default function DashboardPage() {
             pagina. Un wrapper alto quanto la barra non le darebbe corsa e
             sfilerebbe. (I66 scrollspy; I74: su <md la sostituisce la barra
             inferiore; entrambe assenti in modalità compatta) */}
-        {!compact ? <SectionNav /> : null}
+        {!compact && !kioskAttivo ? <SectionNav /> : null}
 
           {/* Errore */}
           {error ? (
@@ -967,35 +1073,67 @@ export default function DashboardPage() {
                   </SectionBoundary>
                 </div>
               </>
+            ) : kioskAttivo ? (
+              /* I87 — VISTA KIOSK/TV: solo la vista selezionata (+ banner soglie);
+                 niente nav, panoramiche, diagnostica, tecnici, registro né footer —
+                 la KioskBar sticky lo sostituisce (uscita sempre disponibile).
+                 Errore API e schermata di setup restano visibili sopra (fuori da qui). */
+              <>
+                {bannerAlert}
+
+                {kioskView === "quote" ? (
+                  <>
+                    <MainWindows general={general} now={now} />
+                    <p className="text-center text-xs text-zinc-500">
+                      Oggi a Roma: <span className="font-medium text-zinc-400">{formatDateRome(now)}</span>
+                    </p>
+                  </>
+                ) : null}
+
+                {kioskView === "grafico" ? (
+                  <div className="space-y-3">
+                    {rangeSelector}
+                    {modelSelector}
+                    <SectionBoundary title="Grafico storico" fallbackHeight="h-64">
+                      <HistoryChart
+                        history={filteredHistory}
+                        window={chartWindow}
+                        onWindowChange={setChartWindow}
+                        serverCount={serverCount}
+                        intervalLabel={intervalLabel}
+                      />
+                    </SectionBoundary>
+                    <SectionBoundary title="Statistiche di proiezione" fallbackHeight="h-40">
+                      <StatsPanel
+                        trend={trend}
+                        win={chartWindow}
+                        resetAt={selectedWindowEnd}
+                        remaining={selectedWindowRemaining}
+                        serverCount={serverCount}
+                        ewma={ewma}
+                        intervalLabel={intervalLabel}
+                      />
+                    </SectionBoundary>
+                    <SectionBoundary title="Ritmo di consumo" fallbackHeight="h-56">
+                      <RateChart history={filteredHistory} window={chartWindow} intervalLabel={intervalLabel} />
+                    </SectionBoundary>
+                  </div>
+                ) : null}
+
+                {kioskView === "analisi" ? (
+                  <SectionBoundary title="Analisi di lungo periodo" fallbackHeight="h-64">
+                    <LongTermAnalysis
+                      history={filteredHistory}
+                      nomeModello={selectedModel}
+                      intervalLabel={intervalLabel}
+                    />
+                  </SectionBoundary>
+                ) : null}
+              </>
             ) : (
             <>
-              {/* Banner quota bassa (avvisi di soglia) */}
-              {banner ? (
-                <Alert
-                  className={
-                    banner.level === "crit"
-                      ? "border-rose-500/30 bg-rose-950/40 text-rose-100"
-                      : "border-amber-500/30 bg-amber-950/40 text-amber-100"
-                  }
-                >
-                  {banner.level === "crit" ? <AlertOctagon className="size-4" /> : <AlertTriangle className="size-4" />}
-                  <AlertTitle>
-                    {banner.level === "crit"
-                      ? "Quota quasi esaurita"
-                      : "Soglia di attenzione superata"}
-                  </AlertTitle>
-                  <AlertDescription>
-                    <ul className={`mt-1 space-y-0.5 ${banner.level === "crit" ? "text-rose-200/90" : "text-amber-200/90"}`}>
-                      {banner.items.map((item) => (
-                        <li key={`${item.model}-${item.win}`}>
-                          {item.modelLabel} · {item.winLabel}{" "}
-                          al <strong>{item.remaining.toFixed(1)}%</strong> (soglia {item.threshold}%)
-                        </li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              ) : null}
+              {/* Banner quota bassa (avvisi di soglia) — JSX condiviso con il kiosk (I87) */}
+              {bannerAlert}
 
               {/* Anelli principali */}
               <div id="quota" className="mm-anchor">
@@ -1131,11 +1269,11 @@ export default function DashboardPage() {
         </main>
 
         {/* ----------------------------- Footer ----------------------------- */}
-        {!compact ? (
+        {!compact && !kioskAttivo ? (
         <footer className="mt-auto border-t border-white/[0.06] bg-[#09090b]/80 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-[11px] text-zinc-600 sm:flex-row sm:px-6">
             <p>
-              MiniMax Token Monitor · dashboard non ufficiale per il Token Plan di{" "}
+              MiniMax Token Monitor · v {APP_VERSION} · dashboard non ufficiale per il Token Plan di{" "}
               <a
                 href="https://platform.minimax.io"
                 target="_blank"
@@ -1153,15 +1291,43 @@ export default function DashboardPage() {
         </footer>
         ) : null}
 
-        {/* I74 — barra di navigazione inferiore su mobile (fuori dalla vista compatta)
-            + spaziatore che evita che il footer resti coperto dalla barra fissa */}
-        {!compact ? (
+        {/* I86 — marcatore di versione (I46): fonte unica src/lib/version.ts, aggiornato
+            a ogni passata documentale (convenzione nell'header del file) */}
+
+        {/* I74 — barra di navigazione inferiore su mobile (fuori dalla vista compatta
+            e dal kiosk I87) + spaziatore che evita che il footer resti coperto */}
+        {!compact && !kioskAttivo ? (
           <>
             <BottomNav />
             <div aria-hidden className="h-16 md:hidden" />
           </>
         ) : null}
+
+        {/* I87 — barra di controllo kiosk: sostituisce footer e nav mobile mentre il
+            kiosk è attivo; sticky a fondo pagina così l'uscita resta SEMPRE raggiungibile */}
+        {kioskAttivo ? (
+          <KioskBar
+            state={kioskState}
+            view={kioskView}
+            nightDimActive={nightDimAttivo}
+            onView={setKioskView}
+            onPrefs={(patch) => setKioskState((s) => ({ ...s, ...patch }))}
+            onExit={() => setKioskState((s) => ({ ...s, enabled: false }))}
+          />
+        ) : null}
       </div>
+
+      {/* I87 — dimming notturno (22:00–06:59 Roma): overlay sopra il contenuto (header
+          incluso) e sotto la barra kiosk (z-50, resta leggibile); pointer-events-none.
+          Overlay al posto di filter:brightness() perché il filtro su un antenato crea
+          un containing block che sposta i figli fixed/sticky. */}
+      {kioskAttivo ? (
+        <div
+          aria-hidden
+          className="no-print pointer-events-none fixed inset-0 z-[45] bg-black transition-opacity duration-700"
+          style={{ opacity: nightDimAttivo ? 0.55 : 0 }}
+        />
+      ) : null}
 
       <SettingsDialog
         open={settingsOpen}

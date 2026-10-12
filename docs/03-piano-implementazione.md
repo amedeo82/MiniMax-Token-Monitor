@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-12 (**passata di allineamento documentale**: §3 mappa integrata con i file delle estensioni I50–I85 e nota sui residui non cablati, §4 settings `thresholds` I28 e snippet Prisma a 4 modelli, §7 layout riportato alla pagina attuale, §9 nota sui residui della catena di verifica, §11 roadmap aggiornata — I18/I52 implementate). Precedente: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68). Precedente: 2026-10-12 (§5.17 nav sezioni sempre visibile durante lo scrolling — I85: nav figlia diretta di `<main>` per dare corsa allo sticky + fix scrollspy morto con retry dell'osservazione fino al primo snapshot).
+> Ultimo aggiornamento: 2026-10-12 (**I86 + I87 — §5.20**: riconciliazione dei residui dell'era 08/10 con decisioni utente — route Task 7 e scaffold rimossi, versione nel footer, campionatore conservato dormiente — e **modalità kiosk/TV riattivata come item proprio**: ?kiosk=1 + toggle header, viste Quote/Grafico/Analisi con rotazione e dimming notturno 22:00–06:59 Roma, KioskBar sticky al posto del footer, superficie barra rimappata nel tema chiaro). Precedente: 2026-10-12 (passata di allineamento documentale: §3 mappa integrata con i file delle estensioni I50–I85 e nota sui residui non cablati, §4 settings `thresholds` I28 e snippet Prisma a 4 modelli, §7 layout riportato alla pagina attuale, §9 nota sui residui della catena di verifica, §11 roadmap aggiornata — I18/I52 implementate). Precedente: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68).
 
 ---
 
@@ -103,6 +103,8 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/lib/interval.ts` | Presetti intervallo 6h/24h/3g/7g/30g/tutto, filtro client-side (I69) |
 | `src/lib/event-filters.ts` | Filtri registro eventi: kind multi-selezione, testo, periodo (I77) |
 | `src/lib/compact.ts` | Parsing modalità compatta `?compact=1` (I73) |
+| `src/lib/kiosk.ts` | Stato kiosk persistito (`mm-dash-kiosk-v1`), rotazione viste, finestra notturna `isNightRome` 22:00–06:59 Roma, parsing `?kiosk=1`, gestione URL (I87) |
+| `src/lib/version.ts` | Marcatore `APP_VERSION` reso nel footer e nella barra kiosk — aggiornato a OGNI passata documentale, insieme ai docs (I46, riattivato da I86) |
 | `src/lib/print.ts` | `stampaReportSettimanale()` — classe body + ripristino su afterprint (I75) |
 | `src/lib/ring-color.ts` | Colore continuo HSL, glow dinamico, count-up con reduced-motion (I65) |
 | `src/lib/tab-identity.ts` | Titolo/favicon dinamici con guard anti re-asserzione (I67) |
@@ -116,19 +118,22 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/components/bottom-nav.tsx` | Barra navigazione fissa su mobile <md, stesso scrollspy (I74) |
 | `src/components/section-boundary.tsx` | Error boundary per sezione con skeleton e «Riprova» (I76) |
 | `src/components/theme-toggle.tsx` | Toggle sole/luna (tema chiaro/scuro/sistema, I78) |
+| `src/components/kiosk-bar.tsx` | Barra di controllo kiosk/TV sticky a fondo pagina: cambio vista, rotazione con intervallo, dimming, uscita sempre disponibile (I87) |
 | `src/components/print-report.tsx` | Report settimanale stampabile (I75) |
 | `src/components/pwa-register.tsx` | Registrazione Service Worker + sync notifiche a tab chiuso (I52) |
 | `src/app/api/summary/route.ts` | `GET /api/summary` read-only senza chiave: KPI aggregati per widget esterni (I80) |
 | `src/app/api/history/models/route.ts` | GET/POST/DELETE storico per-modello su `ModelUsagePoint` (I82) |
 | `src/app/manifest.ts` + `public/sw.js` + `public/sw-shared.js` | PWA: manifest, icone, cache offline, notifiche a tab chiuso (I52) |
-| `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (237 verifiche + coverage check) (I55, esteso a ogni item) |
-| `tests/lib/` (21 file) + `tests/components/` (5 file) | Suite Bun: 272 test / 811 asserzioni (I50/I81 + ogni item) |
+| `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (255 verifiche + coverage check) (I55, esteso a ogni item) |
+| `tests/lib/` (22 file) + `tests/components/` (7 file) | Suite Bun: 293 test / 861 asserzioni (I50/I81 + ogni item) |
 
-> **Residui NON cablati** (tracciati in git ma orfani, fuori dalla mappa funzionale — analisi e
-> decisione in `docs/04` §3, item I86 ⬜): `src/lib/kiosk.ts` + `src/components/kiosk-bar.tsx`
-> (modalità kiosk/TV, I45), `src/lib/version.ts` (marcatore versione, I46),
-> `src/lib/campione.ts` (campionatore passivo, I49), `src/app/api/verifiche/route.ts`
-> (route temporanea del Task 7, inerte), `src/app/api/route.ts` (scaffold).
+> **Residuo NON cablato VOLUTO** (decisione I86 del 12/10, analisi in `docs/03` §5.20 e
+> `docs/04` §3): `src/lib/campione.ts` (campionatore passivo I49) resta nell'albero
+> TRACCIATO e DORMIENTE, pronto al re-cablaggio nel proxy per la campagna V8 (verdetto
+> formale sul fuso dei reset); l'audit verifica che NON sia importato da alcun file.
+> Gli altri residui dell'era 08/10 sono stati riconciliati: route Task 7 `api/verifiche`
+> e scaffold `api/route.ts` RIMOSSI (coerenza ADR-13-R), versione I46 riattivata nel
+> footer, kiosk I45 riattivato come item proprio **I87**.
 
 ---
 
@@ -947,6 +952,61 @@ general-pivot).
 
 ---
 
+### 5.20 I86 — Riconciliazione dei residui dell'era 08/10 + I87 — Modalità kiosk/TV — 12/10
+
+**Contesto (I86)**: il commit UUID di piattaforma `1b78931` aveva reintroiettato nell'albero
+codice dell'era 08/10 dichiarata persa, tutto ORFANO (zero wiring/test/audit). Le decisioni
+dell'utente (clarify 12/10, quattro voci):
+
+| Residuo | Decisione | Esito |
+|---------|-----------|-------|
+| `src/app/api/verifiche/route.ts` (Task 7) | **RIMOZIONE** | `git rm` — ripristina la coerenza con ADR-13-R (nessun endpoint che spawn di processi); il toolkit resta usabile da CLI (`node scripts/verifiche/verifica.mjs …`) |
+| `src/app/api/route.ts` (scaffold «Hello, world!») | **RIMOZIONE** | `git rm` — dead code |
+| `src/lib/version.ts` (I46) | **RIATTIVAZIONE** | `APP_VERSION` renderizzato nel footer della pagina (e nella barra kiosk); convenzione nell'header del file: aggiornare a OGNI passata documentale, insieme ai docs |
+| `src/lib/campione.ts` (I49) | **CONSERVAZIONE DORMIENTE** | resta tracciato e NON cablato, pronto al re-cablaggio per la campagna V8 (verdetto fuso reset); l'audit verifica l'ASSENZA di wiring |
+| kiosk I45 (`kiosk.ts` + `kiosk-bar.tsx`) | **RIATTIVAZIONE CATALOGATA → item I87** | wiring completo con test e check audit (sotto) |
+
+**Design (I87 — kiosk/TV)**: vista per monitor dedicato, riattivata dal codice superstite
+dell'era 08/10 (moduli puri già scritti: `KioskState` con persistenza `mm-dash-kiosk-v1`,
+`KIOSK_VIEWS` quote/grafico/analisi, `nextKioskView`, `isNightRome` 22:00–06:59 Roma,
+`kioskHref`, `KioskBar`). Aggiunte per il cablaggio:
+
+1. `readKioskMode(search)` in `src/lib/kiosk.ts` — pura, stessa semantica di
+   `readCompactMode` (I73): attivano `?kiosk=1`, `?kiosk`, `?kiosk=true` (case-insensitive);
+   non attivano `0/false/off/spazzatura`.
+2. **Stato in `page.tsx`**: `kioskState` (caricato da localStorage al mount; il parametro
+   URL `?kiosk=1` FORZA `enabled: true` al primo avvio), `kioskView` (default «quote»).
+   Effetti: persistenza a ogni cambio; sincronizzazione URL via
+   `history.replaceState(kioskHref(…))` (la barra indirizzi resta coerente senza navigazioni);
+   listener `Escape` che esce; timer di rotazione `setInterval(nextKioskView, rotationSeconds·1000)`
+   solo con rotazione attiva.
+3. **Rendering**: `kioskAttivo = mounted && !compact && kioskState.enabled` — il kiosk è
+   esclusivo con la vista compatta (parametri concorrenti: vince compact, il bottone di
+   ingresso non esiste in widget). Con kiosk attivo: nav sezioni (I66/I85) e barra mobile
+   (I74) nascoste, footer sostituito dalla `KioskBar` sticky bottom (uscita SEMPRE
+   disponibile: bottone + Esc), il main mostra SOLO la vista selezionata:
+   - **Quote**: banner soglie + `MainWindows` + data odierna Roma;
+   - **Grafico**: selettore intervallo (I69) + modello pivot (I82) + `HistoryChart` +
+     `StatsPanel` + `RateChart`;
+   - **Analisi**: `LongTermAnalysis` (pivot I82).
+   Errore API e schermata di setup restano visibili fuori dal branch (come in compatta I73).
+4. **Toggle di ingresso** nell'header (icona Monitor, fuori da compact e kiosk).
+5. **Dimming notturno**: overlay `fixed inset-0 z-[45] bg-black pointer-events-none`
+   con opacità 0→0.55 (transizione 700 ms) quando `kioskAttivo && nightDim && isNightRome(now)` —
+   sotto la KioskBar (z-50, resta leggibile) e sopra header (z-40) e contenuto; scelto
+   l'overlay al posto di `filter: brightness()` perché il filtro su un antenato crea un
+   containing block che sposterebbe i figli `fixed`/`sticky`.
+6. **Zero consumo quota (ADR-8)**: il kiosk è una vista — non aggiunge alcuna chiamata;
+   il polling e le regole esistenti non cambiano.
+
+**Criteri di accettazione**: `?kiosk=1` attiva e sopravvive al reload (localStorage);
+Esc e bottone escono (URL ripulito); rotazione cicla le 3 viste all'intervallo scelto;
+barra kiosk sticky a fondo pagina su qualsiasi scroll; dimming disattivo di giorno con
+overlay opacità 0 (percorso notturno coperto da test puri su `isNightRome`); zero overflow
+desktop/mobile; console pulita; nav/footer/barra mobile assenti in kiosk.
+
+---
+
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro
 
 1. **Sempre** `Intl.DateTimeFormat` con `timeZone: "Europe/Rome"` e locale `it-IT`
@@ -989,7 +1049,9 @@ general-pivot).
 
 Le 8 sezioni sono ancorate (`.mm-anchor` + `scroll-margin-top` da `--nav-offset`) e avvolte in
 error boundary indipendenti (I76). La modalità compatta (I73) mostra solo header ridotto +
-MainWindows + RateChart + selettore intervallo.
+MainWindows + RateChart + selettore intervallo. La modalità kiosk/TV (I87, `?kiosk=1`) mostra
+SOLO la vista selezionata (Quote/Grafico/Analisi, con rotazione e dimming notturno opzionali)
+e sostituisce footer e nav con la barra di controllo sticky.
 
 Principi: percentuali come metrica primaria; ogni numero temporale esplicitamente
 etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
@@ -1023,14 +1085,15 @@ etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
   delegare le V1–V6 all'agente (ADR-13); il blocco è stato rimosso e il meccanismo
   chiuso (ADR-13-R): il proxy non scrive più nulla su disco. La procedura per
   ri-armarla, se mai necessaria, è documentata in `docs/05` §10.
-- **Residui noti della catena di verifica (registrati come I86 in `docs/04` §3)**: la
-  route temporanea `src/app/api/verifiche/route.ts` del Task 7 è ancora nell'albero
-  (ri-introdotta da un commit UUID di piattaforma) ma è INERTE — legge
-  `scripts/verifiche/.chiave-sessione`, che non esiste più, senza la quale rifiuta di
-  avviare qualsiasi processo — e non espone la chiave nelle risposte. La sua rimozione
-  (o eventuale riattivazione controllata SOLO con il protocollo ADR-13/ADR-13-R) è
-  tracciata in `docs/04` §3 I86. Anche `src/lib/campione.ts` (campionatore I49) è
-  presente ma NON cablato nel proxy: nessuna scrittura su disco avviene oggi.
+- **Residui della catena di verifica — RICONCILIATI (I86, 12/10)**: la route temporanea
+  `src/app/api/verifiche/route.ts` del Task 7 (ri-introdotta nell'albero da un commit UUID
+  di piattaforma, inerte senza `scripts/verifiche/.chiave-sessione`) è stata **RIMOSSA**
+  insieme allo scaffold `src/app/api/route.ts`: l'applicazione non espone più alcun endpoint
+  che spawn di processi, in piena coerenza con ADR-13-R (il toolkit resta usabile da CLI con
+  `node scripts/verifiche/verifica.mjs …` e la procedura di eventuale ri-armo è in `docs/05`
+  §10). `src/lib/campione.ts` (campionatore I49) resta presente VOLUTAMENTE NON cablato
+  (decisione I86): nessuna scrittura su disco avviene oggi e l'audit verifica l'assenza di
+  wiring — il re-cablaggio avverrà solo per la campagna V8, con smontaggio a fine campagna.
 
 ---
 
