@@ -720,6 +720,59 @@ vuoto. Suite: tsc 0 errori su src/+tests/, lint OK, 250/250 (764 asserzioni,
 +1 test I85 sul componente), audit 214/214 PASS 0 scoperte (+3 check I85, check
 I74 aggiornato al nuovo domicilio della classe `hidden md:block`).
 
+### 5.18 Audit di accessibilità sistematico (I79) — 12/10
+
+Proposta docs/07 §5.12: «Contrasto misurato (WCAG AA), `aria-live` per aggiornamenti
+polling, focus visibili, descrizioni `sr-only` per i grafici (heatmap, calendario,
+reset clock)». Quattro pilastri, tutti client-side (ADR-8 intoccato).
+
+**Pilastro 1 — Contrasto misurato (WCAG AA)**: già in gran parte conseguito da
+I83/I84 (probe `scripts/probe-contrast.js`: conversione oklab/oklch/lab→sRGB,
+alpha compositing, sfondo effettivo per antenati; esito attuale CHIARO 36 campioni
+/ 0 FAIL, SCURO 38 / 0 FAIL). I79: il probe viene **esteso con le superfici della
+nav** (I66/I85: link attivo `[aria-current="true"]` e inattivi, su sfondo
+semi-trasparente `/85` con blur — lo sfondo effettivo viene fuso dal probe) e
+ri-eseguito su entrambi i temi come parte della verifica I79.
+
+**Pilastro 2 — `aria-live` per gli aggiornamenti del polling**: nell'header
+aggiunta una regione live dedicata (`sr-only`, `aria-live="polite"`) che annuncia
+«Dati aggiornati alle HH:MM:SS (Roma)» al cambio di `lastFetch` (ogni snapshot
+riuscito). NB: esisteva già una live region con l'ora di Roma che si aggiornava
+**ogni secondo** — spam per uno screen reader e annunci continui; viene
+declassata a `aria-hidden` (l'ora è già visibile testualmente accanto). Il banner
+soglia e l'errore API usano già `role="alert"` (shadcn Alert), i toast di sonner
+annunciano nativamente: niente da aggiungere lì.
+
+**Pilastro 3 — Focus visibili**: i link della nav (superiore I66/I85 e barra
+inferiore I74) sono `<a>` nudi SENZA indicatore di focus (i componenti shadcn
+Button/Tabs/ToggleGroup/DropdownMenu hanno già ring/bg di focus). Cure in
+`globals.css`: `nav a:focus-visible` → outline 2px + offset 2px, bianco-alpha in
+scuro e nero-alpha in chiaro (strato `html:not(.dark)`, tecnica I78/I84). Regola
+volutamente SCOPERTA solo alla nav per non duplicare l'indicazione sui componenti
+che già la possiedono.
+
+**Pilastro 4 — Descrizioni testuali dei grafici**: nuovo modulo puro
+`src/lib/a11y.ts` con tre generatori di descrizione (deterministici, testabili):
+- `descrizioneHeatmap(grid, winLabel)` — consumo totale, ora di picco
+  (giorno+ora Roma), celle attive su 168;
+- `descrizioneCalendario(grid, winLabel)` — consumo totale e giorni con dati,
+  giorno più intenso (data YYYY-MM-DD + valore), settimana corrente = ultima
+  colonna;
+- `descrizioneResetClock(osservati, ora)` — reset osservati negli ultimi 7 giorni
+  per finestra, ultimo reset con data/ora Roma, blocchi teorici UTC (00/05/10/15/20).
+Consumo: `<p className="sr-only">` dentro `HeatmapSection` e `CalendarSection`
+(analysis-panel.tsx); `ResetClock` (diagnostica-panel.tsx) ha già `role="img"`
+con label STATICa → l'`aria-label` diventa la descrizione DINAMICA generata dai
+dati (i `<title>` per-i-punto restano per il tooltip mouse). Test in
+`tests/lib/a11y.test.ts` (griglie fake deterministiche + casi vuoti totali).
+
+**Audit**: check I79 nell'audit (modulo a11y con i 3 export, sr-only nelle due
+sezioni, aria-label dinamico nel reset clock, regione live polling, focus-visible
+nav in entrambi i temi). Verifica browser: probe contrasto esteso su entrambi i
+temi (0 FAIL atteso), presenza DOM della live region e delle descrizioni,
+focus visibile con navigazione da tastiera (Tab sulla nav + screenshot), console
+pulita, zero overflow.
+
 ---
 
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro

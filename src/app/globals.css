@@ -612,3 +612,16 @@ html:not(.dark) pre.bg-black\/50 * {
     display: block !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* I79 — Accessibilità: focus visibile sui link della nav (superiore   */
+/* I66/I85 e barra inferiore I74, <a> nudi senza ring shadcn)          */
+/* ------------------------------------------------------------------ */
+nav a:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 0.75);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+html:not(.dark) nav a:focus-visible {
+  outline-color: rgb(0 0 0 / 0.65);
+}

@@ -50,6 +50,7 @@ import {
 } from "@/lib/cycles";
 import { mergeHistories, fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import { formatDateTimeRome, formatDuration } from "@/lib/time";
+import { descrizioneCalendario, descrizioneHeatmap } from "@/lib/a11y";
 import type { HistoryPoint } from "@/components/history-chart";
 import { CalendarDays, Database, Flame, Info, Layers, RefreshCw } from "lucide-react";
 
@@ -578,8 +579,11 @@ function CalendarSection({ history }: { history: HistoryPoint[] }) {
         <span className="ml-auto text-[10px] text-zinc-600">ultime {CAL_SETTIMANE} settimane · la corrente è l&apos;ultima colonna</span>
       </div>
 
+      {/* I79 — descrizione testuale della griglia per screen reader */}
+      <p className="sr-only">{descrizioneCalendario(grid, winLabel)}</p>
+
       <div className="overflow-x-auto rounded-xl border border-white/[0.07] p-2">
-        <div className="space-y-[3px]">
+        <div className="space-y-[3px]" aria-hidden>
           {grid.weeks.map((settimana, wi) => (
             <div key={wi} className="flex items-center gap-[3px]">
               {settimana.map((cella, ci) => (
@@ -774,9 +778,12 @@ function HeatmapSection({ interval, weekly }: { interval: HeatmapGrid; weekly: H
         </div>
       </div>
 
+      {/* I79 — descrizione testuale della griglia per screen reader */}
+      <p className="sr-only">{descrizioneHeatmap(grid, winLabel)}</p>
+
       {/* Griglia 7×24 */}
       <div className="overflow-x-auto rounded-xl border border-white/[0.07] p-2">
-        <div className="min-w-[560px] space-y-[3px]">
+        <div className="min-w-[560px] space-y-[3px]" aria-hidden>
           {WEEKDAY_LABELS.map((label, d) => (
             <div key={label} className="flex items-center gap-[3px]">
               <span className="w-8 shrink-0 text-right text-[10px] capitalize text-zinc-500">{label}</span>
