@@ -6,14 +6,16 @@
 > nel recovery con gli stessi numeri e significati comunicati in chat (tracciamento in
 > `docs/04` §3).
 >
-> Stato: **14 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
+> Stato: **15 di 15 implementate** — il **batch 1 client-only** (I69, I77, I76 con fix
 > del bug noto, I73) è stato implementato l'11/10 pomeriggio (vedi §5.2, §5.6, §5.9,
 > §5.10 e `docs/04` §3); il **batch 2 analisi** (I70, I71, I72) è stato implementato
 > l'11/10 sera (vedi §5.3, §5.4, §5.5 e `docs/04` §3); il **batch 3 infrastruttura**
 > (I80, I81, I68) è stato implementato l'11/10 notte (vedi §5.13, §5.14, §5.1 e
 > `docs/04` §3); il **batch 4 UX** (I74, I75, I78) è stato implementato l'11/10 sera
 > (vedi §5.7, §5.8, §5.11 e `docs/04` §3); **I79 (audit accessibilità) è stata
-> implementata il 12/10** (vedi §5.12 e `docs/04` §3); resta 1 proposta ⬜ (I82).
+> implementata il 12/10** (vedi §5.12 e `docs/04` §3); **I82 (generalizzazione
+> multi-modello) è stata implementata il 12/10** (vedi §5.15 e `docs/04` §3) —
+> **15 di 15: analisi chiusa**.
 
 Contesto della proposta originale: dopo la chiusura dei batch 1–3 (I57–I67) l'analisi
 aveva individuato 15 ulteriori miglioramenti in tre gruppi — analisi avanzata
@@ -238,9 +240,22 @@ event-log, section-nav (logica pura già coperta dalla suite lib).
 > a document.body al load). Prima tornata: QuotaRing/MiniBar (6), SectionNav (3),
 > SectionBoundary (2, con figlio che lancia), EventLog (5). 16 test componente.
 
-## 5.15 I82 — Generalizzazione multi-modello
+## 5.15 I82 — Generalizzazione multi-modello ✅
 Parametrizzazione `model_name` in cicli/storico: oggi le analisi usano «general» come
 pivot; la generalizzazione aprirebbe le analisi anche agli altri modelli del piano.
+
+> **IMPLEMENTATA 12/10** (design completo in `docs/03` §5.19): contratto delle analisi
+> INVARIATO (`HistoryPoint[]`) con pivot parametrico a monte — lib pura
+> `model-history.ts` (localStorage `mm-dash-modelhistory-v1` FIFO 2.000 + forward-fill
+> alla lettura), route `/api/history/models` sulla tabella I42 `ModelUsagePoint`
+> (ricreata con `db push`: il modello era perito col rollback e lo schema commesso
+> aveva attributi corrotti in `DownsampledPoint` — ripristinati), selettore del pivot
+> nel grafico (chips general/video…, nascosto con un solo modello), etichette finestra
+> parametriche (`intervalLabel` → «24 ore» per il video), Diagnostica deliberatamente
+> su general (salute del monitor). Verifiche: curl POST/GET/DELETE con dedup e
+> pruning 90g osservato in opera, browser con switch general↔video (tab «24 ore»,
+> «Cicli 24 ore», analisi su 48 rilevamenti video), mobile/compact, console pulita.
+> Suite: 272/272 (+15), audit 237/237 (+14). Registro in `docs/04` §3.
 
 ---
 
@@ -253,7 +268,6 @@ pivot; la generalizzazione aprirebbe le analisi anche agli altri modelli del pia
    §5.5 e `docs/04` §3).
 3. ~~**Batch 3 infrastruttura/integrazione**: I80 · I81 · I68.~~ → **IMPLEMENTATO
    11/10** (vedi §5.13/§5.14/§5.1 e `docs/04` §3).
-4. ~~**Backlog/qualità**: I74 · I75 · I78 · I79 · I82.~~ → **I74 · I75 · I78
-   IMPLEMENTATI 11/10** (batch 4 UX, vedi §5.7/§5.8/§5.11 e `docs/04` §3);
-   **I79 IMPLEMENTATO 12/10** (vedi §5.12 e `docs/04` §3); resta in backlog
-   **I82** (generalizzazione multi-modello).
+4. ~~**Backlog/qualità**: I74 · I75 · I78 · I79 · I82.~~ → **TUTTE IMPLEMENTATE**:
+   I74 · I75 · I78 l'11/10 (batch 4 UX, vedi §5.7/§5.8/§5.11), I79 il 12/10
+   (§5.12) e I82 il 12/10 (§5.15) — `docs/04` §3 per i registri completi.

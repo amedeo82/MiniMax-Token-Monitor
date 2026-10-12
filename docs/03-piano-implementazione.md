@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-12 (§5.17 nav sezioni sempre visibile durante lo scrolling — I85: nav figlia diretta di `<main>` per dare corsa allo sticky + fix scrollspy morto con retry dell'osservazione fino al primo snapshot). Precedente: 2026-10-12 (§5.16 due famiglie di colore — I84: token `--mm-muted` chiaro/scuro, famiglia scuro revisionata al probe WCAG, accent chiaro su toni 700/800 con tinte 50 piene; 0 FAIL su 74 campioni in entrambi i temi).
+> Ultimo aggiornamento: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68). Precedente: 2026-10-12 (§5.17 nav sezioni sempre visibile durante lo scrolling — I85: nav figlia diretta di `<main>` per dare corsa allo sticky + fix scrollspy morto con retry dell'osservazione fino al primo snapshot).
 
 ---
 
@@ -772,6 +772,110 @@ nav in entrambi i temi). Verifica browser: probe contrasto esteso su entrambi i
 temi (0 FAIL atteso), presenza DOM della live region e delle descrizioni,
 focus visibile con navigazione da tastiera (Tab sulla nav + screenshot), console
 pulita, zero overflow.
+
+### 5.19 I82 — Generalizzazione multi-modello (pivot parametrico di cicli/storico)
+
+**Problema**: tutte le analisi di lungo periodo (cicli, ritmo, proiezione, heatmap,
+calendario, distribuzione) consumano lo storico FLAT `HistoryPoint[]`
+`{ t, interval, weekly }` che registra SOLO il modello «general»: la sua struttura è
+storicamente cresciuta attorno alle due finestre (5 ore / settimanale) del primo
+modello osservato. Gli altri modelli del piano (es. «video» con finestra giornaliera
+24h) appaiono nelle card «Altri modelli» e nella Vista panoramica, ma senza storico,
+cicli o analisi.
+
+**Decisione di progetto — contratto INVARIATO, pivot parametrico**: le funzioni di
+analisi (`detectCycles`, `weekdayConsumption`, `heatmapConsumption`, `computeTrend`,
+`ewmaProjection`, …) e i componenti (`HistoryChart`, `RateChart`, `StatsPanel`,
+`LongTermAnalysis`) restano ESATTAMENTE com'eri su `HistoryPoint[]`. La
+generalizzazione si ottiene a MONTE: chi costruisce lo storico decide il pivot.
+Un modello diverso produce un `HistoryPoint[]` suo (le sue due finestre mappate su
+`interval`/`weekly`) e le analisi funzionano senza toccare una riga. Vantaggi:
+zero regressioni sulle analisi esistenti, test invariati, l'aggiunta di futuri
+modelli è pura acquisizione dati.
+
+**Componenti nuovi**:
+
+1. `src/lib/model-history.ts` (puro, lato client) — lo storico per-modello:
+   - `ModelHistoryPoint { t, model, interval: number|null, weekly: number|null }`
+     (valori GREZZI, nullable: il forward-fill avviene alla lettura);
+   - localStorage `mm-dash-modelhistory-v1` (FIFO 2.000 punti, tutti i modelli
+     insieme, ordinati per `t`);
+   - `appendModelPoints(prev, sample, max)` — da uno snapshot crea i punti di OGNI
+     modello con almeno una finestra non null (dedup: stesso modello entro 20 s →
+     sostituisce l'ultimo, come `pushHistory` per general);
+   - `historyForModel(points, model)` — filtra, ordina e forward-fill
+     (`?? prev ?? 100`, stesse sematiche di `pushHistory`) → `HistoryPoint[]`
+     consumabile da tutte le analisi;
+   - `modelNamesOsservati(points)` — distinti, «general» sempre primo, poi ordine
+     di prima comparsa;
+   - `mergeModelHistories(local, remote)` — dedup per `(model, t)`, vince il locale;
+   - `modelRowsToPoints(rows)` — le righe server (una per `model+win+t`, la tabella
+     I42 è long-format) tornano punti wide per la UI;
+   - sync client: `fetchServerModelHistory`, `pushModelPointsToServer` (batch
+     fire-and-forget), `clearServerModelHistory(model?)` — stesso pattern offline-first
+     di `server-history.ts` (I16): localStorage primario, replica silenziosa.
+
+2. `src/app/api/history/models/route.ts` — persistenza server dello storico
+   per-modello sulla tabella `ModelUsagePoint` (lib I42 `server-model-history.ts`,
+   SQL raw parametrizzato, finora senza route): `POST {points:[{t, model, interval,
+   weekly, source, region}]}` (una riga per finestra, upsert + pruning 90g/10k),
+   `GET ?model=&win=&since=&limit=`, `DELETE ?model=`. La chiave API non transita mai
+   (solo percentuali e timestamp, come I16). ADR-8 intoccato: la route tocca solo
+   SQLite, mai MiniMax.
+
+3. **Schema Prisma — ripristino pregresso + modello mancante** (scoperto
+   all'apertura della sessione, bloccante):
+   - il file commesso aveva attributi corrotti in `DownsampledPoint`:
+     `@@unique(ourStart, source])` / `@@index(ourStart])` (campo inesistente, parentesi
+     squilibrate — corruzione entrata con il recovery I68 di 6c0a503; il DB reale era
+     nato da uno schema valido, quindi il danno era LATENTE: qualsiasi `db push`
+     futuro sarebbe fallito) → ripristinati `@@unique([hourStart, source])` e
+     `@@index([hourStart])`;
+   - il modello `ModelUsagePoint` (I42) NON era più nello schema né la tabella nel DB
+     (rollback): la lib raw SQL sopravviveva ma inutilizzabile → modello ridefinito
+     con le stesse colonne della lib (`model, win, t, percent, source, region,
+     createdAt`, unica su `model+win+t`) e tabella ricreata con `db push`.
+
+4. **UI — selettore del pivot** (page.tsx):
+   - stato `selectedModel` (default «general»); chips modello accanto al selettore
+     Intervallo, visibili solo se osservato più di un modello; modelli = storico
+     per-modello ∪ modelli dello snapshot corrente;
+   - `pivotHistory = selectedModel === "general" ? history : historyForModel(...)` —
+     poi la pipeline I69 (`filterHistoryByPreset`) invariata: Grafico, Ritmo e Analisi
+     seguono il pivot; la **Diagnostica resta deliberatamente sullo storico COMPLETO
+     di «general»** (salute del MONITOR: guasti di rilevamento e blocchi teorici UTC
+     del piano, non del modello scelto);
+   - `StatsPanel`/verdetto: `selectedWindow` passa da `general` al **modello pivot**
+     (proiezione coerente col grafico mostrato);
+   - identità tab (I67), banner/avvisi, eventi: restano su «general» (il «primus»
+     del piano; documentato, non è un dimenticatoio);
+   - etichette finestre: per i modelli non-general la finestra `interval` può essere
+     la giornaliera 24h (es. video) → prop opzionale `intervalLabel` (default «5 ore»)
+     su `HistoryChart`, `StatsPanel`, `RateChart`, `LongTermAnalysis`; il valore da
+     passare deriva dalla DURATA osservata della finestra del pivot
+     (`windowShortLabel` in quota-cards: 4–6h → «5 ore», 23–25h → «24 ore», altrimenti
+     durata formattata). Le chiavi interne restano `interval`/`weekly`.
+
+5. **Ingestione** (page.tsx, dentro `pushHistory` — unico punto per demo/api/import):
+   dopo il punto general, `appendModelPoints` + replica server dei soli punti nuovi.
+   In demo, se lo storico per-modello è vuoto viene retro-popolato con
+   `makeDemoModelHistory` (lib/demo.ts): rigenera 40 snapshot sintetici PASSATI con la
+   stessa `makeDemoSnapshot(t)` e ne estrae TUTTI i modelli — curve coerenti con i
+   tick demo dal vivo.
+
+**Test**: `tests/lib/model-history.test.ts` (puri: append con dedup 20s, salto
+modelli senza finestre, forward-fill, ordine modelli osservati, merge locale-vince,
+modelRowsToPoints long→wide); audit +check I82 (lib, route, wiring page, schema con
+`ModelUsagePoint`, etichette parametriche); verifica curl della route
+(POST→GET→DELETE con pulizia) e browser in demo: switch pivot «general»↔«video» con
+grafico/ritmo/analisi/etichette coerenti, Diagnostica invariata, console pulita,
+zero overflow.
+
+**Limiti onesti**: lo storico per-modello nasce con questa versione — i punti
+passati di «video» non esistono (nessun backfill possibile: l'API espone solo
+lo snapshot corrente); le analisi video diventano via più significative man mano
+che il poller accumula. Eventi/avvisi per modelli non-general: fuori scope (restano
+general-pivot).
 
 ---
 

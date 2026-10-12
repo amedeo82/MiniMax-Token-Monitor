@@ -112,3 +112,34 @@ model UsageEventRecord {
   @@index([t])
   @@index([kind])
 }
+
+/**
+ * I42/I82 — Un punto dello storico PER-MODELLO: percentuale residua di UNA
+ * finestra (interval = la finestra breve del modello, es. 5 ore per general o
+ * giornaliera 24h per video; weekly = la settimanale) di UN modello al momento
+ * del rilevamento. Formato LONG (una riga per finestra): l'upsert deduplica
+ * sulla chiave (model, win, t). Consumato dalla route /api/history/models (I82)
+ * tramite `src/lib/server-model-history.ts` (SQL raw parametrizzato: l'accesso
+ * non dipende dall'accessor tipizzato, che potrebbe mancare in un processo dev
+ * con client generato prima del push — nota in testa alla lib).
+ */
+model ModelUsagePoint {
+  id      Int    @id @default(autoincrement())
+  /** Nome del modello come ritornato dall'API (es. "general", "video"). */
+  model   String
+  /** Finestra: "interval" | "weekly". */
+  win     String
+  /** Momento del rilevamento (epoch ms). Parte della chiave di dedup. */
+  t       DateTime
+  /** % residua osservata (0–100). */
+  percent Float
+  /** Origine del punto: "api" | "demo" | "import". */
+  source  String @default("api")
+  /** Regione dell'endpoint interrogato: "eu" | "cn". */
+  region  String @default("eu")
+  createdAt DateTime @default(now())
+
+  @@unique([model, win, t])
+  @@index([model])
+  @@index([t])
+}

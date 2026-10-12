@@ -8,6 +8,7 @@
  */
 
 import { parseUsageResponse, Region, UsageSnapshot } from "./minimax";
+import type { ModelHistoryPoint } from "./model-history";
 
 const FIVE_HOURS_MS = 5 * 3600_000;
 const WEEK_MS = 7 * 24 * 3600_000;
@@ -109,6 +110,30 @@ export function makeDemoHistory(samples = 40, stepMs = 5 * 60_000): { t: number;
       interval: Math.max(0, Math.min(100, Math.round(interval * 10) / 10)),
       weekly: Math.max(0, Math.min(100, Math.round(weekly * 10) / 10)),
     });
+  }
+  return out;
+}
+
+/**
+ * I82 — Storico demo PER-MODELLO: rigenera snapshot sintetici nel passato con
+ * la STESSA `makeDemoSnapshot(t)` (curve identiche ai tick demo dal vivo) e ne
+ * estrae tutti i modelli. Serve al primo avvio demo: senza backfill le analisi
+ * dei modelli non-general resterebbero vuote fino ad accumulo di tick live.
+ * Nota: il video demo non ha mai usato la finestra giornaliera (interval
+ * piatto a 100), la sua curva visibile è quella settimanale.
+ */
+export function makeDemoModelHistory(samples = 40, stepMs = 5 * 60_000): ModelHistoryPoint[] {
+  const now = Date.now();
+  const out: ModelHistoryPoint[] = [];
+  for (let i = samples; i >= 1; i--) {
+    const t = now - i * stepMs;
+    const snap = makeDemoSnapshot("eu", t);
+    for (const m of snap.models) {
+      const interval = m.interval?.remainingPercent ?? null;
+      const weekly = m.weekly?.remainingPercent ?? null;
+      if (interval === null && weekly === null) continue;
+      out.push({ t, model: m.modelName, interval, weekly });
+    }
   }
   return out;
 }
