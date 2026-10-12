@@ -49,9 +49,29 @@ beforeEach(() => {
   });
 });
 
+/**
+ * I88 — il descrittore ORIGINALE di window.localStorage viene catturato alla
+ * valutazione del modulo (prima di qualunque test di questo file) e RIPRISTINATO
+ * dopo ogni test. Il precedente `delete window.localStorage` era un bug latente:
+ * con happy-dom `window === globalThis`, quindi defineProperty sostituisce il
+ * descrittore originale (proprietà own, verificato con
+ * scripts/verifiche/prova-bug-localstorage.ts) e `delete` lo elimina PER SEMPRE —
+ * i file che giravano dopo (es. theme-toggle I78) trovavano
+ * «localStorage is not defined» a seconda dell'ordine di discovery di bun test.
+ */
+const descrittoreStoragePreTest: PropertyDescriptor | undefined = Object.getOwnPropertyDescriptor(
+  window,
+  "localStorage",
+);
+
 afterEach(() => {
-  // Rimuove lo shadow: il descrittore originale (happy-dom o altro) torna visibile.
-  delete (window as unknown as Record<string, unknown>).localStorage;
+  if (descrittoreStoragePreTest) {
+    // Ripristino il descrittore catturato (happy-dom o il mock di un file precedente).
+    Object.defineProperty(window, "localStorage", descrittoreStoragePreTest);
+  } else {
+    // Nessun descrittore prima di questo file: torna l'assenza originaria.
+    delete (window as unknown as Record<string, unknown>).localStorage;
+  }
 });
 
 describe("kiosk: readKioskMode (?kiosk=1)", () => {

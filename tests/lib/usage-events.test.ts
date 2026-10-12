@@ -3,7 +3,7 @@
  * localStorage (mock in memoria), chiavi soglia per tipo finestra (I28),
  * migrazione soglie legacy, banner e transizioni tra snapshot.
  */
-import { describe, test, expect, beforeEach } from "bun:test";
+import { describe, test, expect, beforeEach, afterAll } from "bun:test";
 import {
   ALERT_DEFAULTS,
   appendEvents,
@@ -27,13 +27,35 @@ const store = new Map<string, string>();
 /* Nota I81: da quando i test di componente registrano happy-dom (bunfig
    preload), localStorage esiste ed è una proprietà a sola LETTURA — si usa
    defineProperty (configurable) per sostituirla col mock deterministico. */
+/* I88 — il descrittore ORIGINALE viene catturato alla valutazione del modulo e
+   ripristinato in afterAll: senza ripristino, i file di test che girano dopo
+   trovano il mock (o, se questo file corre dopo un `delete` altrove, nulla).
+   Il mock è completo (clear/length/key oltre a getItem/setItem/removeItem) così
+   resta utilizzabile anche nel caso (degradato ma non rotto) in cui un file
+   successivo lo erediti per un problema d'ordine. */
+const descrittoreStoragePreFile: PropertyDescriptor | undefined =
+  Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
   value: {
+    get length(): number {
+      return store.size;
+    },
+    clear: () => void store.clear(),
     getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => void store.set(k, v),
+    key: (i: number) => Array.from(store.keys())[i] ?? null,
     removeItem: (k: string) => void store.delete(k),
+    setItem: (k: string, v: string) => void store.set(k, String(v)),
   },
+});
+
+afterAll(() => {
+  if (descrittoreStoragePreFile) {
+    Object.defineProperty(globalThis, "localStorage", descrittoreStoragePreFile);
+  } else {
+    delete (globalThis as unknown as Record<string, unknown>).localStorage;
+  }
 });
 if (typeof (globalThis as Record<string, unknown>).window === "undefined") {
   (globalThis as Record<string, unknown>).window = globalThis;
