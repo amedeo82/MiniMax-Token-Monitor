@@ -68,8 +68,9 @@ interface LongTermAnalysisProps {
 export function LongTermAnalysis({ history, nomeModello = "general", intervalLabel = "5 ore" }: LongTermAnalysisProps) {
   const [loading, setLoading] = React.useState(false);
   const [loadedAt, setLoadedAt] = React.useState<number | null>(null);
-  const [serverVersion, setServerVersion] = React.useState(0);
-  const remoteRef = React.useRef<HistoryPoint[] | null>(null);
+  /* I90 — i punti server sono STATO (servono al render nel merge): la vecchia
+     coppia remoteRef + serverVersion leggeva una ref in render (regola v7). */
+  const [remote, setRemote] = React.useState<HistoryPoint[] | null>(null);
 
   /** Scarica (o ri-scarica) lo storico completo dal server. Con pivot non-general
    *  la fonte è lo storico PER-MODELLO (I82): lo storico flat di /api/history è
@@ -80,15 +81,13 @@ export function LongTermAnalysis({ history, nomeModello = "general", intervalLab
       if (nomeModello === "general") {
         const server = await fetchServerHistory(10_000);
         if (server && server.points.length > 0) {
-          remoteRef.current = serverPointsToHistory(server.points);
-          setServerVersion((v) => v + 1);
+          setRemote(serverPointsToHistory(server.points));
           setLoadedAt(Date.now());
         }
       } else {
         const server = await fetchServerModelHistory(10_000);
         if (server && server.rows.length > 0) {
-          remoteRef.current = historyForModel(modelRowsToPoints(server.rows), nomeModello);
-          setServerVersion((v) => v + 1);
+          setRemote(historyForModel(modelRowsToPoints(server.rows), nomeModello));
           setLoadedAt(Date.now());
         }
       }
@@ -97,20 +96,29 @@ export function LongTermAnalysis({ history, nomeModello = "general", intervalLab
     }
   }, [nomeModello]);
 
+  /* Al cambio di pivot i punti server del modello precedente vanno DROPPATI:
+     il merge per timestamp non distingue i modelli. I90 — aggiustamento di
+     stato in fase di render (pattern React «adjusting state when a prop
+     changes») al posto del reset sincrono in effect (regola v7). */
+  const [prevModello, setPrevModello] = React.useState(nomeModello);
+  if (prevModello !== nomeModello) {
+    setPrevModello(nomeModello);
+    setRemote(null);
+  }
+
   // Prima analisi: scarica lo storico completo appena il pannello monta.
-  // Al cambio di pivot i punti server del modello precedente vanno DROPPATI:
-  // il merge per timestamp non distingue i modelli.
+  // I90 — avvio differito di un tick: load (che scrive stato con setLoading)
+  // parte in callback, non sincrono nel corpo dell'effetto (regola v7); il
+  // fetch è comunque asincrone, il timing effettivo non cambia.
   React.useEffect(() => {
-    remoteRef.current = null;
-    setServerVersion((v) => v + 1);
-    void load();
+    const avvio = setTimeout(() => void load(), 0);
+    return () => clearTimeout(avvio);
   }, [load]);
 
   /** Serie d'analisi: storico pagina + punti server (dedup per timestamp). */
   const data = React.useMemo(() => {
-    void serverVersion; // dipendenza esplicita: ricalcola quando il server risponde
-    return remoteRef.current ? mergeHistories(history, remoteRef.current) : history;
-  }, [history, serverVersion]);
+    return remote ? mergeHistories(history, remote) : history;
+  }, [history, remote]);
 
   const intervalCycles = React.useMemo(() => detectCycles(data, "interval"), [data]);
   const weeklyCycles = React.useMemo(() => detectCycles(data, "weekly"), [data]);
@@ -143,7 +151,7 @@ export function LongTermAnalysis({ history, nomeModello = "general", intervalLab
   }
 
   const spanMs = data[data.length - 1].t - data[0].t;
-  const fromServer = remoteRef.current?.length ?? 0;
+  const fromServer = remote?.length ?? 0;
 
   return (
     <Card className="border-white/[0.07] bg-white/[0.04] backdrop-blur">

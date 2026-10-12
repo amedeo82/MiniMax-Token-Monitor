@@ -60,15 +60,28 @@ export function useScrollSpySezioni(): [
   number,
 ] {
   const [attiva, setAttiva] = React.useState<string>(SEZIONI[0].id);
-  const [offset, setOffset] = React.useState(130);
+
+  /* I90 — l'offset è una misura del DOM (sistema esterno): useSyncExternalStore
+     la espone al render senza setState sincrono in effect (regola v7). Snapshot
+     server 130 = il valore iniziale pre-refactoring; durante l'idratazione vale
+     lo snapshot server, poi React rilegge il client snapshot (nessun mismatch).
+     La misura è fissa come prima del refactoring (l'header ha altezza statica):
+     la sottoscrizione non ha eventi, il valore viene riletto a ogni render. */
+  const misuraOffset = () => {
+    const header = document.querySelector("header");
+    return (header?.offsetHeight ?? 106) + 56;
+  };
+  const offset = React.useSyncExternalStore(
+    () => () => {},
+    misuraOffset,
+    () => 130,
+  );
 
   React.useEffect(() => {
-    // --nav-offset = altezza reale dell'header + 56px (barra + respiro)
-    const header = document.querySelector("header");
-    const h = (header?.offsetHeight ?? 106) + 56;
-    setOffset(h);
-    document.documentElement.style.setProperty("--nav-offset", `${h}px`);
-  }, []);
+    // --nav-offset = altezza reale dell'header + 56px (aggiornamento del DOM:
+    // sistema esterno — nessun setState, regola v7 soddisfatta)
+    document.documentElement.style.setProperty("--nav-offset", `${offset}px`);
+  }, [offset]);
 
   React.useEffect(() => {
     let osservatore: IntersectionObserver | null = null;

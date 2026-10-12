@@ -458,6 +458,28 @@ const CHECKS = [
   check.files("I49", ["scripts/verifiche/analisi-reset-timezone.mjs", "scripts/verifiche/campione-live.jsonl"], "analizzatore fuso reset ri-creato + file campione commesso come prova grezza (205 righe: 122 del 09/10 recuperate + 83 fresche)"),
   check.file("I56", "scripts/verifiche/esiti/v8-fuso-reset-latest.md", "verdetto V8 «blocchi fissi UTC» su esito stabile a nome persistente"),
   check.files("I56", ["scripts/verifiche/esiti/v4-2026-10-12T12-56-18.json", "scripts/verifiche/esiti/v5-2026-10-12T12-56-24.json", "scripts/verifiche/esiti/v6-2026-10-12T13-19-29.json"], "esiti rapidi con chiave reale commessi (V4/V5/V6, 12/10)"),
+  /* --- I88 — fix bug latente test-infra: localStorage distrutto dal cleanup kiosk --- */
+  check.simbolo("I88", "tests/lib/kiosk.test.ts", "getOwnPropertyDescriptor", "descrittore originale catturato (happy-dom window===globalThis: il delete eliminava la proprietà own PER SEMRE)"),
+  check.simbolo("I88", "tests/lib/kiosk.test.ts", "defineProperty", "ripristino del descrittore in afterEach (mai delete secco)"),
+  check.simbolo("I88", "tests/lib/usage-events.test.ts", "afterAll", "secondo polluter (mock usage-events) ripristinato con afterAll"),
+  check.file("I88", "scripts/verifiche/prova-bug-localstorage.ts", "prova meccanista window===globalThis commessa (prima/durante/dopo)"),
+  /* --- I89 — aggiornamento stack alle ultime versioni (fase 1 bun update + fase 2 major) --- */
+  check.nessunFile("I89", "src/components/ui", "^chart\\.tsx$", "ui/chart.tsx shadcn RIMOSSO (dead code 353 righe incompatibile con recharts 3, precedente I86)"),
+  check.simbolo("I89", "docs/04-stato-avanzamento.md", "TypeScript 7", "voci tenute indietro con motivo documentato (TS 7, Prisma 7/8, eslint 10)"),
+  check.simbolo("I89", "docs/04-stato-avanzamento.md", "react-day-picker", "wrapper shadcn non importati tenuti indietro con motivo (upgrade con rigenerazione)"),
+  /* --- I90 — passata «React Compiler-ready»: regole react-hooks v7 riattivate (docs/04 §7) --- */
+  check.assenza("I90", "eslint.config.mjs", "set-state-in-effect...off", "set-state-in-effect RIATTIVATA (niente più off in config)"),
+  check.assenza("I90", "eslint.config.mjs", "react-hooks/refs...off", "refs RIATTIVATA (niente più off in config)"),
+  check.simbolo("I90", "eslint.config.mjs", "React Compiler-ready", "motivazione della riattivazione documentata in config"),
+  check.nessunFile("I90", "src/components/ui", "^carousel\\.tsx$", "ui/carousel.tsx shadcn RIMOSSO (dead code a zero import, precedente I86)"),
+  check.simbolo("I90", "src/hooks/use-mobile.ts", "useSyncExternalStore", "hook shadcn convertito (niente setState sincrono in effect)"),
+  check.simbolo("I90", "src/components/theme-toggle.tsx", "useSyncExternalStore", "mounted-guard senza setState in effect"),
+  check.simbolo("I90", "src/components/section-nav.tsx", "useSyncExternalStore", "offset nav come misura da store esterno"),
+  check.simbolo("I90", "src/app/page.tsx", "queueMicrotask", "caricamento persisted differito a microtask (init senza setState sincroni)"),
+  check.simbolo("I90", "src/app/page.tsx", "pollDelayMs", "ritardo scheduler come STATO (le ref non si leggono in render)"),
+  check.simbolo("I90", "src/components/analysis-panel.tsx", "setRemote\\(null\\)", "reset pivot in fase di render (coppia remoteRef+serverVersion eliminata)"),
+  check.simbolo("I90", "src/components/settings-dialog.tsx", "prevReset", "reset form all'apertura con aggiustamento in render"),
+  check.simbolo("I90", "src/lib/ring-color.ts", "prevValue", "casi istantanei AnimatedPercent con aggiustamento in render"),
 ];
 
 /* ------------------------------------------------------------------ */
