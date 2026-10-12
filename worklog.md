@@ -709,3 +709,25 @@ Stage Summary:
 - Lezione tecnica: i ToggleGroupItem radix single espongono role="radio" (non button) — i click sintetici vanno mirati per role radio; le righe di test più vecchie di 90 giorni spariscano per pruning: usare timestamp recenti nei test delle route con pruning
 - Suite: 272 test / 811 asserzioni, audit 237/237 (+14 check I82); docs allineati (03 §5.19, 04 §3+§8, 07 §5.15, README)
 - Restano fuori docs/07: V4 fresca con chiave reale, campagna campionatore I49+V8+I56 (richiedono la chiave API dell'utente)
+
+---
+Task ID: 32
+Agent: Super Z (main)
+Task: Allineamento documentale completo («analizza ed aggiorna tutta la documentazione del progetto, poi commit e push»)
+
+Work Log:
+- Analisi incrociata di TUTTA la documentazione (docs/01–07 + README) contro lo stato reale del codice: albero file completo, schema Prisma, interfaccia DashboardSettings, cablaggi (page/layout/proxy), suite (bun test 272/272 = 811 asserzioni, confermata) e audit (237/237 PASS, confermato)
+- SCOPERTA PRINCIPALE (era 08/10 «persa»): il commit UUID di piattaforma `1b78931` (12/10, 437 righe) ha reintrodotto nell'albero codice dell'era I33–I47 dichiarata persa — TUTTO TRACCIATO MA ORFANO (zero riferimenti in page/layout/proxy, zero test, zero audit): `src/lib/kiosk.ts` + `src/components/kiosk-bar.tsx` (I45 kiosk/TV), `src/lib/version.ts` (I46, `APP_VERSION = "2026-10-08 · I47"`, non renderizzato), `src/lib/campione.ts` (I49 campionatore), + route temporanea Task 7 `src/app/api/verifiche/route.ts` (spawn del toolkit; INERTE senza `scripts/verifiche/.chiave-sessione`, formalmente in contraddizione con ADR-13-R) + scaffold `src/app/api/route.ts`. Registrato il corollario nel blocco rollback di docs/04 §3 e l'item **I86 ⬜** (rimozione o riattivazione catalogata per ciascuno; MAI riarmare la route di verifica senza protocollo ADR-13/ADR-13-R)
+- docs/04: corollario + nota I49 aggiornata (campione.ts sopravvissuto) + riga I86 ⬜ + §7 aperture chiuse (multi-modello → I82, notifiche tab chiuso → I52, regressione pesata → EWMA I72) + §8 changelog
+- docs/03: header (passata di allineamento); §3 riga Prisma a 4 modelli + «Mappa integrata» con 28 righe (file I50–I85 con item e responsabilità) + blocco residui non cablati; §4 snippet DashboardSettings aggiornato a `thresholds` (I28/ADR-12) + modelli `DownsampledPoint`/`ModelUsagePoint` aggiunti allo snippet Prisma; §7 layout riportato alla pagina attuale (nav I66/I85, barra mobile I74, selettore modello I82, intervallo I69, RateChart I59, EWMA I72, Diagnostica I60/I62/I70/I71, filtri I77, stampe I75, tema I78) con nota boundary/compact; §9 nuovo bullet sui residui della catena di verifica (route inerte, campione non cablato); §11 roadmap aggiornata (item 2 I18 → implementato, item 3 → I53 ⬜, item 4 PWA → I52 implementato)
+- README: indice documentazione esteso a docs/06 e docs/07 (mancavano del tutto); albero «Struttura del repository» rigenerato sullo stato attuale (app: layout/manifest/globals + 5 rotte API; components: 16 file; lib raggruppata per item; prisma 4 modelli; public PWA; tests 26 file) + nota residui; riga «docs/ (01–05)» → «(01–07)»
+- docs/05 §10: aggiunta la riga della campagna del 09/10 con chiave reale (verdetti V4 IDENTICI · V5 n.a. · V6 48/48 · V8 blocchi fissi UTC offset 0 ms — esiti persi col rollback, unica evidenza il transcript) + nota sul campionatore I49 (contratto superstite nell'header di campione.ts, re-cablaggio richiesto per una nuova V8)
+- Docs verificate ma NON toccate (già allineate): docs/01, docs/02 (ricerca API stabile), docs/06, docs/07 (cataloghi con note di implementazione complete)
+- Protocollo di validazione: nessun cambio di codice (nessun file in src/, tests/, scripts/, prisma/ toccato); bun test 272/272 (811 asserzioni) e audit 237/237 PASS 0 scoperte CONFERMATI prima e dopo le modifiche documentali
+- Chiusura: commit documentale unico (docs/ + README + worklog), commit DB separato se il poller ha scritto (lezione I30), push origin main
+
+Stage Summary:
+- Passata di allineamento documentale COMPLETATA: 5 file aggiornati (docs/03, docs/04, docs/05, README, worklog), 4 verificati e intatti (docs/01, 02, 06, 07); nessun cambio di codice, suite e audit invariati (272/272, 237/237)
+- Scoperta più importante: i file dell'era 08/10 non erano TUTTI persi — kiosk (I45), version (I46) e campionatore (I49) sono tornati nell'albero con un commit UUID e vivono come orfani non cablati; la route Task 7 api/verifiche è inerte ma formalmente in contraddizione con ADR-13-R → decisione registrata come I86 ⬜
+- Lezione di analisi: la «verità» dei registri va ricontrollata anche contro l'albero commesso (git ls-files), non solo contro il working tree — i commit UUID di piattaforma possono reintroiettare codice dichiarato perso
+- Restano da fare in docs/04: I86 ⬜ (residui); fuori docs/04: I53 ⬜, V4 fresca con chiave reale, campagna campionatore I49+V8+I56 (richiedono la chiave API dell'utente)

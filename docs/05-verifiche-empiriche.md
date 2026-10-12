@@ -300,6 +300,7 @@ vanno poi riportati in `docs/04` §4 (stato della verifica), `docs/01` (semantic
 | 2026-10-04 | Catena automatica (Task 7) | reale (via ADR-13) | ⚠️ **Setup + avvio**: cattura temporanea della chiave nel proxy (`ADR-13`, `docs/04` §5) + watcher `watcher-quick.sh` collaudato con chiave finta; il browser dell'anteprima ha fornito la chiave reale e la campagna è partita (rapide V4/V5/V1 `--once`/V6 + lunghe V1/V2) | nessuno (log di sessione perduto, vedi sotto) |
 | 2026-10-04→05 | V1/V2 lunghe + controprova V2 sul confine delle 17:00 | reale | ⚠️ **IN CORSO AL MOMENTO DELLA PERDITA**: il riavvio del workspace del 06/10 (04:53 UTC) ha terminato i processi e cancellato log, file chiave ed esiti prima della scrittura su `esiti/`; nessun verdetto recuperabile dagli artefatti → le verifiche tornano «da rieseguire» (§9) | nessuno (perduto col riavvio) |
 | 2026-10-06 | Chiusura amministrativa (I30) | — | Meccanismo di cattura RIMOSSO dal proxy (ritiro ADR-13, proxy ritestato 200 e senza scritture); DB controllato (351 punti: 126 api 02/10 + 225 demo, integro); toolkit e watcher restano pronti per una nuova campagna | — |
+| 2026-10-09 | Campagna completa con chiave reale (V4 · V5 · V6 · V8 con campionatore I49) | reale | ⚠️ **Verdetti prodotti ma esiti PERSI col secondo rollback dell'11/10**: V4 = IDENTICI · V5 non applicabile (M Plan senza conteggi, esito valido) · V6 nessun rate limit (48/48 @10s) · V8 «blocchi fissi UTC» con offset 0 ms (115 campioni, transizione delle 12:00 Roma osservata, start pre-armata non riancorata dall'uso). Unica evidenza superstite: il transcript chat (non citabile come artefatto formale) → campagne fresche necessarie per esiti su file (`docs/04` §4); V4 ha comunque sbloccato I18 via accettazione documentale | nessuno (perso) |
 | 2026-10-11 | Verifica proxy I18 (curl, chiave finta) | finta | ✓ fallback NON innescato su errore di autenticazione: risposta `ok:true` con passthrough `status_code 1004` sul primario `token_plan` (messaggio «login fail…», coerente con l'evidenza del 02/10), nessun campo `fallback`; trigger validati nei test (156/156) e audit 126/126 | — |
 
 > Le righe «non valida» servono a validare il toolkit e a raccogliere indizi; il
@@ -319,3 +320,11 @@ rimuovere di nuovo il blocco ed eliminare il file chiave. La lezione appresa del
 06/10: far scrivere gli esiti **incrementalmente** (il toolkit li scrive a fine run:
 un riavvio a metà campagna li perde) e lanciare le verifiche lunghe in più spezzoni
 con `--durata` breve.
+
+**Nota sul campionatore passivo (I49, V8)**: la sezione §11 con la procedura di
+montaggio/smontaggio del campionatore (ADR-13-R2: una riga JSONL per risposta valida
+su `scripts/verifiche/campione-live.jsonl`, cap 12 MB, nessuna chiave mai scritta,
+rimozione a campagna chiusa) è stata **persa col rollback**. Il contratto completo
+sopravvive nell'header della lib `src/lib/campione.ts` (sopravvissuta non cablata —
+vedi `docs/04` §3 I49 e I86): una nuova campagna V8 richiede il re-cablaggio
+documentato nel proxy e la sua successiva rimozione, come da protocollo ADR-13/ADR-13-R.

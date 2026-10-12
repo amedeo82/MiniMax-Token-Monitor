@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68). Precedente: 2026-10-12 (§5.17 nav sezioni sempre visibile durante lo scrolling — I85: nav figlia diretta di `<main>` per dare corsa allo sticky + fix scrollspy morto con retry dell'osservazione fino al primo snapshot).
+> Ultimo aggiornamento: 2026-10-12 (**passata di allineamento documentale**: §3 mappa integrata con i file delle estensioni I50–I85 e nota sui residui non cablati, §4 settings `thresholds` I28 e snippet Prisma a 4 modelli, §7 layout riportato alla pagina attuale, §9 nota sui residui della catena di verifica, §11 roadmap aggiornata — I18/I52 implementate). Precedente: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68). Precedente: 2026-10-12 (§5.17 nav sezioni sempre visibile durante lo scrolling — I85: nav figlia diretta di `<main>` per dare corsa allo sticky + fix scrollspy morto con retry dell'osservazione fino al primo snapshot).
 
 ---
 
@@ -74,7 +74,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/cycles.ts` | I26 analisi di lungo periodo: `detectCycles()` (segmenta lo storico nei cicli di finestra: reset = salto ≥+15 punti che riporta a ≥85 — `RESET_JUMP`/`RESET_TARGET` — robusto contro sorgenti miste), `summarizeCycles()` (medie sui cicli completati), `weekdayConsumption()` (consumo per giorno Europe/Rome sul calo del minimo progressivo), `heatmapConsumption()` (I32: griglia 7×24 giorno × ora, stessa semantica drawdown, attribuzione alla cella del punto medio), `movingAverage()` (SMA) |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
 | `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
-| `prisma/schema.prisma` | Modello `UsagePoint` (t unique, interval, weekly, source, region) — storico server-side, nessun dato sensibile |
+| `prisma/schema.prisma` | 4 modelli SQLite — `UsagePoint` (storico general: t unique, interval, weekly, source, region), `UsageEventRecord` (archivio eventi), `DownsampledPoint` (I68: bucket orari derivati, ricostruibili con backfill), `ModelUsagePoint` (I82: storico per-modello, chiave model+win+t) — nessun dato sensibile |
 | `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano; **I18**: campagna di fetch `tryEndpoint()` riusabile (ritenti transitori I51) per primario e fallback `coding_plan/remains` — sul fallimento definitivo per endpoint scomparso tenta l'alternativo e risponde con `fallback {used, primaryEndpoint, reason}` (o `fallbackTried: true`), mai su auth né su errori transitori |
 | `src/app/api/history/route.ts` | I16 persistenza storico (SQLite/Prisma): POST (upsert per `t`, validazione input, pruning FIFO a 10.000 punti + cutoff 90 giorni), GET (`?limit=&since=`, ordinato per `t`), DELETE (svuota). La chiave API non transita mai qui |
 | `src/app/api/events/route.ts` | I27 persistenza registro eventi (SQLite/Prisma): POST (upsert per `id`, validazione tipo/finestra/messaggio, max 500 eventi/richiesta, pruning a 5.000 eventi + cutoff 180 giorni), GET (`?limit=&since=&kind=`, ordinato per `t`), DELETE (svuota). Nessuna chiave API transita qui |
@@ -86,6 +86,49 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/components/event-log.tsx` | `EventLog`: timeline del registro eventi raggruppata per giorno (Europe/Rome), badge per tipo, menu Esporta (CSV/JSON locale + archivio COMPLETO dal server I27), svuotamento locale+server |
 | `src/components/tech-panels.tsx` | `RawJsonPanel` (JSON grezzo con orario fetch), `TechInfo` (regione, modalità, endpoint, ora server dedotta, pannello "altri endpoint utili", avviso semantica `usage_count`) |
 | `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, region, refreshSeconds, demoMode, alertsEnabled, **thresholds** (AlertThresholds {h5,h24,weekly} — I28, matrice 3×2 nel tab «Avvisi» con migrazione legacy ADR-12), notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
+
+**Mappa integrata — file aggiunti dalle estensioni (ottobre 2026, I50–I85).** La tabella sopra
+descrive il nucleo originario (02/10) con le patch I18/I28/I31/I32; i file aggiunti dalle
+estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19, stato in
+`docs/04` §3):
+
+| File | Responsabilità (item) |
+|------|------------------------|
+| `src/lib/backoff.ts` | Backoff esponenziale con jitter puro, `parseRetryAfterMs`, `delayAfterFailure` (I51) |
+| `src/lib/rate.ts` | Serie ritmo %/h: gap >30 min e risalite → null, SMA-3 (I59) |
+| `src/lib/rate-anomalies.ts` | Z-score robusto Iglewicz–Hoaglin (mediana+MAD) sui ritmi GREZZI (I70) |
+| `src/lib/ewma.ts` | Proiezione esponenziale (mezza vita 2h) per il confronto A/B col verdetto lineare (I72) |
+| `src/lib/health.ts` | Episodi di errore (7 giorni Roma, guasto più frequente) (I62) |
+| `src/lib/sampling.ts` | Qualità del campionamento: copertura giornaliera DST-safe + gap >15 min (I71) |
+| `src/lib/interval.ts` | Presetti intervallo 6h/24h/3g/7g/30g/tutto, filtro client-side (I69) |
+| `src/lib/event-filters.ts` | Filtri registro eventi: kind multi-selezione, testo, periodo (I77) |
+| `src/lib/compact.ts` | Parsing modalità compatta `?compact=1` (I73) |
+| `src/lib/print.ts` | `stampaReportSettimanale()` — classe body + ripristino su afterprint (I75) |
+| `src/lib/ring-color.ts` | Colore continuo HSL, glow dinamico, count-up con reduced-motion (I65) |
+| `src/lib/tab-identity.ts` | Titolo/favicon dinamici con guard anti re-asserzione (I67) |
+| `src/lib/downsample.ts` | Bucket orari puri: `mergeHourBucket`, `serverHourlyToHistory` (I68) |
+| `src/lib/a11y.ts` | Descrizioni testuali heatmap/calendario/reset clock per screen reader (I79) |
+| `src/lib/model-history.ts` | Storico per-modello: localStorage FIFO 2.000, dedup 20s per-modello, forward-fill, merge (I82) |
+| `src/lib/server-model-history.ts` | Sync server per-modello su `ModelUsagePoint` (SQL raw parametrizzato) (I82) |
+| `src/components/analysis-panel.tsx` | «Analisi di lungo periodo»: Cicli / Per giorno / Per ora (heatmap I32) / Calendario (I58) / Distribuzione (I61) + spreco (I57), prevedibilità (I63), oggi vs media (I64); fonte per-modello (I82) |
+| `src/components/diagnostica-panel.tsx` | «Diagnostica»: ResetClock (I60), salute del monitor (I62), anomalie del ritmo (I70), qualità del campionamento (I71) |
+| `src/components/section-nav.tsx` | Nav sezioni sticky con scrollspy condiviso `useScrollSpySezioni` (retry fino al montaggio delle sezioni) (I66/I74/I85) |
+| `src/components/bottom-nav.tsx` | Barra navigazione fissa su mobile <md, stesso scrollspy (I74) |
+| `src/components/section-boundary.tsx` | Error boundary per sezione con skeleton e «Riprova» (I76) |
+| `src/components/theme-toggle.tsx` | Toggle sole/luna (tema chiaro/scuro/sistema, I78) |
+| `src/components/print-report.tsx` | Report settimanale stampabile (I75) |
+| `src/components/pwa-register.tsx` | Registrazione Service Worker + sync notifiche a tab chiuso (I52) |
+| `src/app/api/summary/route.ts` | `GET /api/summary` read-only senza chiave: KPI aggregati per widget esterni (I80) |
+| `src/app/api/history/models/route.ts` | GET/POST/DELETE storico per-modello su `ModelUsagePoint` (I82) |
+| `src/app/manifest.ts` + `public/sw.js` + `public/sw-shared.js` | PWA: manifest, icone, cache offline, notifiche a tab chiuso (I52) |
+| `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (237 verifiche + coverage check) (I55, esteso a ogni item) |
+| `tests/lib/` (21 file) + `tests/components/` (5 file) | Suite Bun: 272 test / 811 asserzioni (I50/I81 + ogni item) |
+
+> **Residui NON cablati** (tracciati in git ma orfani, fuori dalla mappa funzionale — analisi e
+> decisione in `docs/04` §3, item I86 ⬜): `src/lib/kiosk.ts` + `src/components/kiosk-bar.tsx`
+> (modalità kiosk/TV, I45), `src/lib/version.ts` (marcatore versione, I46),
+> `src/lib/campione.ts` (campionatore passivo, I49), `src/app/api/verifiche/route.ts`
+> (route temporanea del Task 7, inerte), `src/app/api/route.ts` (scaffold).
 
 ---
 
@@ -112,8 +155,9 @@ interface DashboardSettings {
   refreshSeconds: number;  // 0 = off
   demoMode: boolean;
   alertsEnabled: boolean;          // motore avvisi (banner + toast)
-  alertThresholdWarn: number;      // % residua, 0 = disattivata (default 25)
-  alertThresholdCrit: number;      // % residua, 0 = disattivata (default 10)
+  thresholds: AlertThresholds;     // soglie per TIPO di finestra {h5,h24,weekly} — I28/ADR-12:
+                                   // il tipo è risolto dalla durata reale start→end; le legacy
+                                   // globali (alertThresholdWarn/Crit) sono migrate al load
   notifyReset: boolean;            // avviso al reset finestre
   browserNotifications: boolean;   // Notification API (richiede permesso)
 }
@@ -146,6 +190,30 @@ model UsageEventRecord {
   createdAt DateTime @default(now())
   @@index([t])
   @@index([kind])
+}
+
+// I68 — bucket orario DERIVATO (downsampling, ricostruibile al 100% con backfill)
+model DownsampledPoint {
+  id        Int      @id @default(autoincrement())
+  hourStart DateTime           // inizio ora UTC coperta dal bucket
+  source    String   @default("api")
+  // min/max/somma/ultimo per interval e weekly + count + lastT
+  @@unique([hourStart, source])
+  @@index([hourStart])
+}
+
+// I82 — storico PER-MODELLO (formato LONG: una riga per finestra non null)
+model ModelUsagePoint {
+  id      Int    @id @default(autoincrement())
+  model   String             // "general" | "video" | …
+  win     String             // interval | weekly
+  t       DateTime           // epoch ms, parte della chiave di dedup
+  percent Float              // % residua osservata (0–100)
+  source  String @default("api")
+  region  String @default("eu")
+  @@unique([model, win, t])
+  @@index([model])
+  @@index([t])
 }
 ```
 
@@ -895,20 +963,33 @@ general-pivot).
 ## 7. UI — layout della dashboard
 
 ```
-┌ Header: titolo · stato dati (API/demo/importato) · ultimo aggiornamento (Roma) · refresh · settings ┐
-│ Alert errori (autenticazione/HTTP/rete) quando presenti                                            │
-│ Banner avvisi soglia (amber/rose) quando una finestra è sotto la propria soglia                       │
-├ MainWindows: riepilogo grande delle due finestre del general (QuotaRing + countdown + badge)       │
-├ HistoryChart: andamento % nel tempo (switch interval/weekly) + fasce cicli/reset (I32) + export CSV/JSON  │
-├ StatsPanel: consumo medio · esaurimento previsto · rilevamenti · VERDETTO esaurimento vs reset     │
-│             · PACE + QUOTA SPRECATA (I31: ritmo vs pareggio, residuo al reset, fermo tecnico)       │
-├ PanoramicTable: tutte le finestre del piano a confronto (modello × finestra, stato, reset)         │
-├ LongTermAnalysis: cicli · per giorno · heatmap ore × giorno (I32, fino a 10.000 punti server)     │
-├ Altri modelli: ModelCard dinamica per ogni voce ≠ general                                          │
-├ TechInfo: regione, modalità, endpoint usato, refresh, ora server dedotta, altri endpoint           │
-├ RawJsonPanel: JSON grezzo dell'ultima risposta                                                     │
-└ EventLog: registro eventi (reset, soglie, errori) raggruppato per giorno · export CSV · svuota     ┘
+┌ Header: titolo · stato dati (API/demo/importato) · ultimo aggiornamento (Roma) · refresh ·
+│         toggle tema (I78) · settings                                                       │
+│ Alert errori (autenticazione/HTTP/rete) · Banner avvisi soglia · regione aria-live (I79)   │
+├ NAV sezioni sticky sotto l'header (I66/I85, ≥md): Quota · Grafico · Ritmo · Panoramica ·   │
+│         Analisi · Diagnostica · Tecnici · Eventi — scrollspy con evidenza della sezione    │
+│         visibile; su <md barra fissa in basso (I74); nessuna delle due in compatta (I73)   │
+├ MainWindows: riepilogo grande delle due finestre del general (QuotaRing continui I65)      │
+├ HistoryChart: switch finestra + selettore MODELLO pivot (I82, se >1) + selettore           │
+│         Intervallo (I69) + media mobile SMA-10 + fasce cicli/reset (I32) + Esporta         │
+│         (locale/server/orario I68) + «Stampa report settimanale» (I75)                     │
+├ RateChart: ritmo di consumo %/h (I59, sotto il grafico)                                    │
+├ StatsPanel: consumo medio · esaurimento previsto · rilevamenti · VERDETTO vs reset (I23)   │
+│             · PACE + QUOTA SPRECATA (I31) · Proiezione EWMA A/B (I72)                      │
+├ PanoramicTable: tutte le finestre del piano a confronto (modello × finestra, stato, reset) │
+├ LongTermAnalysis (pivot I82): Cicli (+spreco I57, prevedibilità I63) · Per giorno           │
+│         (+oggi vs media I64) · Per ora (heatmap I32) · Calendario (I58) · Distribuzione (I61)│
+├ Altri modelli: ModelCard dinamica per ogni voce ≠ general                                  │
+├ Diagnostica: orologio dei reset (I60) · salute del monitor (I62) · anomalie del ritmo (I70)│
+│         · qualità del campionamento (I71) — SEMPRE sullo storico completo di general       │
+├ TechInfo: regione, modalità, endpoint (primario/fallback I18), refresh, ora server         │
+├ RawJsonPanel: JSON grezzo dell'ultima risposta (resta scuro anche in tema chiaro, I78)     │
+└ EventLog: registro eventi (reset, soglie, errori) con filtri kind/testo/periodo (I77)      ┘
 ```
+
+Le 8 sezioni sono ancorate (`.mm-anchor` + `scroll-margin-top` da `--nav-offset`) e avvolte in
+error boundary indipendenti (I76). La modalità compatta (I73) mostra solo header ridotto +
+MainWindows + RateChart + selettore intervallo.
 
 Principi: percentuali come metrica primaria; ogni numero temporale esplicitamente
 etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
@@ -942,6 +1023,14 @@ etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
   delegare le V1–V6 all'agente (ADR-13); il blocco è stato rimosso e il meccanismo
   chiuso (ADR-13-R): il proxy non scrive più nulla su disco. La procedura per
   ri-armarla, se mai necessaria, è documentata in `docs/05` §10.
+- **Residui noti della catena di verifica (registrati come I86 in `docs/04` §3)**: la
+  route temporanea `src/app/api/verifiche/route.ts` del Task 7 è ancora nell'albero
+  (ri-introdotta da un commit UUID di piattaforma) ma è INERTE — legge
+  `scripts/verifiche/.chiave-sessione`, che non esiste più, senza la quale rifiuta di
+  avviare qualsiasi processo — e non espone la chiave nelle risposte. La sua rimozione
+  (o eventuale riattivazione controllata SOLO con il protocollo ADR-13/ADR-13-R) è
+  tracciata in `docs/04` §3 I86. Anche `src/lib/campione.ts` (campionatore I49) è
+  presente ma NON cablato nel proxy: nessuna scrittura su disco avviene oggi.
 
 ---
 
@@ -978,15 +1067,16 @@ con i calcoli manuali, pannello endpoint, console pulita.
 1. ~~**Confronto tra finestre consecutive**~~ — **implementato (I26)**: cicli di finestra
    5h e settimanali rilevati dai salti di reset nello storico, con durata/consumo/ritmo
    medi e tabella comparativa (`lib/cycles.ts` + `analysis-panel.tsx`).
-2. **Fallback automatico** su `coding_plan/remains` se `token_plan/remains` fallisse (V4 in `docs/04`).
-   *Toolkit verifiche pronto (I29): `scripts/verifiche/verifica.mjs v4` con runbook `docs/05` §6;
-   evidenza parziale senza chiave → entrambi gli endpoint HTTP 200 + 1004 con messaggi di auth diversi
-   (dettagli in `docs/01` §4). La campagna con chiave reale del 04–05/10 è stata interrotta dal
-   riavvio del workspace (I30) e i verdetti non sono recuperabili: **V4 resta l'unico sblocco di I18**
-   (vedi nota in `docs/04` §4 e piano `docs/05` §9).*
-3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe.
-4. **PWA/offline**: installazione e ultima snapshot cache; notifiche soglia anche a tab
-   chiuso via Service Worker (oggi: banner + toast + Notification API solo a tab aperto).
+2. ~~**Fallback automatico** su `coding_plan/remains`~~ — **implementato (I18, 11/10)**:
+   trigger su 404/405/410/501 o risposta non-JSON, MAI su auth (401/403/1004) né su
+   rete/timeout; evento tecnico solo sulla transizione primario↔fallback. Sbloccato
+   dall'accettazione documentale del verdetto V4 = IDENTICI del 09/10 (`docs/04` §4);
+   una V4 fresca con chiave reale può solo CONFERMARE l'equivalenza (runbook `docs/05` §6).
+3. **Multi-regione simultanea**: query parallela eu+cn per chi ha chiavi in entrambe
+   (registrata come **I53 ⬜** in `docs/04` §3).
+4. ~~**PWA/offline**~~ — **implementato (I52, 11/10)**: manifest + icone + shell e ultimo
+   snapshot in cache offline; notifiche soglia anche a tab chiuso via Service Worker con
+   chiave in IndexedDB (ADR-14). La modalità compatta per schermi secondari/widget è I73.
 5. ~~**Statistiche aggregate di lungo periodo**~~ — **implementato (I26)**: consumo medio
    per giorno della settimana (Europe/Rome, drawdown del minimo progressivo) e media
    mobile (SMA-10) attivabile sul grafico principale.
