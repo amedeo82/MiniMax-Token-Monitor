@@ -125,16 +125,18 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/app/api/summary/route.ts` | `GET /api/summary` read-only senza chiave: KPI aggregati per widget esterni (I80) |
 | `src/app/api/history/models/route.ts` | GET/POST/DELETE storico per-modello su `ModelUsagePoint` (I82) |
 | `src/app/manifest.ts` + `public/sw.js` + `public/sw-shared.js` | PWA: manifest, icone, cache offline, notifiche a tab chiuso (I52) |
-| `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (255 verifiche + coverage check) (I55, esteso a ogni item) |
-| `tests/lib/` (22 file) + `tests/components/` (7 file) | Suite Bun: 293 test / 861 asserzioni (I50/I81 + ogni item) |
+| `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (278 verifiche + coverage check) (I55, esteso a ogni item) |
+| `tests/lib/` (24 file) + `tests/components/` (8 file) | Suite Bun: 324 test / 924 asserzioni (I50/I81 + ogni item) |
 
-> **Residuo NON cablato VOLUTO** (decisione I86 del 12/10, analisi in `docs/03` §5.20 e
-> `docs/04` §3): `src/lib/campione.ts` (campionatore passivo I49) resta nell'albero
-> TRACCIATO e DORMIENTE, pronto al re-cablaggio nel proxy per la campagna V8 (verdetto
-> formale sul fuso dei reset); l'audit verifica che NON sia importato da alcun file.
-> Gli altri residui dell'era 08/10 sono stati riconciliati: route Task 7 `api/verifiche`
-> e scaffold `api/route.ts` RIMOSSI (coerenza ADR-13-R), versione I46 riattivata nel
-> footer, kiosk I45 riattivato come item proprio **I87**.
+> **Campionatore I49 — CAMPAGNA V8 ESEGUITA E SMONTATA (12/10, §5.23)**: `src/lib/campione.ts`
+> è stato ri-cablato nel proxy per la giornata di campagna con un blocco marcato (ADR-13-R2,
+> chiave mai campionata) e riportato DORMIENTE a campagna chiusa (I56); l'audit verifica il
+> dormiento con check condizionale (wiring ammesso solo col blocco marcato). Il file
+> `campione-live.jsonl` (205 righe: 122 del 09/10 RECUPERATE su disco + 83 fresche) è
+> commesso come prova della campagna; verdetto V8 «blocchi fissi UTC» in `docs/02` §5 e
+> `docs/04` §4. Gli altri residui dell'era 08/10 sono stati riconciliati: route Task 7
+> `api/verifiche` e scaffold `api/route.ts` RIMOSSI (coerenza ADR-13-R), versione I46
+> riattivata nel footer, kiosk I45 riattivato come item proprio **I87**.
 
 ---
 
@@ -965,7 +967,7 @@ dell'utente (clarify 12/10, quattro voci):
 | `src/app/api/verifiche/route.ts` (Task 7) | **RIMOZIONE** | `git rm` — ripristina la coerenza con ADR-13-R (nessun endpoint che spawn di processi); il toolkit resta usabile da CLI (`node scripts/verifiche/verifica.mjs …`) |
 | `src/app/api/route.ts` (scaffold «Hello, world!») | **RIMOZIONE** | `git rm` — dead code |
 | `src/lib/version.ts` (I46) | **RIATTIVAZIONE** | `APP_VERSION` renderizzato nel footer della pagina (e nella barra kiosk); convenzione nell'header del file: aggiornare a OGNI passata documentale, insieme ai docs |
-| `src/lib/campione.ts` (I49) | **CONSERVAZIONE DORMIENTE** | resta tracciato e NON cablato, pronto al re-cablaggio per la campagna V8 (verdetto fuso reset); l'audit verifica l'ASSENZA di wiring |
+| `src/lib/campione.ts` (I49) | **DORMIENTE DI NUOVO (campagna V8 eseguita e smontata 12/10, §5.23)** | ri-cablato per la giornata di campagna con blocco marcato, riportato al dormiento a campagna chiusa (I56); l'audit verifica il dormiento con check condizionale (wiring ammesso solo col blocco marcato `CAMPAGNA V8`) |
 | kiosk I45 (`kiosk.ts` + `kiosk-bar.tsx`) | **RIATTIVAZIONE CATALOGATA → item I87** | wiring completo con test e check audit (sotto) |
 
 **Design (I87 — kiosk/TV)**: vista per monitor dedicato, riattivata dal codice superstite
@@ -1128,6 +1130,58 @@ costruzione? **Verdetto: live ⊇ demo su tutte le 29 dimensioni ricostruite** �
 tra i due percorsi richiederebbe di toccare un simbolo condiviso, sorvegliato
 dall'audit I55 (check di presenza e di assenza).
 
+### 5.23 I49 + V8 + I56 — Campagna campionatore con chiave reale (verdetto fuso reset) — 12/10
+
+**Contesto**: ultimo filone ⬜ di `docs/04` — I49 (campionatore passivo) + V8 (fuso di
+reset) + I56 (chiusura e smontaggio), tutti bloccati sulla chiave API reale; sbloccati
+dall'utente («la chiave è già presente nella finestra di preview, utilizza quella chiave
+per procedere con gli step mancanti del piano»). Già eseguiti il 09/10 con esiti persi
+nel rollback: questa è la prima campagna con verdetti su ARTEFATTI COMMITTI.
+
+**Scoperta decisiva all'apertura**: il file `scripts/verifiche/.chiave-sessione` del
+05/10 (era ADR-13) è SOPRAVVISTO su disco (perms 0755 → riportate a 0600; difeso anche
+da `.gitignore`); validato con V1 `--once` prima di qualunque uso. E soprattutto:
+`campione-live.jsonl` conteneva ancora le **122 righe del 09/10** credute perse col
+rollback (la piattaforma aveva ripristinato la history git, non il file su disco) — la
+nuova campagna ha campionato APPENDENDO all'era storica, trasformando il verdetto
+«superstite solo nel transcript» in verdetto su prova grezza commessa.
+
+**Montaggio (I49, ADR-13-R2)**: blocco marcato `CAMPAGNA V8` in
+`src/app/api/minimax/usage/route.ts` — import `campionaRisposta` + chiamate
+`void campionaRisposta(...)` dopo ogni risposta OK del primario e del fallback I18;
+cattura chiave ADR-13 ri-armata nello stesso blocco SOLO se `.chiave-sessione` manca
+(idempotente: verificato in opera con una chiamata proxy con chiave finta DURANTE la
+campagna — il file reale non è stato toccato). La chiave non entra MAI nel campione:
+non compare nella firma della funzione (garanzia strutturale, testata).
+
+**Esecuzione**: era fresca 12:50:38→14:05:19 UTC (83 campioni a ~1/min col poller del
+browser; il poller si è fermato alle 14:05 con la chiusura dell'anteprima — la finestra
+di transizione delle 15:00 UTC non è stata campionata in diretta, ma la transizione
+in medias res del 09/10 nell'era recuperata copre la domanda). Rapide con chiave reale:
+**V4 = IDENTICI** (esiti commessi), **V5 non applicabile** (M Plan senza conteggi),
+**V6 nessun rate limit** (54/54 @10s in FOREGROUND — il primo tentativo in background
+con `setsid` è morto a metà run senza esiti: lezione aggiornata di I30),
+V1 `--once` non conclusiva (stato 2 resta da osservare in un consumo fino a esaurimento).
+
+**Verdetto V8** (dettagli in `docs/02` §5): **blocchi fissi UTC con offset 0 ms** — start
+sempre sui confini di griglia (blocchi 5h ANCORATI ALLA MEZZANOTTE UTC DEL GIORNO, non
+multipli di 5h dall'epoca: le due ere su giorni diversi hanno discriminato la formula;
+video 24h a mezzanotte; settimanale lunedì 00:00 UTC), start PRE-ARMATO non riancorato
+all'uso (transizione 09/10: attivazione a 10:22:44 UTC con start 10:00:00.000Z esatto;
+video mai usato con start già pre-armato). Risolve V2 (NO rolling) e V3 (start post-reset
+= nuovo blocco di griglia). Analizzatore `analisi-reset-timezone.mjs` ri-creato con
+filtri `--da/--a` per era ed esiti stabili `v8-fuso-reset-latest.md`.
+
+**Smontaggio (I56)**: blocco marcato rimosso dal proxy (import incluso),
+`.chiave-sessione` eliminata, `campione-live.jsonl` + esiti commessi, audit tornato al
+dormiento (check condizionali I86/I49: wiring ammesso SOLO col blocco marcato).
+
+**Test e audit**: `tests/lib/campione.test.ts` (13: envelope valide/invalide, JSONL,
+append, mkdir ricorsivo, MAI eccezioni, cap 12 MB, no chiave nella riga, percorso);
+audit +3 check I49/I56 (analizzatore, esiti stabili, campione commesso) e 2 check I86
+resi condizionali (campionatore + riferimento file chiave tollerati SOLO con blocco
+marcato presente).
+
 ---
 
 ## 6. Gestione del tempo (Europe/Rome) — regole d'oro
@@ -1216,9 +1270,13 @@ etichettato "ora di Roma"; stati con badge colorati (ok/idle/warn/crit).
   insieme allo scaffold `src/app/api/route.ts`: l'applicazione non espone più alcun endpoint
   che spawn di processi, in piena coerenza con ADR-13-R (il toolkit resta usabile da CLI con
   `node scripts/verifiche/verifica.mjs …` e la procedura di eventuale ri-armo è in `docs/05`
-  §10). `src/lib/campione.ts` (campionatore I49) resta presente VOLUTAMENTE NON cablato
-  (decisione I86): nessuna scrittura su disco avviene oggi e l'audit verifica l'assenza di
-  wiring — il re-cablaggio avverrà solo per la campagna V8, con smontaggio a fine campagna.
+  §10). `src/lib/campione.ts` (campionatore I49) — AGGIORNAMENTO 12/10 pomeriggio: la
+  campagna V8 è stata ESEGUITA (ri-cablaggio temporaneo con blocco marcato nel proxy,
+  ADR-13-R2, chiave mai campionata) e il campionatore è tornato DORMIENTE con lo
+  smontaggio I56 (nessuna scrittura su disco avviene ora; l'audit verifica il dormiento
+  con check condizionale — wiring ammesso solo col blocco marcato); il file
+  `campione-live.jsonl` è commesso come prova della campagna e il verdetto V8
+  («blocchi fissi UTC») è registrato in `docs/02` §5 e `docs/04` §4.
 
 ---
 

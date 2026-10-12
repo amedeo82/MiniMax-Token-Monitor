@@ -1,0 +1,75 @@
+{
+  "id": "V1",
+  "domanda": "Il codice di stato 2 significa «esaurita»?",
+  "avvio": "12/10/26, 14:55:38",
+  "fine": "12/10/26, 14:56:08",
+  "config": {
+    "comando": "v1",
+    "regione": "eu",
+    "chiave": "—",
+    "intervalloS": 30,
+    "durataMin": 0.02,
+    "endpoint": "https://www.minimax.io/v1/token_plan/remains",
+    "modello": null
+  },
+  "campioni": [
+    {
+      "t": 1791809738533,
+      "tRoma": "12/10/26, 14:55:38",
+      "http": 200,
+      "ok": true,
+      "ms": 324,
+      "errore": null,
+      "statusCode": 0,
+      "statusMsg": "success",
+      "piano": null,
+      "finestre": {
+        "general": {
+          "interval": {
+            "pct": 74,
+            "status": "1",
+            "start": 1791799200000,
+            "end": 1791817200000,
+            "remainsMs": 7461271,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 97,
+            "status": "1",
+            "start": 1791763200000,
+            "end": 1792368000000,
+            "remainsMs": 558261271,
+            "usage": 0,
+            "total": 0
+          }
+        },
+        "video": {
+          "interval": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791763200000,
+            "end": 1791849600000,
+            "remainsMs": 39861271,
+            "usage": 0,
+            "total": 0
+          },
+          "weekly": {
+            "pct": 100,
+            "status": "3",
+            "start": 1791763200000,
+            "end": 1792368000000,
+            "remainsMs": 558261271,
+            "usage": 0,
+            "total": 0
+          }
+        }
+      }
+    }
+  ],
+  "transizioni": [],
+  "esito": {
+    "verdetto": "NON CONCLUSIVA — stato 2 mai osservato: serve consumare la finestra fino a esaurimento durante la verifica.",
+    "note": []
+  }
+}

@@ -187,6 +187,38 @@ Giorni della settimana verificati: 28/09/2026 = **lunedì**, 02/10/2026 = **vene
    at 15:00"* — l'esempio della documentazione coincide esattamente col nostro campione.
    Lo start della finestra = momento del **primo utilizzo dopo la scadenza precedente**.
 
+### Verdetto V8 (12/10, campagna campionatore I49/I56): il reset NON è «rolling» — sono BLOCCHI FISSI UTC
+
+L'ipotesi «rolling ancorato al primo utilizzo» del punto 3 (naturale sulla scorta delle
+docs e del campione del 02/10, dove start 10:00 UTC coincideva con l'esempio) è stata
+**falsificata** dalla campagna V8 con chiave reale (campionatore passivo ADR-13-R2,
+205 campioni su due ere — 122 del 09/10 recuperati su disco + 83 freschi del 12/10;
+verdetto formale su artefatti commessi, `docs/04` §4):
+
+1. **Gli start osservati giacciono SEMPRE sui confini di griglia con offset 0 ms**:
+   blocchi 5h **ancorati alla mezzanotte UTC del giorno** (confini a 00:00, 05:00,
+   10:00, 15:00, 20:00 UTC di ciascun giorno — NON multipli di 5h dall'epoca: 24h non è
+   multiplo di 5h e i confini slitterebbero di giorno in giorno; le due ere su giorni
+   diversi hanno discriminato la formula). Finestra video 24h: mezzanotte UTC esatta
+   (`2026-10-12T00:00:00.000Z`, offset 0 ms). Settimanale: lunedì 00:00 UTC esatto
+   (conferma del punto 1 sopra).
+2. **Lo start è PRE-ARMATO, non riancorato all'uso**: il 09/10 il blocco delle 10:00 UTC
+   si è attivato a 10:22:44 UTC (primo rilevamento col nuovo start, ~22 min dopo il
+   confine — probabilmente al primo utilizzo reale dopo il confine) ma il suo
+   `start_time` è `10:00:00.000Z` ESATTO, non 10:22:44: l'ancoraggio è il confine di
+   griglia, mai l'istante d'uso. Nell'era fresca il video (mai usato, stato 3, 100%)
+   mostra già `start_time = 2026-10-12T00:00:00.000Z`: la finestra è pre-armata al
+   blocco corrente **senza alcun utilizzo**.
+3. Conseguenze pratiche: il countdown al reset della finestra 5h converge sul confine
+   di griglia (prevedibile a prescindere dall'uso); la finestra NON si «riparte» a ogni
+   primo uso; il comportamento osservato resta coerente con l'esempio delle docs quando
+   il primo uso coincide col confine (caso del 02/10) — da qui l'ambiguità risolta solo
+   dall'osservazione a cavallo del confine.
+
+Analizzatore riproducibile: `scripts/verifiche/analisi-reset-timezone.mjs` (esiti stabili
+`esiti/v8-fuso-reset-latest.md`; procedura in `docs/05` §11). Risponde anche a V2 (rolling?
+NO) e V3 (start dopo reset senza uso = start del nuovo blocco di griglia, pre-armata).
+
 ---
 
 ## 6. Lettura del campione reale (cosa stava succedendo)

@@ -1,0 +1,72 @@
+# V8 — Analisi del fuso di reset delle finestre (campione reale)
+
+- **Input:** `/home/z/my-project/scripts/verifiche/campione-live.jsonl` (205 righe JSONL, da `2026-10-09T07:59:15.676Z` a `2026-10-12T14:05:19.918Z`)
+- **Generato:** 12/10/2026, 16:23:21 (Europe/Rome)
+- **Sicurezza ADR-13-R2:** nessun materiale chiave nel campione ✓
+- **Tolleranza richiesta:** 0 ms (verdetto storico «offset 0 ms»)
+
+## Verdetto: **BLOCCHI FISSI UTC**
+
+Sintesi: 4 serie modello/finestra · 820 osservazioni · 5 transizioni osservate (5 con nuovo start sul confine di griglia) · 0 serie non allineate
+
+### general/interval — griglia: blocchi fissi 5h UTC
+
+Campioni: 205 · start distinti: 3 · tutti allineati: sì
+
+| start (UTC) | start (Roma) | campioni | griglia | offset | allineato |
+|-------------|--------------|----------|---------|--------|-----------|
+| `2026-10-09T05:00:00.000Z` | 09/10/2026, 07:00:00 | 103 | blocchi fissi 5h UTC | 0 ms | sì |
+| `2026-10-09T10:00:00.000Z` | 09/10/2026, 12:00:00 | 19 | blocchi fissi 5h UTC | 0 ms | sì |
+| `2026-10-12T10:00:00.000Z` | 12/10/2026, 12:00:00 | 83 | blocchi fissi 5h UTC | 0 ms | sì |
+
+Transizioni:
+- `2026-10-09T10:22:44.623Z` → nuovo start `2026-10-09T10:00:00.000Z` (09/10/2026, 12:00:00 Roma)
+- `2026-10-12T12:50:38.101Z` → nuovo start `2026-10-12T10:00:00.000Z` (12/10/2026, 12:00:00 Roma)
+
+### general/weekly — griglia: settimanale lunedì 00:00 UTC
+
+Campioni: 205 · start distinti: 2 · tutti allineati: sì
+
+| start (UTC) | start (Roma) | campioni | griglia | offset | allineato |
+|-------------|--------------|----------|---------|--------|-----------|
+| `2026-10-05T00:00:00.000Z` | 05/10/2026, 02:00:00 | 122 | settimanale lunedì 00:00 UTC | 0 ms | sì |
+| `2026-10-12T00:00:00.000Z` | 12/10/2026, 02:00:00 | 83 | settimanale lunedì 00:00 UTC | 0 ms | sì |
+
+Transizioni:
+- `2026-10-12T12:50:38.101Z` → nuovo start `2026-10-12T00:00:00.000Z` (12/10/2026, 02:00:00 Roma)
+
+### video/interval — griglia: blocchi fissi 24h UTC (mezzanotte)
+
+Campioni: 205 · start distinti: 2 · tutti allineati: sì
+
+| start (UTC) | start (Roma) | campioni | griglia | offset | allineato |
+|-------------|--------------|----------|---------|--------|-----------|
+| `2026-10-09T00:00:00.000Z` | 09/10/2026, 02:00:00 | 122 | blocchi fissi 24h UTC (mezzanotte) | 0 ms | sì |
+| `2026-10-12T00:00:00.000Z` | 12/10/2026, 02:00:00 | 83 | blocchi fissi 24h UTC (mezzanotte) | 0 ms | sì |
+
+Transizioni:
+- `2026-10-12T12:50:38.101Z` → nuovo start `2026-10-12T00:00:00.000Z` (12/10/2026, 02:00:00 Roma)
+
+### video/weekly — griglia: settimanale lunedì 00:00 UTC
+
+Campioni: 205 · start distinti: 2 · tutti allineati: sì
+
+| start (UTC) | start (Roma) | campioni | griglia | offset | allineato |
+|-------------|--------------|----------|---------|--------|-----------|
+| `2026-10-05T00:00:00.000Z` | 05/10/2026, 02:00:00 | 122 | settimanale lunedì 00:00 UTC | 0 ms | sì |
+| `2026-10-12T00:00:00.000Z` | 12/10/2026, 02:00:00 | 83 | settimanale lunedì 00:00 UTC | 0 ms | sì |
+
+Transizioni:
+- `2026-10-12T12:50:38.101Z` → nuovo start `2026-10-12T00:00:00.000Z` (12/10/2026, 02:00:00 Roma)
+
+## Lettura delle transizioni (blocco fisso vs rolling)
+
+| cattura (UTC) | serie | nuovo start | nuovo start (Roma) | sulla griglia | start ≠ istante d'uso |
+|---------------|-------|-------------|--------------------|---------------|-----------------------|
+| `2026-10-09T10:22:44.623Z` | general/interval | `2026-10-09T10:00:00.000Z` | 09/10/2026, 12:00:00 | sì | no |
+| `2026-10-12T12:50:38.101Z` | general/interval | `2026-10-12T10:00:00.000Z` | 12/10/2026, 12:00:00 | sì | no |
+| `2026-10-12T12:50:38.101Z` | general/weekly | `2026-10-12T00:00:00.000Z` | 12/10/2026, 02:00:00 | sì | no |
+| `2026-10-12T12:50:38.101Z` | video/interval | `2026-10-12T00:00:00.000Z` | 12/10/2026, 02:00:00 | sì | no |
+| `2026-10-12T12:50:38.101Z` | video/weekly | `2026-10-12T00:00:00.000Z` | 12/10/2026, 02:00:00 | sì | no |
+
+Se il nuovo start coincide con il confine di griglia e NON con l'istante della prima richiesta dopo il confine, la finestra è un **blocco fisso pre-armato** (non «rolling» ancorato all'uso): risposta a V2 e V3 (docs/04 §4).

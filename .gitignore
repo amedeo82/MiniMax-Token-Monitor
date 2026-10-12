@@ -55,3 +55,7 @@ server.log
 # output strumenti sessione (non deliverable)
 tool-results/
 .debris-pre-rollback/
+
+# ADR-13/13-R2 — file chiave di sessione (MAI commettere)
+scripts/verifiche/.chiave-sessione
+scripts/verifiche/sessione-*.log

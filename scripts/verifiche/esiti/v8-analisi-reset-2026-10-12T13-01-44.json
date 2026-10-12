@@ -1,0 +1,271 @@
+{
+  "verifica": "V8",
+  "titolo": "Analisi del fuso di reset delle finestre (campionatore passivo I49)",
+  "input": "/home/z/my-project/scripts/verifiche/campione-live.jsonl",
+  "campioni": 136,
+  "primaTs": "2026-10-09T07:59:15.676Z",
+  "ultimaTs": "2026-10-12T13:00:55.081Z",
+  "sicurezza": [],
+  "esito": "BLOCCHI FISSI UTC",
+  "serie": [
+    {
+      "chiave": "general/interval",
+      "modello": "general",
+      "finestra": "interval",
+      "griglia": "blocchi fissi 5h UTC",
+      "durataMs": 18000000,
+      "campioni": 136,
+      "startDistinti": 3,
+      "tuttiAllineati": true,
+      "starts": [
+        {
+          "start": 1791522000000,
+          "iso": "2026-10-09T05:00:00.000Z",
+          "roma": "09/10/2026, 07:00:00",
+          "primoTs": "2026-10-09T07:59:15.676Z",
+          "ultimoTs": "2026-10-09T09:53:15.410Z",
+          "n": 103,
+          "griglia": "blocchi fissi 5h UTC",
+          "offsetMs": 0,
+          "allineato": true
+        },
+        {
+          "start": 1791540000000,
+          "iso": "2026-10-09T10:00:00.000Z",
+          "roma": "09/10/2026, 12:00:00",
+          "primoTs": "2026-10-09T10:22:44.623Z",
+          "ultimoTs": "2026-10-09T10:39:15.689Z",
+          "n": 19,
+          "griglia": "blocchi fissi 5h UTC",
+          "offsetMs": 0,
+          "allineato": true
+        },
+        {
+          "start": 1791799200000,
+          "iso": "2026-10-12T10:00:00.000Z",
+          "roma": "12/10/2026, 12:00:00",
+          "primoTs": "2026-10-12T12:50:38.101Z",
+          "ultimoTs": "2026-10-12T13:00:55.081Z",
+          "n": 14,
+          "griglia": "blocchi fissi 5h UTC",
+          "offsetMs": 0,
+          "allineato": true
+        }
+      ],
+      "transizioni": [
+        {
+          "ts": "2026-10-09T10:22:44.623Z",
+          "da": "2026-10-09T05:00:00.000Z",
+          "a": "2026-10-09T10:00:00.000Z",
+          "aRoma": "09/10/2026, 12:00:00"
+        },
+        {
+          "ts": "2026-10-12T12:50:38.101Z",
+          "da": "2026-10-09T10:00:00.000Z",
+          "a": "2026-10-12T10:00:00.000Z",
+          "aRoma": "12/10/2026, 12:00:00"
+        }
+      ]
+    },
+    {
+      "chiave": "general/weekly",
+      "modello": "general",
+      "finestra": "weekly",
+      "griglia": "settimanale lunedì 00:00 UTC",
+      "durataMs": 604800000,
+      "campioni": 136,
+      "startDistinti": 2,
+      "tuttiAllineati": true,
+      "starts": [
+        {
+          "start": 1791158400000,
+          "iso": "2026-10-05T00:00:00.000Z",
+          "roma": "05/10/2026, 02:00:00",
+          "primoTs": "2026-10-09T07:59:15.676Z",
+          "ultimoTs": "2026-10-09T10:39:15.689Z",
+          "n": 122,
+          "griglia": "settimanale lunedì 00:00 UTC",
+          "offsetMs": 0,
+          "allineato": true
+        },
+        {
+          "start": 1791763200000,
+          "iso": "2026-10-12T00:00:00.000Z",
+          "roma": "12/10/2026, 02:00:00",
+          "primoTs": "2026-10-12T12:50:38.101Z",
+          "ultimoTs": "2026-10-12T13:00:55.081Z",
+          "n": 14,
+          "griglia": "settimanale lunedì 00:00 UTC",
+          "offsetMs": 0,
+          "allineato": true
+        }
+      ],
+      "transizioni": [
+        {
+          "ts": "2026-10-12T12:50:38.101Z",
+          "da": "2026-10-05T00:00:00.000Z",
+          "a": "2026-10-12T00:00:00.000Z",
+          "aRoma": "12/10/2026, 02:00:00"
+        }
+      ]
+    },
+    {
+      "chiave": "video/interval",
+      "modello": "video",
+      "finestra": "interval",
+      "griglia": "blocchi fissi 24h UTC (mezzanotte)",
+      "durataMs": 86400000,
+      "campioni": 136,
+      "startDistinti": 2,
+      "tuttiAllineati": true,
+      "starts": [
+        {
+          "start": 1791504000000,
+          "iso": "2026-10-09T00:00:00.000Z",
+          "roma": "09/10/2026, 02:00:00",
+          "primoTs": "2026-10-09T07:59:15.676Z",
+          "ultimoTs": "2026-10-09T10:39:15.689Z",
+          "n": 122,
+          "griglia": "blocchi fissi 24h UTC (mezzanotte)",
+          "offsetMs": 0,
+          "allineato": true
+        },
+        {
+          "start": 1791763200000,
+          "iso": "2026-10-12T00:00:00.000Z",
+          "roma": "12/10/2026, 02:00:00",
+          "primoTs": "2026-10-12T12:50:38.101Z",
+          "ultimoTs": "2026-10-12T13:00:55.081Z",
+          "n": 14,
+          "griglia": "blocchi fissi 24h UTC (mezzanotte)",
+          "offsetMs": 0,
+          "allineato": true
+        }
+      ],
+      "transizioni": [
+        {
+          "ts": "2026-10-12T12:50:38.101Z",
+          "da": "2026-10-09T00:00:00.000Z",
+          "a": "2026-10-12T00:00:00.000Z",
+          "aRoma": "12/10/2026, 02:00:00"
+        }
+      ]
+    },
+    {
+      "chiave": "video/weekly",
+      "modello": "video",
+      "finestra": "weekly",
+      "griglia": "settimanale lunedì 00:00 UTC",
+      "durataMs": 604800000,
+      "campioni": 136,
+      "startDistinti": 2,
+      "tuttiAllineati": true,
+      "starts": [
+        {
+          "start": 1791158400000,
+          "iso": "2026-10-05T00:00:00.000Z",
+          "roma": "05/10/2026, 02:00:00",
+          "primoTs": "2026-10-09T07:59:15.676Z",
+          "ultimoTs": "2026-10-09T10:39:15.689Z",
+          "n": 122,
+          "griglia": "settimanale lunedì 00:00 UTC",
+          "offsetMs": 0,
+          "allineato": true
+        },
+        {
+          "start": 1791763200000,
+          "iso": "2026-10-12T00:00:00.000Z",
+          "roma": "12/10/2026, 02:00:00",
+          "primoTs": "2026-10-12T12:50:38.101Z",
+          "ultimoTs": "2026-10-12T13:00:55.081Z",
+          "n": 14,
+          "griglia": "settimanale lunedì 00:00 UTC",
+          "offsetMs": 0,
+          "allineato": true
+        }
+      ],
+      "transizioni": [
+        {
+          "ts": "2026-10-12T12:50:38.101Z",
+          "da": "2026-10-05T00:00:00.000Z",
+          "a": "2026-10-12T00:00:00.000Z",
+          "aRoma": "12/10/2026, 02:00:00"
+        }
+      ]
+    }
+  ],
+  "transizioni": [
+    {
+      "chiave": "general/interval",
+      "ts": "2026-10-09T10:22:44.623Z",
+      "da": "2026-10-09T05:00:00.000Z",
+      "a": "2026-10-09T10:00:00.000Z",
+      "aRoma": "09/10/2026, 12:00:00",
+      "nuovoStartSullaGriglia": true,
+      "usoInclusoNelBlocco": false
+    },
+    {
+      "chiave": "general/interval",
+      "ts": "2026-10-12T12:50:38.101Z",
+      "da": "2026-10-09T10:00:00.000Z",
+      "a": "2026-10-12T10:00:00.000Z",
+      "aRoma": "12/10/2026, 12:00:00",
+      "nuovoStartSullaGriglia": true,
+      "usoInclusoNelBlocco": false
+    },
+    {
+      "chiave": "general/weekly",
+      "ts": "2026-10-12T12:50:38.101Z",
+      "da": "2026-10-05T00:00:00.000Z",
+      "a": "2026-10-12T00:00:00.000Z",
+      "aRoma": "12/10/2026, 02:00:00",
+      "nuovoStartSullaGriglia": true,
+      "usoInclusoNelBlocco": false
+    },
+    {
+      "chiave": "video/interval",
+      "ts": "2026-10-12T12:50:38.101Z",
+      "da": "2026-10-09T00:00:00.000Z",
+      "a": "2026-10-12T00:00:00.000Z",
+      "aRoma": "12/10/2026, 02:00:00",
+      "nuovoStartSullaGriglia": true,
+      "usoInclusoNelBlocco": false
+    },
+    {
+      "chiave": "video/weekly",
+      "ts": "2026-10-12T12:50:38.101Z",
+      "da": "2026-10-05T00:00:00.000Z",
+      "a": "2026-10-12T00:00:00.000Z",
+      "aRoma": "12/10/2026, 02:00:00",
+      "nuovoStartSullaGriglia": true,
+      "usoInclusoNelBlocco": false
+    }
+  ],
+  "sintesi": {
+    "modelliFinestre": 4,
+    "campioniTotali": 544,
+    "verificabili": 4,
+    "nonAllineati": 0,
+    "transizioni": 5,
+    "transizioniSullaGriglia": 5
+  },
+  "tolleranzaMs": 0,
+  "griglie": {
+    "interval5h": {
+      "nome": "blocchi fissi 5h UTC",
+      "periodo": 18000000,
+      "etichetta": "5 ore"
+    },
+    "day24h": {
+      "nome": "blocchi fissi 24h UTC (mezzanotte)",
+      "periodo": 86400000,
+      "etichetta": "24 ore"
+    },
+    "weekly": {
+      "nome": "settimanale lunedì 00:00 UTC",
+      "periodo": 604800000,
+      "etichetta": "7 giorni"
+    }
+  },
+  "metodo": "start distinti per modello/finestra dai payload reali; offset dalla griglia UTC teorica (5h / 24h / lunedì 00:00 UTC); transizioni con confronto nuovo-start vs confine vs istante d'uso"
+}
