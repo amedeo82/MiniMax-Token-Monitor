@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Monitor, MonitorOff, MoonStar, RotateCw } from "lucide-react";
 import { KIOSK_ROTATION_OPTIONS, KIOSK_VIEWS, type KioskState, type KioskView } from "@/lib/kiosk";
+import { APP_VERSION } from "@/lib/version";
 
 interface KioskBarProps {
   state: KioskState;
@@ -35,11 +36,12 @@ export function KioskBar({ state, view, nightDimActive, onView, onPrefs, onExit 
   return (
     <div className="mt-auto sticky bottom-0 z-50 border-t border-white/[0.08] bg-[#09090b]/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
-        {/* Indicatore di modalità */}
+        {/* Indicatore di modalità + versione (I46: fonte unica version.ts) */}
         <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
           <Monitor className="size-3.5" />
           Kiosk
         </span>
+        <span className="font-mono text-[10px] text-zinc-600">v {APP_VERSION}</span>
 
         {/* Cambio vista manuale (disponibile anche con la rotazione attiva) */}
         <div className="flex items-center gap-1" role="group" aria-label="Vista kiosk">

@@ -108,6 +108,25 @@ export function isNightRome(epochMs: number): boolean {
 }
 
 /**
+ * I87 — Parsing del querystring `?kiosk=1` (pura, iniettabile come
+ * `readCompactMode` di I73): attivano `kiosk=1`, `kiosk` (assenza di valore),
+ * `kiosk=true` (case-insensitive); NON attivano `0`, `false`, `off` o valori
+ * estranei — default esplicito e prevedibile. Accetta la stringa con o senza «?».
+ */
+export function readKioskMode(search: string | null | undefined): boolean {
+  if (!search) return false;
+  try {
+    const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+    const raw = params.get("kiosk");
+    if (raw === null) return false;
+    const v = raw.trim().toLowerCase();
+    return v === "" || v === "1" || v === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * URL corrente con il parametro `kiosk` aggiunto (valore "1") o rimosso,
  * preservando gli altri parametri. Usato con history.replaceState per tenere
  * la barra degli indirizzi coerente senza navigazioni.

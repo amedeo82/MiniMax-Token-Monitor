@@ -213,6 +213,11 @@ html:not(.dark) .bg-\[\#09090b\]\/80 {
 html:not(.dark) .bg-\[\#09090b\]\/85 {
   background-color: rgb(250 250 250 / 0.9);
 }
+/* I87 — barra kiosk (stessa famiglia di header/footer/nav; senza questa regola
+   la barra restava scura nel tema chiaro con i testi già rimappati → illeggibile) */
+html:not(.dark) .bg-\[\#09090b\]\/95 {
+  background-color: rgb(250 250 250 / 0.95);
+}
 
 /* Bordi bianchi-alpha → neri-alpha (stessa gerarchia visiva, invertita) */
 html:not(.dark) .border-white\/\[0\.04\] {
