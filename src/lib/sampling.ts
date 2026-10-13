@@ -27,6 +27,7 @@
  */
 
 import { TZ_ROME } from "./time";
+import { medianaDi } from "./stats";
 
 export interface SamplingDay {
   /** Chiave del giorno Roma (YYYY-MM-DD). */
@@ -119,11 +120,4 @@ export function romeDayKey(t: number): string {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(t));
-}
-
-/** Mediana di un array non vuoto (media dei due centrali se pari). */
-function medianaDi(valori: number[]): number {
-  const s = [...valori].sort((a, b) => a - b);
-  const mezzo = Math.floor(s.length / 2);
-  return s.length % 2 === 1 ? s[mezzo] : (s[mezzo - 1] + s[mezzo]) / 2;
 }

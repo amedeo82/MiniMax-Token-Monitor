@@ -15,7 +15,7 @@
  * Funzione pura, opzioni iniettabili per test deterministici.
  */
 
-import { RESET_JUMP, RESET_TARGET, type WindowKey } from "./cycles";
+import type { WindowKey } from "./cycles";
 
 export interface RatePoint {
   /** (number|null)[] stessa lunghezza della serie di input. */
@@ -55,8 +55,11 @@ export function rateSeries(
       raw.push(null);
       continue;
     }
-    // Risalita: reset o rumore → null (non è consumo)
-    if (vCurr > vPrev || (vCurr - vPrev >= RESET_JUMP && vCurr >= RESET_TARGET)) {
+    // Risalita: reset o rumore → null (non è consumo). Nota I91: qualunque
+    // risalita è già coperta da vCurr > vPrev — la vecchia disgiuntiva sul
+    // salto ≥ RESET_JUMP era irraggiungibile (con vCurr ≤ vPrev il salto non
+    // può essere positivo) ed è stata rimossa.
+    if (vCurr > vPrev) {
       raw.push(null);
       continue;
     }

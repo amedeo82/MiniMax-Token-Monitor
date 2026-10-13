@@ -119,6 +119,35 @@ export function appendModelPoints(
 /* ------------------------------ lettura ---------------------------- */
 
 /**
+ * I91 — Punto FLAT dello storico «general» a partire dai valori misurati:
+ * forward-fill dei null (`?? precedente ?? 100`), le stesse semantiche usate
+ * da `pushHistory` (page.tsx) e da `historyForModel` qui sotto.
+ *
+ * Ritorna NULL quando il punto sarebbe FINTO, cioè quando inventerebbe dati:
+ * - entrambe le finestre null e nessun precedente da cui fare fill;
+ * - (chiamato solo con «general» presente: l'assenza del modello è gestita a
+ *   monte dal chiamante — prima di I91 la guardia di `pushHistory` era codice
+ *   morto e uno snapshot senza «general» produceva un punto finto {100,100},
+ *   interpretato dalle analisi come falso reset).
+ *
+ * Funzione pura: testabile in isolamento (tests/lib/flat-history.test.ts).
+ */
+export function flatPointFromGeneral(
+  t: number,
+  interval: number | null,
+  weekly: number | null,
+  prev: HistoryPoint[],
+): HistoryPoint | null {
+  const last = prev[prev.length - 1];
+  if (interval === null && weekly === null && !last) return null;
+  return {
+    t,
+    interval: interval ?? last?.interval ?? 100,
+    weekly: weekly ?? last?.weekly ?? 100,
+  };
+}
+
+/**
  * Storico FLAT `HistoryPoint[]` di UN modello: filtra, ordina e forward-fill
  * dei null (`?? precedente ?? 100`) — le stesse semantiche di `pushHistory`.
  * È il ponte verso tutte le analisi esistenti (contratto invariato, §5.19).
