@@ -13,6 +13,7 @@
 
 import type { HistoryPoint } from "@/components/history-chart";
 import type { HourStats } from "@/lib/downsample";
+import { parseServerListResponse } from "@/lib/server-response";
 
 export interface ServerPoint {
   t: number;
@@ -108,8 +109,13 @@ export async function fetchServerHistory(limit = 2000): Promise<ServerHistoryRes
   try {
     const res = await fetch(`/api/history?limit=${limit}`);
     if (!res.ok) return null;
-    const json = (await res.json()) as ServerHistoryResult & { error?: unknown };
-    return json.ok ? { ok: true, total: json.total, points: json.points ?? [] } : null;
+    const json = (await res.json()) as unknown;
+    /* I92 — normalizzazione: total garantito number, points mancante = [].
+       Prima ci si fidava della forma: il fallback offline del SW poteva
+       servire un payload di altra forma con ok:true → total undefined →
+       crash di render nei componenti che lo formattano. */
+    const parsed = parseServerListResponse<ServerPoint>(json, "points");
+    return parsed ? { ok: true, total: parsed.total, points: parsed.items } : null;
   } catch {
     return null;
   }
@@ -129,8 +135,10 @@ export async function fetchServerHourly(
     if (source) qs.set("source", source);
     const res = await fetch(`/api/history?${qs.toString()}`);
     if (!res.ok) return null;
-    const json = (await res.json()) as ServerHourlyResult & { error?: unknown };
-    return json.ok ? { ok: true, total: json.total, hours: json.hours ?? [] } : null;
+    const json = (await res.json()) as unknown;
+    /* I92 — stessa normalizzazione di fetchServerHistory. */
+    const parsed = parseServerListResponse<ServerHourBucket>(json, "hours");
+    return parsed ? { ok: true, total: parsed.total, hours: parsed.items } : null;
   } catch {
     return null;
   }

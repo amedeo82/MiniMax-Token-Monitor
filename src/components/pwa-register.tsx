@@ -55,6 +55,18 @@ export function PwaRegister() {
       registration?.active?.postMessage({ type: "CHECK_NOW" });
     };
 
+    /* I92 — handler NOMINATI e TUTTI rimossi nel cleanup: la versione
+       precedente lasciava appesi visibilitychange (freccia anonima) e il
+       listener message del SW — con StrictMode (mount→unmount→mount) il
+       primo set restava attivo per sempre. */
+    const onVisibilita = () => {
+      if (document.visibilityState === "visible") richiediCheck();
+    };
+    const onSwMessage = (e: MessageEvent) => {
+      if (e.data?.type === "SW_READY") inviaSegreti();
+      // Rientro dal CHECK_NOW: niente toast (la notifica arriva dal SW)
+    };
+
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => {
@@ -62,10 +74,7 @@ export function PwaRegister() {
         inviaSegreti();
         // Il SW potrebbe non essere ancora attivo al primo giro: ascolta
         // il suo segnale di prontezza e re-invia i segreti.
-        navigator.serviceWorker.addEventListener("message", (e: MessageEvent) => {
-          if (e.data?.type === "SW_READY") inviaSegreti();
-          // Rientro dal CHECK_NOW: niente toast (la notifica arriva dal SW)
-        });
+        navigator.serviceWorker.addEventListener("message", onSwMessage);
         // Riattiva subito un SW in attesa dopo un deploy
         reg.addEventListener("updatefound", () => {
           const nuovo = reg.installing;
@@ -82,13 +91,13 @@ export function PwaRegister() {
 
     window.addEventListener("mm-dash-settings-updated", inviaSegreti);
     window.addEventListener("focus", richiediCheck);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") richiediCheck();
-    });
+    document.addEventListener("visibilitychange", onVisibilita);
 
     return () => {
       window.removeEventListener("mm-dash-settings-updated", inviaSegreti);
       window.removeEventListener("focus", richiediCheck);
+      document.removeEventListener("visibilitychange", onVisibilita);
+      navigator.serviceWorker.removeEventListener("message", onSwMessage);
     };
   }, []);
 

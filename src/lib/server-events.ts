@@ -17,6 +17,7 @@
  */
 
 import type { UsageEvent } from "./usage-events";
+import { parseServerListResponse } from "./server-response";
 
 export interface ServerEventRow {
   id: string;
@@ -114,8 +115,13 @@ export async function fetchServerEvents(limit = 2000, kind?: string): Promise<Se
     if (kind) params.set("kind", kind);
     const res = await fetch(`/api/events?${params.toString()}`);
     if (!res.ok) return null;
-    const json = (await res.json()) as ServerEventsResult & { error?: unknown };
-    return json.ok ? { ok: true, total: json.total, events: json.events ?? [] } : null;
+    const json = (await res.json()) as unknown;
+    /* I92 — normalizzazione: total garantito number, events mancante = [].
+       Prima ci si fidava della forma: il fallback offline del SW poteva
+       servire un payload di altra forma con ok:true → total undefined →
+       crash di render del Registro eventi quando offline. */
+    const parsed = parseServerListResponse<ServerEventRow>(json, "events");
+    return parsed ? { ok: true, total: parsed.total, events: parsed.items } : null;
   } catch {
     return null;
   }
