@@ -46,7 +46,12 @@ export async function countModelPoints(): Promise<number> {
   return Number(rows[0]?.c ?? 0);
 }
 
-/** Legge le righe per-modello (filtri opzionali), ordinate per t poi id.
+/** Legge le righe per-modello (filtri opzionali): la fetta PIÙ RECENTE (fino a
+ *  limit) restituita in ordine cronologico (t poi id).
+ *  I93 — prima `ORDER BY t ASC LIMIT n`: con archivio più grande del limit
+ *  restituiva le righe PIÙ VECCHIE (l'esatto opposto del merge all'avvio e
+ *  degli export, che vogliono la contemporaneità — e il pruning FIFO conserva
+ *  proprio le più recenti). Fix: `ORDER BY t DESC` + LIMIT + inversione.
  *  I filtri sono composti con Prisma.sql/Prisma.join: valori sempre
  *  parametrizzati, sintassi segnaposto gestita dal driver. */
 export async function findModelPoints(opts: {
@@ -65,8 +70,11 @@ export async function findModelPoints(opts: {
   const rows = await db.$queryRaw<
     { model: string; win: string; t: string; percent: number; source: string; region: string }[]
   >(
-    Prisma.sql`SELECT "model", "win", "t", "percent", "source", "region" FROM "ModelUsagePoint"${where} ORDER BY "t" ASC, "id" ASC LIMIT ${limit}`,
+    /* I93 — DESC + LIMIT = la fetta PIÙ RECENTE; il reverse in coda restaura
+       l'ordine cronologico (t ASC) atteso dai client. */
+    Prisma.sql`SELECT "model", "win", "t", "percent", "source", "region" FROM "ModelUsagePoint"${where} ORDER BY "t" DESC, "id" DESC LIMIT ${limit}`,
   );
+  rows.reverse();
   const out: ModelPointRow[] = [];
   for (const r of rows) {
     if (!assertWin(r.win)) continue;

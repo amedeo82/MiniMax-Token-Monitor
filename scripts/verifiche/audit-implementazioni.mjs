@@ -511,6 +511,17 @@ const CHECKS = [
   check.nessunFile("I92", "src/components/ui", "^(toast|toaster)\\.tsx$", "stack shadcn toast RIMOSSO (dead code: la dashboard usa sonner)"),
   check.nessunFile("I92", "src/hooks", "^use-toast\\.ts$", "hook use-toast RIMOSSO (dead code, unico consumatore era ui/toaster)"),
   check.assenza("I92", "package.json", "react-toast|embla-carousel", "dipendenze morte rimosse (@radix-ui/react-toast, embla-carousel-react senza consumatori)"),
+
+  /* --- I93 — diagnostica e ricerca di bug: GET archivio serve la fetta PIÙ RECENTE (3 punti), dead-code parseWindow --- */
+  check.simbolo("I93", "src/app/api/history/route.ts", "orderBy: \\{ t: \"desc\" \\}", "GET storico: la fetta servita è la PIÙ RECENTE (era asc = più vecchi)"),
+  check.simbolo("I93", "src/app/api/history/route.ts", "rows\\.reverse\\(\\)", "GET storico: output restaurato cronologico dopo la selezione desc"),
+  check.simbolo("I93", "src/app/api/events/route.ts", "orderBy: \\{ t: \"desc\" \\}", "GET eventi: la fetta servita è la PIÙ RECENTE (era asc = più vecchi)"),
+  check.simbolo("I93", "src/app/api/events/route.ts", "rows\\.reverse\\(\\)", "GET eventi: output restaurato cronologico dopo la selezione desc"),
+  check.simbolo("I93", "src/lib/server-model-history.ts", "ORDER BY \\\"t\\\" DESC", "findModelPoints: fetta PIÙ RECENTE (era ASC = righe più vecchie)"),
+  check.simbolo("I93", "src/lib/server-model-history.ts", "rows\\.reverse\\(\\)", "findModelPoints: output restaurato cronologico dopo la selezione DESC"),
+  check.simbolo("I93", "tests/lib/archive-recent.test.ts", "fetta PIÙ RECENTE", "test di regressione route-level con db mockato (query desc + output cronologico)"),
+  check.assenza("I93", "src/lib/minimax.ts", "prefix", "parametro parseWindow «prefix» RIMOSSO (dead code: mai usato)"),
+  check.assenza("I93", "public/sw-shared.js", "var p = kind === \"weekly\"", "variabile «p» RIMOSSA dal parseWindow del mirror SW (dead code, mai letta)"),
 ];
 
 /* ------------------------------------------------------------------ */

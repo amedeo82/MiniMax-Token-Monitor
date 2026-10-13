@@ -78,7 +78,6 @@
   /* --------------------------- parsing --------------------------- */
 
   function parseWindow(item, kind) {
-    var p = kind === "weekly" ? "weekly_" : "current_interval_";
     var remainingPercent = num(item[kind === "weekly" ? "current_weekly_remaining_percent" : "current_interval_remaining_percent"]);
     var totalCount = num(item[kind === "weekly" ? "current_weekly_total_count" : "current_interval_total_count"]);
     var remainingCount = num(item[kind === "weekly" ? "current_weekly_usage_count" : "current_interval_usage_count"]);

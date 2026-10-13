@@ -13,8 +13,15 @@ export const dynamic = "force-dynamic";
  * viene mai salvata: questo endpoint tratta solo percentuali residue e timestamp.
  *
  * POST   { points: [{ t, interval, weekly, source, region }] }  → upsert + pruning
- * GET    ?limit=2000&since=<epoch ms>                           → punti ordinati per t
+ * GET    ?limit=2000&since=<epoch ms>                           → i punti PIÙ RECENTI (fino a limit), ordinati per t
  * DELETE                                                          → svuota lo storico
+ *
+ * I93 — la GET serve la fetta PIÙ RECENTE: prima usava `orderBy t asc` +
+ * `take limit`, che con archivio più grande del limit restituiva i punti
+ * PIÙ VECCHI — l'esatto opposto del bisogno dei consumatori (merge all'avvio
+ * e export vogliono la contemporaneità, e il pruning FIFO conserva proprio
+ * i più recenti). Fix: `orderBy t desc` + `take limit` + inversione, così
+ * l'output resta cronologico (contratto invariato) ma la fetta è la giusta.
  */
 
 /** Numero massimo di punti conservati sul server (pruning FIFO dopo ogni POST). */
@@ -236,11 +243,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    /* I93 — orderBy DESC + take = la fetta PIÙ RECENTE; il reverse in coda
+       restaura l'ordine cronologico atteso dai client (merge/export). */
     const rows = await db.usagePoint.findMany({
       where: since !== null ? { t: { gte: new Date(since) } } : undefined,
-      orderBy: { t: "asc" },
+      orderBy: { t: "desc" },
       take: limit,
     });
+    rows.reverse();
     const total = await db.usagePoint.count();
     return NextResponse.json({
       ok: true,
