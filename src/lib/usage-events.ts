@@ -338,8 +338,6 @@ export function evaluateTransitions(
   const result: TransitionResult = { alerts: [], resets: [], events: [] };
   if (!cfg.alertsEnabled || !prev) return result;
 
-  const winKey = (win: "interval" | "weekly") => (win === "interval" ? "interval" : "weekly");
-
   for (const nextModel of next.models) {
     const prevModel = prev.models.find(
       (m) => m.modelName.toLowerCase() === nextModel.modelName.toLowerCase(),
@@ -347,8 +345,8 @@ export function evaluateTransitions(
     if (!prevModel) continue;
 
     for (const win of ["interval", "weekly"] as const) {
-      const pw = prevModel[winKey(win)];
-      const nw = nextModel[winKey(win)];
+      const pw = prevModel[win];
+      const nw = nextModel[win];
       if (!pw || !nw) continue;
       if (pw.remainingPercent === null || nw.remainingPercent === null) continue;
 

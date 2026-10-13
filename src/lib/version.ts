@@ -7,4 +7,4 @@
  *
  * Formato: «AAAA-MM-GG · I<n>» dove I<n> è l'ultimo item implementato/documentato.
  */
-export const APP_VERSION = "2026-10-12 · I90";
+export const APP_VERSION = "2026-10-13 · I91";

@@ -59,6 +59,7 @@ import {
   appendModelPoints,
   fetchServerModelHistory,
   historyForModel,
+  flatPointFromGeneral,
   loadModelHistory,
   mergeModelHistories,
   MODEL_HISTORY_MAX,
@@ -340,32 +341,41 @@ export default function DashboardPage() {
   /* --------------------------- fetching ---------------------------- */
   const pushHistory = React.useCallback((snap: UsageSnapshot) => {
     const general = findModel(snap, "general");
-    const interval = general?.interval?.remainingPercent;
-    const weekly = general?.weekly?.remainingPercent;
-    if (interval === null && weekly === null && general === undefined) return;
     const prev = historyRef.current;
-    const point: HistoryPoint = {
-      t: snap.fetchedAt,
-      interval: interval ?? prev[prev.length - 1]?.interval ?? 100,
-      weekly: weekly ?? prev[prev.length - 1]?.weekly ?? 100,
-    };
-    // Deduplica: se l'ultimo punto è più vecchio di 20s accoda, altrimenti sostituisci
-    const last = prev[prev.length - 1];
-    const next = last && point.t - last.t < 20_000 ? [...prev.slice(0, -1), point] : [...prev, point];
-    const trimmed = next.slice(-HISTORY_MAX);
-    historyRef.current = trimmed;
-    setHistory(trimmed);
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
-    } catch {
-      /* quota piena: ignora */
+    /* I91 — il punto flat descrive SOLO «general»: se il modello manca (es.
+       JSON importato con soli modelli video) NON si registra nulla. La vecchia
+       guardia `interval === null && weekly === null && general === undefined`
+       era codice morto (con general assente i due valori sono UNDEFINED, non
+       null) e produceva un punto finto {interval: 100, weekly: 100}, che le
+       analisi (RESET_TARGET 85) leggevano come falso reset. La costruzione
+       testabile del punto vive in lib/model-history.ts (flatPointFromGeneral). */
+    const point = general
+      ? flatPointFromGeneral(
+          snap.fetchedAt,
+          general.interval?.remainingPercent ?? null,
+          general.weekly?.remainingPercent ?? null,
+          prev,
+        )
+      : null;
+    if (point) {
+      // Deduplica: se l'ultimo punto è più vecchio di 20s accoda, altrimenti sostituisci
+      const last = prev[prev.length - 1];
+      const next = last && point.t - last.t < 20_000 ? [...prev.slice(0, -1), point] : [...prev, point];
+      const trimmed = next.slice(-HISTORY_MAX);
+      historyRef.current = trimmed;
+      setHistory(trimmed);
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+      } catch {
+        /* quota piena: ignora */
+      }
+      // I16: replica il punto sul server (fire-and-forget, silenzioso in caso di errore)
+      pushPointToServer(point, {
+        source: snap.source,
+        region: snap.region,
+        onTotal: (total) => setServerCount(total),
+      });
     }
-    // I16: replica il punto sul server (fire-and-forget, silenzioso in caso di errore)
-    pushPointToServer(point, {
-      source: snap.source,
-      region: snap.region,
-      onTotal: (total) => setServerCount(total),
-    });
 
     /* I82 — storico per-modello: un punto per OGNI modello del campione (non
        solo general), stesse regole di dedup 20s; replica server dei soli nuovi. */
@@ -779,6 +789,13 @@ export default function DashboardPage() {
       setAltError(null);
       setAltFetch(null);
       prevOkAltRef.current = null;
+      /* I91 — azzera anche lo snapshot precedente del motore transizioni: senza
+         reset, il primo snapshot della NUOVA connessione veniva confrontato con
+         l'ultimo della VECCHIA (es. regione eu → cn o demo → api) e valori non
+         confrontabili potevano innescare transizioni FITTIZIE (falsi «Reset
+         rilevato» / toast di soglia) con eventi falsi nel registro. Con prev
+         null, evaluateTransitions non produce nulla sul primo snapshot. */
+      prevSnapRef.current = null;
     }
   };
 

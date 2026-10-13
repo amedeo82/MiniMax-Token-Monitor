@@ -480,6 +480,20 @@ const CHECKS = [
   check.simbolo("I90", "src/components/analysis-panel.tsx", "setRemote\\(null\\)", "reset pivot in fase di render (coppia remoteRef+serverVersion eliminata)"),
   check.simbolo("I90", "src/components/settings-dialog.tsx", "prevReset", "reset form all'apertura con aggiustamento in render"),
   check.simbolo("I90", "src/lib/ring-color.ts", "prevValue", "casi istantanei AnimatedPercent con aggiustamento in render"),
+  // I91 — refactoring + bug hunting: 2 bug reali corretti, dead code rimosso, DRY (stats/http-validate)
+  check.assenza("I91", "src/app/page.tsx", "weekly === null && general === undefined", "vecchia guardia codice morto RIMOSSA da pushHistory (produceva punto finto {100,100})"),
+  check.simbolo("I91", "src/app/page.tsx", "flatPointFromGeneral\\(", "punto flat «general» costruito con la funzione pura condivisa"),
+  check.simbolo("I91", "src/lib/model-history.ts", "export function flatPointFromGeneral", "costruzione del punto flat estratta e testabile"),
+  check.simbolo("I91", "src/app/page.tsx", "prevSnapRef\\.current = null;", "transizioni azzerate al cambio connessione (niente falsi reset eu→cn / demo→api)"),
+  check.assenza("I91", "src/lib/rate.ts", "vCurr - vPrev >= RESET_JUMP", "disgiuntiva irraggiungibile rimossa (la risalita copre già il reset)"),
+  check.assenza("I91", "src/lib/ewma.ts", "RESET_JUMP", "disgiuntiva irraggiungibile rimossa + import ripulito"),
+  check.simbolo("I91", "src/lib/stats.ts", "export function medianaDi", "mediana condivisa (DRY: era duplicata in sampling/rate-anomalies/cycles)"),
+  check.assenza("I91", "src/lib/sampling.ts", "function medianaDi", "copia locale rimossa (usa lib/stats)"),
+  check.assenza("I91", "src/lib/rate-anomalies.ts", "function medianaDi", "copia locale rimossa (usa lib/stats)"),
+  check.simbolo("I91", "src/lib/http-validate.ts", "export function toEpoch", "validazione HTTP condivisa (DRY: era duplicata in 3 routes)"),
+  check.assenza("I91", "src/app/api/events/route.ts", "function toEpoch", "copia locale rimossa (usa lib/http-validate)"),
+  check.assenza("I91", "src/app/api/history/models/route.ts", "function toFloat", "copia locale rimossa (usa lib/http-validate)"),
+  check.simbolo("I91", "tests/lib/flat-history.test.ts", "flatPointFromGeneral", "test di regressione del punto finto {100,100}"),
 ];
 
 /* ------------------------------------------------------------------ */

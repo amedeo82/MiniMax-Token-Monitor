@@ -32,6 +32,7 @@
  */
 
 import { rateSeries } from "./rate";
+import { medianaDi } from "./stats";
 import type { WindowKey } from "./cycles";
 
 /** Una singola anomalia: ritmo fuori regime con relativo z-score robusto. */
@@ -98,12 +99,4 @@ export function detectRateAnomalies(
   }
 
   return { mediana, mad, scala, soglia, validi: validi.length, anomalie };
-}
-
-/** Mediana di un array non vuoto (media dei due centrali se pari). */
-function medianaDi(valori: number[]): number {
-  if (valori.length === 0) return 0;
-  const s = [...valori].sort((a, b) => a - b);
-  const mezzo = Math.floor(s.length / 2);
-  return s.length % 2 === 1 ? s[mezzo] : (s[mezzo - 1] + s[mezzo]) / 2;
 }

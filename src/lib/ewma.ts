@@ -29,7 +29,7 @@
  * Funzione pura, opzioni iniettabili per test deterministici.
  */
 
-import { RESET_JUMP, RESET_TARGET, type WindowKey } from "./cycles";
+import type { WindowKey } from "./cycles";
 
 export interface EwmaProjection {
   /** Ritmo stimato EWMA (%/h); null con meno di un ritmo valido o ritmo ≤ 0.01. */
@@ -80,8 +80,10 @@ export function ewmaProjection(
 
     // Stesse regole di lib/rate.ts: gap lungo → non è un ritmo misurabile
     if (dt <= 0 || dt > GAP_MAX_MS) continue;
-    // Risalita (reset o rumore) → non è consumo
-    if (curr[key] > prev[key] || (curr[key] - prev[key] >= RESET_JUMP && curr[key] >= RESET_TARGET)) {
+    // Risalita (reset o rumore) → non è consumo. Nota I91: qualunque risalita
+    // è già coperta da curr > prev — la vecchia disgiuntiva sul salto ≥
+    // RESET_JUMP era irraggiungibile e rimossa.
+    if (curr[key] > prev[key]) {
       continue;
     }
 

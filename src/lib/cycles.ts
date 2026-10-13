@@ -22,6 +22,7 @@
  */
 
 import type { HistoryPoint } from "@/components/history-chart";
+import { medianaDi } from "./stats";
 
 export type WindowKey = "interval" | "weekly";
 
@@ -226,16 +227,14 @@ const hourFmt = new Intl.DateTimeFormat("en-US", {
  * nello storico (un giorno presente ma senza consumo conta come 0).
  */
 export function weekdayConsumption(history: HistoryPoint[], win: WindowKey): WeekdayStat[] {
-  const stats: WeekdayStat[] = IT_LABELS.map((label, i) => ({
-    key: Object.keys(EN_TO_INDEX)[i] ?? "",
-    label,
+  const keys = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const stats: WeekdayStat[] = keys.map((key, i) => ({
+    key,
+    label: IT_LABELS[i] ?? "",
     consumed: 0,
     days: 0,
     avgPerDay: 0,
   }));
-  // Ordine key coerente con l'indice
-  const keys = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  for (let i = 0; i < 7; i++) stats[i].key = keys[i];
 
   if (history.length < 2) return stats;
 
@@ -397,17 +396,15 @@ export interface WasteStats {
 export function sprecoPerCiclo(cycles: Cycle[]): WasteStats | null {
   const completati = cycles.filter((c) => !c.ongoing);
   if (completati.length === 0) return null;
-  const sprechi = completati.map((c) => Math.max(0, c.endValue)).sort((a, b) => a - b);
+  const sprechi = completati.map((c) => Math.max(0, c.endValue));
   const media = sprechi.reduce((a, b) => a + b, 0) / sprechi.length;
-  const metà = Math.floor(sprechi.length / 2);
-  const mediana =
-    sprechi.length % 2 === 1 ? sprechi[metà] : (sprechi[metà - 1] + sprechi[metà]) / 2;
+  const mediana = medianaDi(sprechi);
   const clean = sprechi.filter((s) => s < 5).length;
   return {
     n: sprechi.length,
     media,
     mediana,
-    max: sprechi[sprechi.length - 1],
+    max: Math.max(...sprechi),
     clean,
     percClean: (clean / sprechi.length) * 100,
   };
@@ -540,17 +537,15 @@ export function consumoGiornaliero(
   while (cursor.getTime() <= fine.getTime()) {
     const key = dateFmt.format(cursor);
     const value = perGiorno.get(key) ?? null;
-    if (cursor.getTime() <= fine.getTime()) {
-      currentWeek.push({ date: key, value });
-      if (value !== null) {
-        giorni += 1;
-        total += value;
-        if (value > max) max = value;
-      }
-      if (currentWeek.length === 7) {
-        weeks.push(currentWeek);
-        currentWeek = [];
-      }
+    currentWeek.push({ date: key, value });
+    if (value !== null) {
+      giorni += 1;
+      total += value;
+      if (value > max) max = value;
+    }
+    if (currentWeek.length === 7) {
+      weeks.push(currentWeek);
+      currentWeek = [];
     }
     cursor = new Date(cursor.getTime() + 86_400_000);
     if (weeks.length > settimane) break; // margine di sicurezza

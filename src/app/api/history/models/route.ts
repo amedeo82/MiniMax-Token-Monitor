@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { toEpoch, toFloat } from "@/lib/http-validate";
 import {
   countModelPoints,
   deleteModelPoints,
@@ -35,22 +36,6 @@ interface IncomingModelPoint {
   weekly?: unknown;
   source?: unknown;
   region?: unknown;
-}
-
-function toFloat(v: unknown): number | null {
-  if (typeof v === "number" && isFinite(v)) return Math.max(0, Math.min(100, v));
-  if (typeof v === "string" && v.trim() !== "" && isFinite(Number(v))) {
-    return Math.max(0, Math.min(100, Number(v)));
-  }
-  return null;
-}
-
-function toEpoch(v: unknown): number | null {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
-  if (!isFinite(n)) return null;
-  if (n > 1_000_000_000_000) return n; // ms
-  if (n > 1_000_000_000) return n * 1000; // s
-  return null;
 }
 
 function toModelName(v: unknown): string | null {

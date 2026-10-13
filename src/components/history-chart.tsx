@@ -140,7 +140,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
 
   const domain = React.useMemo<[number, number]>(() => {
     if (data.length === 0) return [0, 100];
-    const values = data.map((d) => d.value).filter((v) => v !== null);
+    const values = data.map((d) => d.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const pad = Math.max(5, (max - min) * 0.15);
