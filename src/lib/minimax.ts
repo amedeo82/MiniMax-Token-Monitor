@@ -336,7 +336,6 @@ export function consumedPercent(w: QuotaWindow): number | null {
 
 function parseWindow(
   item: Record<string, unknown>,
-  prefix: "" | "weekly_",
   kind: "interval" | "weekly",
 ): QuotaWindow | null {
   const remainingPercentKey =
@@ -412,8 +411,8 @@ export function parseUsageResponse(raw: unknown, opts: { source: "api" | "demo";
     const name = str(entry["model_name"]);
     if (!name) continue;
 
-    const interval = parseWindow(entry, "", "interval");
-    const weekly = parseWindow(entry, "weekly_", "weekly");
+    const interval = parseWindow(entry, "interval");
+    const weekly = parseWindow(entry, "weekly");
     if (!interval && !weekly) continue;
 
     models.push({ modelName: name, label: modelLabel(name), interval, weekly });

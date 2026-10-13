@@ -17,8 +17,15 @@ export const dynamic = "force-dynamic";
  * percentuale residua dell'evento.
  *
  * POST   { events: [{ id, t, kind, model, win, message, value }] } → upsert + pruning
- * GET    ?limit=2000&since=<epoch ms>&kind=reset                    → eventi ordinati per t
+ * GET    ?limit=2000&since=<epoch ms>&kind=reset                    → eventi PIÙ RECENTI (fino a limit) ordinati per t
  * DELETE                                                            → svuota l'archivio
+ *
+ * I93 — la GET serve la fetta PIÙ RECENTE (stesso fix di /api/history):
+ * prima `orderBy t asc` + `take limit` restituiva gli eventi PIÙ VECCHI
+ * quando l'archivio superava il limit — il merge all'avvio (limit 2000 su
+ * archivio fino a 5.000) e l'export «Archivio server» perdevano la
+ * contemporaneità. Fix: `orderBy t desc` + `take limit` + inversione,
+ * output cronologico invariato, fetta corretta.
  */
 
 /** Numero massimo di eventi conservati sul server (pruning FIFO dopo ogni POST). */
@@ -132,14 +139,17 @@ export async function GET(req: NextRequest) {
   const kind = kindRaw !== null && VALID_KINDS.has(kindRaw) ? kindRaw : null;
 
   try {
+    /* I93 — orderBy DESC + take = la fetta PIÙ RECENTE; il reverse in coda
+       restaura l'ordine cronologico atteso dai client (merge/export). */
     const rows = await db.usageEventRecord.findMany({
       where: {
         ...(since !== null ? { t: { gte: new Date(since) } } : {}),
         ...(kind !== null ? { kind } : {}),
       },
-      orderBy: { t: "asc" },
+      orderBy: { t: "desc" },
       take: limit,
     });
+    rows.reverse();
     const total = await db.usageEventRecord.count();
     return NextResponse.json({
       ok: true,
