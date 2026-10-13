@@ -1,4 +1,32 @@
-# MiniMax Usage Monitor — Dashboard (Europa / Europe-Rome)
+<div align="center">
+
+# 📊 MiniMax Usage Monitor
+
+**Dashboard in tempo reale per il piano a token MiniMax (Token Plan / M Plan) —
+quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel fuso Europe/Rome.**
+
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Prisma 6 + SQLite](https://img.shields.io/badge/Prisma_6_%2B_SQLite-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
+[![Bun](https://img.shields.io/badge/Bun-runtime-F472B6?logo=bun&logoColor=white)](https://bun.sh)
+
+[![Test 342 pass](https://img.shields.io/badge/test-342_pass-31C48D)](tests)
+[![Audit 331 PASS](https://img.shields.io/badge/audit-331_PASS-31C48D)](scripts/verifiche)
+[![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
+[![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
+
+### ▶ [Prova subito la demo su GitHub Codespaces](https://codespaces.new/amedeo82/MiniMax-Token-Monitor?quickstart=1)
+
+*Nessuna installazione: il progetto si apre nel browser e parte in **modalità demo** con dati
+simulati; per i dati reali basta incollare la tua Subscription Key nelle Impostazioni.*
+
+![MiniMax Usage Monitor — tour della dashboard in modalità demo](docs/assets/demo.gif)
+
+</div>
+
+---
 
 Dashboard interattiva per monitorare in tempo reale il consumo del piano a token MiniMax
 (**Token Plan / M Plan**), con tutti gli orari calcolati nel fuso **Europe/Rome** e
@@ -8,6 +36,21 @@ Il progetto interroga l'API ufficiale MiniMax, interpreta la risposta JSON, most
 la quota rimanente e i **countdown di reset** delle finestre di utilizzo, storicizza
 i dati (browser **e** server SQLite) e li **analizza**: cicli di finestra, consumo per
 giorno della settimana, media mobile e proiezione di esaurimento.
+
+---
+
+## 📸 Screenshot
+
+| Dashboard — anelli, countdown e avvisi (tema scuro di progetto) | Grafico storico, KPI e verdetto di proiezione |
+|---|---|
+| ![Dashboard con anelli di quota e countdown](docs/assets/hero-dashboard.png) | ![Grafico storico con media mobile e cicli](docs/assets/sezione-grafico.png) |
+
+| Analisi di lungo periodo (heatmap, calendario, cicli) | Modalità compatta `?compact=1` (widget) |
+|---|---|
+| ![Analisi di lungo periodo](docs/assets/sezione-analisi.png) | ![Modalità compatta](docs/assets/modalita-compatta.png) |
+
+> Le immagini sono catturate in **modalità demo** (dati simulati): nessun dato reale
+> finisce nel repository. La sezione completa è visibile nel tour GIF in cima alla pagina.
 
 ---
 

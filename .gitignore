@@ -59,3 +59,6 @@ tool-results/
 # ADR-13/13-R2 — file chiave di sessione (MAI commettere)
 scripts/verifiche/.chiave-sessione
 scripts/verifiche/sessione-*.log
+
+# frame intermedi della GIF README (Task 41, non deliverable)
+scripts/gif-frames/
