@@ -12,15 +12,17 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![Prisma 6 + SQLite](https://img.shields.io/badge/Prisma_6_%2B_SQLite-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
 [![Bun](https://img.shields.io/badge/Bun-runtime-F472B6?logo=bun&logoColor=white)](https://bun.sh)
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
 [![Test 342 pass](https://img.shields.io/badge/test-342_pass-31C48D)](tests)
 [![Audit 331 PASS](https://img.shields.io/badge/audit-331_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
-### ▶ [Prova subito la demo su GitHub Codespaces](https://codespaces.new/amedeo82/MiniMax-Token-Monitor?quickstart=1)
+### 🚀 [Live Demo — mini-max-token-monitor.vercel.app](https://mini-max-token-monitor.vercel.app/)
 
-*Nessuna installazione: il progetto si apre nel browser e parte in **modalità demo** con dati
-simulati; per i dati reali basta incollare la tua Subscription Key nelle Impostazioni.*
+*Apri la dashboard senza clonare nulla: parte in **modalità demo** con dati simulati; per i dati
+reali incolla la tua Subscription Key nelle Impostazioni. La puoi provare anche in un click su
+[GitHub Codespaces](https://codespaces.new/amedeo82/MiniMax-Token-Monitor?quickstart=1).*
 
 ![MiniMax Usage Monitor — tour della dashboard in modalità demo](docs/assets/demo.gif)
 
