@@ -968,3 +968,25 @@ Stage Summary:
 - Lezione 2: il pattern mock.module + import dinamico estende la copia di regressione alle route Next senza server: da riutilizzare per i contratti HTTP (fino a oggi solo funzioni pure)
 - Lezione 3: un commit con messaggio UUID rompe la tracciabilità docs↔git: la registrazione documentale tardiva (I92) è costata una ricognizione completa; i commit restano descrittivi
 - Aperture docs/04: invariate (resta la ❓ «primo utilizzo»); V1 resta l'unica verifica aperta
+
+---
+
+Task ID: 41
+Agent: Super Z (sessione web)
+Task: Ottimizzazione del repo GitHub per traffico esterno («procediamo ad ottimizzare il repo per github eseguendo questi step»): About (description + topics), README visivo (GIF + screenshot + pulsante Live Demo).
+
+Work Log:
+- RICOGNIZIONE: repo github.com/amedeo82/MiniMax-Token-Monitor — PRIVATO, description/homepage/topics VUOTI, nessun deployment pubblico (assenza vercel.json/netlify.toml/workflows/has_pages); l'istruzione «Demo Live FONDAMENTALE» non è realizzabile come URL pubblico oggi; baseline post-I93 nota: suite 342/342, audit 331/331
+- DECISIONE DEMO LIVE: l'app è full-stack (API routes + SQLite + poller) → GitHub Pages non valutabile e nessun deployment esiste; il pulsante «Live Demo» punta a GitHub Codespaces (codespaces.new?quickstart=1) reso funzionante da .devcontainer/devcontainer.json NUOVO (immagine typescript-node:22-bookworm + feature bun ufficiale, forwardPorts 3000 con openBrowser, postCreateCommand «bun install && bun run db:push»): prova reale senza clonare, parte in modalità demo
+- ASSET VISIVI (scripts/github-assets.py, Playwright): contesto browser FRESH = localStorage vuoto = modalità DEMO per costruzione, verificata a runtime (titolo «demo · MiniMax Token Monitor», badge «dati simulati» visibile) → nessun dato reale finisce nel repo; rotte bloccate via ctx.route (proxy usage, **/api/history*, **/api/events*, **/api/summary*) per ADR-8; 5 PNG retina (dsf=2, 1440×900, it-IT, Europe/Rome): hero-dashboard, sezione-grafico, sezione-analisi, sezione-diagnostica, modalita-compatta; 20 frame a scorrimento continuo (altezza pagina 5471px) → GIF docs/assets/demo.gif (ffmpeg palettegen/paletteuse, 800×500, 20 frame × 0,5 s = 10 s, 813 KB)
+- README: header centrato (titolo, tagline, 10 badge shields — stack + test 342/audit 331 + PWA + fuso), pulsante «Prova subito la demo su GitHub Codespaces», GIF tour, sezione «📸 Screenshot» (tabella 2×2 con nota modalità demo); il resto del README resta invariato
+- GITHUB API (PAT dal remote URL, mai stampato): PATCH description (EN, orientata alla ricerca) e PUT topics — 18: minimax, token-monitor, usage-monitoring, quota-monitor, api-usage, dashboard, analytics, data-visualization, nextjs, react, typescript, tailwindcss, prisma, sqlite, bun, pwa, self-hosted, recharts; homepage lasciata VUOTA in attesa di un deployment
+- VALIDAZIONE: tsc 0 su src/tests (6 errori solo in examples/skills, scaffolding non-progetto), lint 0, suite 342/342 (967 asserzioni), audit 331/331 PASS 0 scoperte (esito fresco audit-implementazioni-2026-10-13T15-52-28.md); nessun file applicativo toccato (README, docs/assets, .devcontainer, scripts/github-assets.py, .gitignore, worklog, docs/04)
+- IGIENE REPO: scripts/gif-frames/ (frame intermedi, 2,7 MB) aggiunta al .gitignore tra gli output di sessione non deliverable
+
+Stage Summary:
+- Repo GitHub ottimizzato: description + 18 topics impostate via API, README visivo (GIF tour 10 s, 5 screenshot retina in modalità demo, badge, pulsante Codespaces), devcontainer per la demo live senza deployment
+- Nessun codice applicativo modificato: protocollo verde (tsc 0, lint 0, 342/342, audit 331/331)
+- Lezione 1: il localStorage vuoto di un browser fresco rende la modalità demo garantita PER COSTRUZIONE (non per attenzione): le catture sono pubblicabili per design, il badge «dati simulati» resta visibile nelle immagini
+- Lezione 2: per un'app full-stack (API+DB) la «Demo Live» senza server esiste solo come Codespaces (o export statico parziale da progettare): GitHub Pages non è valutabile, meglio dichiararlo che mettere un link morto
+- APERTA (decisione utente): il repo è PRIVATO — description/topics/README visivo producono traffico esterno solo se reso pubblico; homepage About in attesa di un deployment (Vercel+Turso o VPS); il PAT del remote funziona anche per le API (formato https://TOKEN@github.com, senza username)

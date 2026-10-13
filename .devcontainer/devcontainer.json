@@ -1,0 +1,16 @@
+{
+  "name": "MiniMax Usage Monitor",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
+  "features": {
+    "ghcr.io/oven-sh/bun:1": {}
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Dashboard MiniMax Usage Monitor",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "bun install && bun run db:push",
+  "remoteUser": "node"
+}
