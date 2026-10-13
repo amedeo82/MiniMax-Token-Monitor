@@ -2,9 +2,16 @@
  * I52 — Service Worker della PWA (ADR-14).
  *
  * Responsabilità:
- * 1. Cache offline: shell dell'app, manifest, icone e ultimo snapshot valido
- *    della quota (solo risposte con ok:true — BUG CORRETTO «1004 cachato»:
- *    un errore di autenticazione non deve mai diventare "ultimo dato noto").
+ * 1. Cache offline: shell dell'app, manifest, icone e risposte GET di
+ *    /api/history (solo 2xx) per la navigazione senza rete; i dati visibili
+ *    offline arrivano dal localStorage della pagina (offline-first I16/I27).
+ *    I92: rimossa la cache «ultimo snapshot» (SNAPSHOT_KEY) — era scritta ma
+ *    il suo payload (JSON del proxy usage) non ha alcun consumatore GET e il
+ *    fallback offline del GET la serviva agli endpoint /api/events e
+ *    /api/history che la interpretavano come risposta di ALTRA forma
+ *    ({ok:true, total:undefined} → crash delle sezioni offline).
+ *    BUG CORRETTO (I52) «1004 cachato»: un errore di autenticazione non
+ *    deve mai diventare "ultimo dato noto" — resta valido per le notifiche.
  * 2. Notifiche a tab CHIUSO: quando la pagina comunica la Subscription Key
  *    via postMessage, il SW la conserva SOLO in IndexedDB (mai in Cache
  *    Storage, mai nel codice, mai nei log) e la usa per interrogare il proxy
@@ -19,11 +26,8 @@
  */
 importScripts("/sw-shared.js");
 
-const CACHE = "mm-dash-v1";
+const CACHE = "mm-dash-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-180.png"];
-/** Chiave cache dell'ultimo snapshot QUOTA valido (offline-first). */
-const SNAPSHOT_KEY = "/__ultimo_snapshot__";
-/** Chiavi cache statiche NON invalidate ad attivazione (solo shell). */
 const DB_NAME = "mm-dash-sw";
 const DB_VERSION = 1;
 const STORE_SECRETS = "secrets";
@@ -117,30 +121,12 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  /* POST al proxy: pass-through + cache MANUALE solo degli snapshot validi.
-     Il body di un POST non è leggibile dopo il pass-through, quindi per
-     sapere se ok:true bisogna clonare la risposta e leggerne il JSON. */
-  if (req.method === "POST" && url.pathname === "/api/minimax/usage") {
-    event.respondWith(
-      fetch(req).then(async (res) => {
-        try {
-          const clone = res.clone();
-          const json = await clone.json();
-          if (json && json.ok === true) {
-            const c = await caches.open(CACHE);
-            await c.put(SNAPSHOT_KEY, res.clone());
-          }
-        } catch {
-          /* risposta non JSON o body già consumato: niente cache */
-        }
-        return res;
-      }),
-    );
-    return;
-  }
-
-  /* Solo GET: rete-prima con fallback cache (shell + storico per l'offline). */
+  /* POST e altri metodi: pass-through trasparente (nessuna cache — I92:
+     l'ultimo snapshot non è più conservato in Cache Storage, i segreti e
+     lo stato delle notifiche vivono SOLO in IndexedDB). */
   if (req.method !== "GET") return;
+
+  /* GET: rete-prima con fallback cache (shell + storico per l'offline). */
   event.respondWith(
     fetch(req)
       .then(async (res) => {
@@ -152,10 +138,13 @@ self.addEventListener("fetch", (event) => {
       })
       .catch(async () => {
         const c = await caches.open(CACHE);
+        // I92 — niente fallback su SNAPSHOT_KEY: serviva un payload di forma
+        // sbagliata agli endpoint API (crash offline delle sezioni). Le richieste
+        // non in cache ottengono il 503 JSON sotto, che i client (fetchServerHistory,
+        // fetchServerEvents, …) traducono in null: la UI resta sui dati locali.
         const hit =
           (req.mode === "navigate" && (await c.match("/"))) ||
-          (await c.match(req)) ||
-          (await c.match(SNAPSHOT_KEY));
+          (await c.match(req));
         if (hit) return hit;
         return new Response(JSON.stringify({ offline: true, error: "Risorsa non disponibile offline." }), {
           status: 503,

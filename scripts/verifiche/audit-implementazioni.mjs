@@ -206,7 +206,10 @@ const CHECKS = [
   check.files("I52", ["public/sw.js", "public/sw-shared.js", "src/app/manifest.ts", "src/components/pwa-register.tsx", "public/icon-192.png", "public/icon-512.png", "public/icon-180.png"], "artefatti PWA"),
   check.simbolo("I52", "public/sw.js", "importScripts\\(\"/sw-shared.js\"\\)", "SW usa la fonte unica"),
   check.simbolo("I52", "public/sw.js", "indexedDB", "segreti solo in IndexedDB (ADR-14)"),
-  check.simbolo("I52", "public/sw.js", "ok === true", "cache snapshot solo su ok:true (fix 1004 cachato)"),
+  /* I92: la cache snapshot non esiste più (rimossa con il suo fallback) —
+     l'intento del fix «1004 cachato» è ora garantito in modo più forte:
+     NESSUNA risposta del proxy usage finisce in Cache Storage. */
+  check.assenza("I52", "public/sw.js", "api/minimax/usage|c\\.put\\(SNAPSHOT", "nessuna cache delle risposte usage (fix 1004 cachato, superato da I92)"),
   check.simbolo("I52", "public/sw-shared.js", "parseUsagePayload", "parser condiviso"),
   check.simbolo("I52", "public/sw-shared.js", "quotaKeyFor", "chiavi soglia condivise"),
   check.simbolo("I52", "public/sw-shared.js", "function evaluate", "transizioni condivise"),
@@ -494,6 +497,20 @@ const CHECKS = [
   check.assenza("I91", "src/app/api/events/route.ts", "function toEpoch", "copia locale rimossa (usa lib/http-validate)"),
   check.assenza("I91", "src/app/api/history/models/route.ts", "function toFloat", "copia locale rimossa (usa lib/http-validate)"),
   check.simbolo("I91", "tests/lib/flat-history.test.ts", "flatPointFromGeneral", "test di regressione del punto finto {100,100}"),
+
+  /* --- I92 — diagnostica e ricerca di bug: fix offline SW, normalizzazione risposte archivio, cleanup PwaRegister, dead-code toast/embla --- */
+  check.assenza("I92", "public/sw.js", "SNAPSHOT_KEY\\s*=|match\\(SNAPSHOT_KEY\\)", "cache «ultimo snapshot» RIMOSSA (payload senza consumatore GET, avvelenava il fallback offline)"),
+  check.simbolo("I92", "public/sw.js", "mm-dash-v2", "cache bump a v2 (attivazione elimina le voci stale mm-dash-v1)"),
+  check.simbolo("I92", "src/lib/server-response.ts", "export function parseServerListResponse", "normalizzazione condivisa delle risposte archivio (total garantito number)"),
+  check.simbolo("I92", "src/lib/server-history.ts", "parseServerListResponse<ServerPoint>", "fetchServerHistory usa il normalizzatore"),
+  check.simbolo("I92", "src/lib/server-history.ts", "parseServerListResponse<ServerHourBucket>", "fetchServerHourly usa il normalizzatore"),
+  check.simbolo("I92", "src/lib/server-events.ts", "parseServerListResponse<ServerEventRow>", "fetchServerEvents usa il normalizzatore"),
+  check.simbolo("I92", "tests/lib/server-response.test.ts", "vecchio fallback SW", "test di regressione del payload degradato {ok:true} senza total"),
+  check.simbolo("I92", "src/components/pwa-register.tsx", "removeEventListener\\(\"visibilitychange\"", "cleanup PwaRegister COMPLETO (prima: listener anonimo mai rimosso)"),
+  check.simbolo("I92", "src/components/pwa-register.tsx", "removeEventListener\\(\"message\"", "listener message del SW rimosso nel cleanup"),
+  check.nessunFile("I92", "src/components/ui", "^(toast|toaster)\\.tsx$", "stack shadcn toast RIMOSSO (dead code: la dashboard usa sonner)"),
+  check.nessunFile("I92", "src/hooks", "^use-toast\\.ts$", "hook use-toast RIMOSSO (dead code, unico consumatore era ui/toaster)"),
+  check.assenza("I92", "package.json", "react-toast|embla-carousel", "dipendenze morte rimosse (@radix-ui/react-toast, embla-carousel-react senza consumatori)"),
 ];
 
 /* ------------------------------------------------------------------ */
