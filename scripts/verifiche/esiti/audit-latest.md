@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T20:09:49.179Z
+# Audit implementazioni — 2026-10-14T20:16:50.962Z
 
-- Verifiche totali: **462** · PASS: **462** · FAIL: **0**
+- Verifiche totali: **475** · PASS: **475** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -467,5 +467,18 @@
 | I95 | test guard (spenta/attiva/401) + rate limit (budget, finestra, per-IP, default 120) | file | PASS | — |
 | I95 | accettazione route-level: DELETE → 401 senza header, 200 con header | file | PASS | — |
 | I95 | header di sicurezza presenti; HSTS solo in produzione | file | PASS | — |
+| I104 | next-auth RIMOSSO (zero import) — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | z-ai-web-dev-sdk RIMOSSO (zero import) — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | zustand RIMOSSO (zero import) — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | mdxeditor RIMOSSO (zero import) — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | date-fns RIMOSSO (calendar inutilizzato) — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | react-hook-form RIMOSSO (form inutilizzato) — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | framer-motion RIMOSSO: la premessa della decisione I104 («usato in quota-ring») era venuta meno — restava solo un commento stale, l'import era già sparito — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | radix tooltip RIMOSSO (ui/tooltip usato solo da sidebar) — assenza richiesta (package.json) | assenza | PASS | — |
+| I104 | componenti ui a zero import eliminati (con la loro chiusura: skeleton/tooltip/sheet servivano solo a sidebar) — nessun file deve esistere | assenza | PASS | — |
+| I104 | ui/toggle RESTAURATO: importato da toggle-group (il grep della prima stesura l'aveva scartato) (src/components/ui/toggle-group.tsx) | simbolo | PASS | — |
+| I104 | commento stale framer-motion corretto (l'animazione è già CSS) (src/components/quota-ring.tsx) | simbolo | PASS | — |
+| I104 | zod CONSERVATO (in uso da I103) (package.json) | simbolo | PASS | — |
+| I104 | recharts conservato (grafici) (package.json) | simbolo | PASS | — |
 
-Verdetto: **PASS** (462 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (475 pass, 0 fail, 0 scoperte)
