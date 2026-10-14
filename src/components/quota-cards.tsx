@@ -13,7 +13,42 @@ import {
   windowProgress,
   formatDuration,
 } from "@/lib/time";
+import { useOrologio } from "@/lib/orologio";
 import { Timer, CalendarClock, RotateCcw, Info } from "lucide-react";
+
+/* ------------------------------------------------------------------ */
+/* I96 — Foglie vive del countdown                                     */
+/* ------------------------------------------------------------------ */
+/* Prima il countdown riceveva `now` (stato pagina a tick 1 s): OGNI secondo
+   ri-renderizzava le card e con loro l'intero albero. Ora ogni countdown è
+   una FOLLIA minimi che si abbona all'orologio condiviso (lib/orologio.ts):
+   al tick si aggiorna solo il testo, la card che lo contiene resta ferma. */
+
+/** ms rimasti fino a `end` secondo l'orologio condiviso (null: non attivo/scaduto). */
+function useResetMs(end: number | null | undefined): number | null {
+  const now = useOrologio();
+  return now === 0 ? null : msUntil(end ?? null, now);
+}
+
+/** «tra <countdown>» in linea — anche scaduto mostra «tra —» (comportamento pre-I96). */
+export function ResetTraInline({ end }: { end: number | null | undefined }) {
+  const ms = useResetMs(end);
+  return <span className="font-mono tabular-nums">tra {formatCountdown(ms)}</span>;
+}
+
+/** «(tra <countdown>)» — NON renderizzato a finestra scaduta (come pre-I96). */
+function ResetTraParentesi({ end }: { end: number | null | undefined }) {
+  const ms = useResetMs(end);
+  if (ms === null) return null;
+  return <span className="ml-1 font-mono tabular-nums text-amber-300">(tra {formatCountdown(ms)})</span>;
+}
+
+/** Riga «tra <countdown>» — NON renderizzata a finestra scaduta (come pre-I96). */
+function ResetTraRiga({ end }: { end: number | null | undefined }) {
+  const ms = useResetMs(end);
+  if (ms === null) return null;
+  return <p className="mt-0.5 font-mono text-xs tabular-nums text-amber-300">tra {formatCountdown(ms)}</p>;
+}
 
 function colorFor(remaining: number | null): RingColor {
   return quotaLevel(remaining).color;
@@ -67,13 +102,17 @@ interface WindowDetailsProps {
   desc: string;
   start: number | null;
   end: number | null;
-  now: number;
 }
 
-/** Riga di dettaglio con inizio/fine/reset di una finestra. */
-function WindowDetails({ title, desc, start, end, now }: WindowDetailsProps) {
-  const remainingMs = msUntil(end, now);
-  const progress = windowProgress(start, end, now);
+/**
+ * Riga di dettaglio con inizio/fine/reset di una finestra.
+ * I96 — foglia viva: si abbona all'orologio condiviso (badge countdown e
+ * avanzamento finestra si aggiornano da soli; la card madre non si ri-renderizza).
+ */
+function WindowDetails({ title, desc, start, end }: WindowDetailsProps) {
+  const now = useOrologio();
+  const remainingMs = now === 0 ? null : msUntil(end, now);
+  const progress = now === 0 ? null : windowProgress(start, end, now);
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -148,12 +187,11 @@ export function windowShortLabel(w: QuotaWindow | null | undefined): string {
 
 interface ModelCardProps {
   model: ModelQuota;
-  now: number;
   delay?: number;
 }
 
-/** Card di un singolo modello con le sue finestre di quota. */
-export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
+/** Card di un singolo modello con le sue finestre di quota (memoizzata: I96). */
+export const ModelCard = React.memo(function ModelCard({ model, delay = 0 }: ModelCardProps) {
   const { interval, weekly } = model;
   const mainRemaining = interval?.remainingPercent ?? weekly?.remainingPercent ?? null;
   const color = colorFor(mainRemaining);
@@ -191,7 +229,7 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
             <MiniBar value={interval.remainingPercent} color={colorFor(interval.remainingPercent)} />
             <p className="mt-2 text-[11px] text-zinc-500">
               Reset previsto: {interval.end ? formatTimeRome(interval.end) : "—"} ·{" "}
-              <span className="font-mono tabular-nums">tra {formatCountdown(msUntil(interval.end, now))}</span>
+              <ResetTraInline end={interval.end} />
             </p>
             <div className="mt-1.5">
               <CountsRow window={interval} />
@@ -219,7 +257,7 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
             <MiniBar value={weekly.remainingPercent} color={colorFor(weekly.remainingPercent)} />
             <p className="mt-2 text-[11px] text-zinc-500">
               Reset previsto: {weekly.end ? formatDateTimeRome(weekly.end) : "—"} ·{" "}
-              <span className="font-mono tabular-nums">tra {formatCountdown(msUntil(weekly.end, now))}</span>
+              <ResetTraInline end={weekly.end} />
             </p>
             <div className="mt-1.5">
               <CountsRow window={weekly} />
@@ -233,7 +271,6 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
             desc={WINDOW_LABELS.interval.desc}
             start={interval.start}
             end={interval.end}
-            now={now}
           />
         ) : null}
         {weekly && weekly.end ? (
@@ -242,21 +279,19 @@ export function ModelCard({ model, now, delay = 0 }: ModelCardProps) {
             desc={WINDOW_LABELS.weekly.desc}
             start={weekly.start}
             end={weekly.end}
-            now={now}
           />
         ) : null}
       </CardContent>
     </Card>
   );
-}
+});
 
 interface MainWindowsProps {
   general: ModelQuota | undefined;
-  now: number;
 }
 
-/** Pannello principale: anelli grandi per le due finestre del modello "general". */
-export function MainWindows({ general, now }: MainWindowsProps) {
+/** Pannello principale: anelli grandi per le due finestre del modello "general" (memoizzato: I96). */
+export const MainWindows = React.memo(function MainWindows({ general }: MainWindowsProps) {
   const interval = general?.interval ?? null;
   const weekly = general?.weekly ?? null;
 
@@ -276,9 +311,7 @@ export function MainWindows({ general, now }: MainWindowsProps) {
             <p className="text-xs text-zinc-400">
               Reset:{" "}
               <span className="font-semibold text-zinc-200">{interval?.end ? formatTimeRome(interval.end) : "—"}</span>
-              {interval?.end && msUntil(interval.end, now) !== null ? (
-                <span className="ml-1 font-mono tabular-nums text-amber-300">(tra {formatCountdown(msUntil(interval.end, now))})</span>
-              ) : null}
+              {interval?.end ? <ResetTraParentesi end={interval.end} /> : null}
             </p>
           </div>
         </div>
@@ -299,9 +332,7 @@ export function MainWindows({ general, now }: MainWindowsProps) {
               Reset:{" "}
               <span className="font-semibold text-zinc-200">{weekly?.end ? formatDateTimeRome(weekly.end) : "—"}</span>
             </p>
-            {weekly?.end && msUntil(weekly.end, now) !== null ? (
-              <p className="mt-0.5 font-mono text-xs tabular-nums text-amber-300">tra {formatCountdown(msUntil(weekly.end, now))}</p>
-            ) : null}
+            {weekly?.end ? <ResetTraRiga end={weekly.end} /> : null}
           </div>
         </div>
       </div>
@@ -313,10 +344,9 @@ export function MainWindows({ general, now }: MainWindowsProps) {
             desc={WINDOW_LABELS.interval.desc}
             start={interval.start}
             end={interval.end}
-            now={now}
           />
         ) : (
-          <WindowDetails title={WINDOW_LABELS.interval.long} desc={WINDOW_LABELS.interval.desc} start={null} end={null} now={now} />
+          <WindowDetails title={WINDOW_LABELS.interval.long} desc={WINDOW_LABELS.interval.desc} start={null} end={null} />
         )}
         {weekly && weekly.end ? (
           <WindowDetails
@@ -324,12 +354,11 @@ export function MainWindows({ general, now }: MainWindowsProps) {
             desc={WINDOW_LABELS.weekly.desc}
             start={weekly.start}
             end={weekly.end}
-            now={now}
           />
         ) : (
-          <WindowDetails title={WINDOW_LABELS.weekly.long} desc={WINDOW_LABELS.weekly.desc} start={null} end={null} now={now} />
+          <WindowDetails title={WINDOW_LABELS.weekly.long} desc={WINDOW_LABELS.weekly.desc} start={null} end={null} />
         )}
       </div>
     </div>
   );
-}
+});

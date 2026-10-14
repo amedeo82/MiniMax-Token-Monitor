@@ -21,7 +21,7 @@ const ORA = 1_760_000_000_000;
 describe("I53 componenti: RegionAltPanel", () => {
   test("con snapshot: titolo con la regione, badge «connessa», piano e crediti", () => {
     const snap = makeDemoSnapshot("cn", ORA);
-    render(<RegionAltPanel region="cn" snapshot={snap} errore={null} fetchedAt={ORA} now={ORA} />);
+    render(<RegionAltPanel region="cn" snapshot={snap} errore={null} fetchedAt={ORA} />);
     expect(screen.getByText(/Seconda regione — Cina/)).toBeDefined();
     expect(screen.getByText("connessa")).toBeDefined();
     expect(screen.getByText(snap.planTitle ?? "")).toBeDefined();
@@ -33,7 +33,7 @@ describe("I53 componenti: RegionAltPanel", () => {
 
   test("con snapshot: mostra la tabella panoramica dei modelli della seconda regione", () => {
     const snap = makeDemoSnapshot("cn", ORA);
-    render(<RegionAltPanel region="cn" snapshot={snap} errore={null} fetchedAt={ORA} now={ORA} />);
+    render(<RegionAltPanel region="cn" snapshot={snap} errore={null} fetchedAt={ORA} />);
     // i modelli del piano demo compaiono nella tabella (header + righe)
     for (const m of snap.models) {
       expect(screen.getAllByText(new RegExp(m.modelName, "i")).length).toBeGreaterThan(0);
@@ -42,7 +42,7 @@ describe("I53 componenti: RegionAltPanel", () => {
 
   test("in demo mostra anche il badge «dati simulati»", () => {
     const snap = makeDemoSnapshot("cn", ORA);
-    render(<RegionAltPanel region="cn" snapshot={snap} errore={null} fetchedAt={ORA} now={ORA} />);
+    render(<RegionAltPanel region="cn" snapshot={snap} errore={null} fetchedAt={ORA} />);
     expect(screen.getByText("dati simulati")).toBeDefined();
   });
 
@@ -53,7 +53,6 @@ describe("I53 componenti: RegionAltPanel", () => {
         snapshot={null}
         errore="Chiave API non valida o non autenticata (status_code 1004)."
         fetchedAt={ORA}
-        now={ORA}
       />,
     );
     expect(screen.getByText("errore")).toBeDefined();
@@ -63,18 +62,18 @@ describe("I53 componenti: RegionAltPanel", () => {
   });
 
   test("senza dati né errore: badge «in attesa» e invito al primo rilevamento", () => {
-    render(<RegionAltPanel region="cn" snapshot={null} errore={null} fetchedAt={null} now={ORA} />);
+    render(<RegionAltPanel region="cn" snapshot={null} errore={null} fetchedAt={null} />);
     expect(screen.getByText("in attesa")).toBeDefined();
     expect(screen.getByText(/Nessun dato ancora/)).toBeDefined();
   });
 
   test("ultimo rilevamento assente → «Mai»", () => {
-    render(<RegionAltPanel region="cn" snapshot={null} errore={null} fetchedAt={null} now={ORA} />);
+    render(<RegionAltPanel region="cn" snapshot={null} errore={null} fetchedAt={null} />);
     expect(screen.getByText("Mai")).toBeDefined();
   });
 
   test("regione eu: il titolo mostra l'etichetta Europa", () => {
-    render(<RegionAltPanel region="eu" snapshot={null} errore={null} fetchedAt={null} now={ORA} />);
+    render(<RegionAltPanel region="eu" snapshot={null} errore={null} fetchedAt={null} />);
     expect(screen.getByText(/Seconda regione — Europa/)).toBeDefined();
   });
 });

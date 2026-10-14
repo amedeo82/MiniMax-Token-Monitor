@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T18:50:58.232Z
+# Audit implementazioni — 2026-10-14T19:42:13.998Z
 
-- Verifiche totali: **388** · PASS: **388** · FAIL: **0**
+- Verifiche totali: **415** · PASS: **415** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -15,13 +15,13 @@
 | I4 | fuso Rome (src/lib/time.ts) | simbolo | PASS | — |
 | I4 | countdown (src/lib/time.ts) | simbolo | PASS | — |
 | I4 | progresso finestra (src/lib/time.ts) | simbolo | PASS | — |
-| I5 | ModelCard (src/components/quota-cards.tsx) | simbolo | PASS | — |
-| I5 | MainWindows (src/components/quota-cards.tsx) | simbolo | PASS | — |
+| I5 | ModelCard (memoizzata da I96) (src/components/quota-cards.tsx) | simbolo | PASS | — |
+| I5 | MainWindows (memoizzato da I96) (src/components/quota-cards.tsx) | simbolo | PASS | — |
 | I5 | QuotaRing (src/components/quota-ring.tsx) | simbolo | PASS | — |
-| I6 | tick 1s (src/app/page.tsx) | simbolo | PASS | — |
+| I6 | orologio pagina (30 s da I96: il secondo vive nelle foglie useOrologio) (src/app/page.tsx) | simbolo | PASS | — |
 | I6 | ora server dedotta (src/lib/minimax.ts) | simbolo | PASS | — |
 | I7 | chiave storico locale (src/app/page.tsx) | simbolo | PASS | — |
-| I7 | HistoryChart (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I7 | HistoryChart (memoizzato da I96) (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I7 | computeTrend (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I8 | SettingsDialog (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I8 | default persistiti (src/components/settings-dialog.tsx) | simbolo | PASS | — |
@@ -48,7 +48,7 @@
 | I22 | export CSV (src/lib/export.ts) | simbolo | PASS | — |
 | I22 | BOM per Excel it-IT (src/lib/export.ts) | simbolo | PASS | — |
 | I23 | verdetto esaurimento vs reset (src/components/history-chart.tsx) | simbolo | PASS | — |
-| I24 | vista panoramica (src/components/model-table.tsx) | simbolo | PASS | — |
+| I24 | vista panoramica (memoizzata da I96) (src/components/model-table.tsx) | simbolo | PASS | — |
 | I25 | tab Connessione (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I25 | tab Avvisi (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I25 | tab Dati (src/components/settings-dialog.tsx) | simbolo | PASS | — |
@@ -106,7 +106,7 @@
 | I58 | aggregazione calendario (src/lib/cycles.ts) | simbolo | PASS | — |
 | I58 | tab Calendario (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I59 | serie ritmo %/h (src/lib/rate.ts) | simbolo | PASS | — |
-| I59 | grafico ritmo (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I59 | grafico ritmo (memoizzato da I96) (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I59 | ancora sezione ritmo (src/app/page.tsx) | simbolo | PASS | — |
 | I60 | dot plot reset (src/components/diagnostica-panel.tsx) | simbolo | PASS | — |
 | I60 | blocchi teorici UTC (src/components/diagnostica-panel.tsx) | simbolo | PASS | — |
@@ -264,7 +264,7 @@
 | I53 | coppie {region,key} della campagna parallela (dedup chiave doppia) (src/lib/minimax.ts) | simbolo | PASS | — |
 | I53 | settings multi-chiave (seconda chiave opzionale, retrocompatibile) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I53 | etichetta dinamica della seconda regione nel dialog (src/components/settings-dialog.tsx) | simbolo | PASS | — |
-| I53 | pannello della seconda regione (solo visualizzazione) (src/components/region-alt-panel.tsx) | simbolo | PASS | — |
+| I53 | pannello della seconda regione (solo visualizzazione; memoizzato da I96) (src/components/region-alt-panel.tsx) | simbolo | PASS | — |
 | I53 | campagna di fetch PARALLELA per regione (src/app/page.tsx) | simbolo | PASS | — |
 | I53 | coppie di interrogazione derivate dalle impostazioni (src/app/page.tsx) | simbolo | PASS | — |
 | I53 | pannello cablato nella sezione Panoramica (src/app/page.tsx) | simbolo | PASS | — |
@@ -393,5 +393,32 @@
 | I102 | destinazione: <main id="contenuto"> (src/app/layout.tsx) | simbolo | PASS | — |
 | I102 | visibile SOLO on-focus (pattern Tailwind, famiglia focus-visible I79) (src/app/layout.tsx) | simbolo | PASS | — |
 | I102 | main focalizzabile programmaticamente (niente anello gigante: outline-none) (src/app/page.tsx) | simbolo | PASS | — |
+| I96 | orologio condiviso a 1 Hz per le foglie vive | file | PASS | — |
+| I96 | hook delle foglie vive (useSyncExternalStore, pattern I90/I100) (src/lib/orologio.ts) | simbolo | PASS | — |
+| I96 | intervallo 1 Hz avviato al primo abbonato (src/lib/orologio.ts) | simbolo | PASS | — |
+| I96 | timer fermato all'ultimo disiscritto (zero timer a riposo) (src/lib/orologio.ts) | simbolo | PASS | — |
+| I96 | fine del tick 1 s a livello pagina — assenza richiesta (src/app/page.tsx) | assenza | PASS | — |
+| I96 | orologio di pagina a MINUTO (30 s): finestra scorrevole/data/dimming/fuso (src/app/page.tsx) | simbolo | PASS | — |
+| I96 | foglia viva del countdown «prossimo aggiornamento» (header) (src/app/page.tsx) | simbolo | PASS | — |
+| I96 | orologio dell'header come foglia viva (1 Hz, zero render pagina) (src/components/orologio-roma.tsx) | simbolo | PASS | — |
+| I96 | ora viva del footer come foglia viva (src/components/orologio-roma.tsx) | simbolo | PASS | — |
+| I96 | ModelCard/MainWindows senza prop now (countdown = foglie ResetTra*/WindowDetails) — assenza richiesta (src/components/quota-cards.tsx) | assenza | PASS | — |
+| I96 | PanoramicTable senza prop now (cella Reset = foglia ResetCell) — assenza richiesta (src/components/model-table.tsx) | assenza | PASS | — |
+| I96 | RegionAltPanel senza prop now — assenza richiesta (src/components/region-alt-panel.tsx) | assenza | PASS | — |
+| I96 | ModelCard memoizzata (src/components/quota-cards.tsx) | simbolo | PASS | — |
+| I96 | MainWindows memoizzato (src/components/quota-cards.tsx) | simbolo | PASS | — |
+| I96 | PanoramicTable memoizzata (src/components/model-table.tsx) | simbolo | PASS | — |
+| I96 | RegionAltPanel memoizzato (src/components/region-alt-panel.tsx) | simbolo | PASS | — |
+| I96 | HistoryChart memoizzato (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I96 | StatsPanel memoizzato (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I96 | RateChart memoizzato (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I96 | LongTermAnalysis memoizzata (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I96 | DiagnosticaPanel memoizzato (src/components/diagnostica-panel.tsx) | simbolo | PASS | — |
+| I96 | costanti Recharts a livello modulo (props referenzialmente stabili) (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I96 | tooltip content estratto a livello modulo (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I96 | sonda di misura del render pagina (strumento docs/04 §3 I96) (src/app/page.tsx) | simbolo | PASS | — |
+| I96 | sonda di misura del render grafico (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I96 | test store 1 Hz: primo abbonato, stop all'ultimo, multi-abbonato | file | PASS | — |
+| I96 | strumento di misura render/min (prima 60,9 → dopo 3,7) | file | PASS | — |
 
-Verdetto: **PASS** (388 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (415 pass, 0 fail, 0 scoperte)

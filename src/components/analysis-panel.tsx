@@ -53,7 +53,33 @@ import { fetchServerModelHistory, historyForModel, modelRowsToPoints } from "@/l
 import { formatDateTimeRome, formatDuration } from "@/lib/time";
 import { descrizioneCalendario, descrizioneHeatmap } from "@/lib/a11y";
 import type { HistoryPoint } from "@/components/history-chart";
+import type { TooltipContentProps } from "recharts";
 import { CalendarDays, Database, Flame, Info, Layers, RefreshCw } from "lucide-react";
+
+/* I96 — costanti Recharts a livello modulo (identità stabili tra i render). */
+const MARGIN_BAR = { top: 8, right: 8, bottom: 0, left: -18 } as const;
+const TICK_STYLE = { fill: "#71717a", fontSize: 10 } as const;
+const AXIS_LINE_TENUE = { stroke: "rgba(255,255,255,0.08)" } as const;
+const TICK_PERCENTO = (v: number) => `${Math.round(v)}%`;
+const TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.04)" } as const;
+
+/** Tooltip del consumo per giorno: finestra 5h + settimanale. */
+function tooltipGiorni(props: TooltipContentProps) {
+  const { active, payload, label } = props;
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload as WeekdayDatum;
+  return (
+    <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+      <p className="font-medium capitalize text-zinc-200">{label}</p>
+      <p className="mt-1 font-mono tabular-nums text-emerald-400">
+        5h: {p["Finestra 5h"].toFixed(1)} %/giorno
+      </p>
+      <p className="font-mono tabular-nums text-amber-400">
+        Settimanale: {p.Settimanale.toFixed(1)} %/giorno
+      </p>
+    </div>
+  );
+}
 
 interface LongTermAnalysisProps {
   /** Storico fuso locale+server già presente nella pagina (fonte primaria). */
@@ -65,7 +91,8 @@ interface LongTermAnalysisProps {
   intervalLabel?: string;
 }
 
-export function LongTermAnalysis({ history, nomeModello = "general", intervalLabel = "5 ore" }: LongTermAnalysisProps) {
+/** Analisi di lungo periodo: cicli, calendario, distribuzione, heatmap (memoizzata: I96). */
+function LongTermAnalysisBase({ history, nomeModello = "general", intervalLabel = "5 ore" }: LongTermAnalysisProps) {
   const [loading, setLoading] = React.useState(false);
   const [loadedAt, setLoadedAt] = React.useState<number | null>(null);
   /* I90 — i punti server sono STATO (servono al render nel merge): la vecchia
@@ -423,38 +450,21 @@ function WeekdaySection({
     <div className="space-y-3">
       <div className="h-52 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }} barGap={3}>
+          <BarChart data={data} margin={MARGIN_BAR} barGap={3}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis
               dataKey="day"
-              tick={{ fill: "#71717a", fontSize: 10 }}
+              tick={TICK_STYLE}
               tickLine={false}
-              axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+              axisLine={AXIS_LINE_TENUE}
             />
             <YAxis
-              tick={{ fill: "#71717a", fontSize: 10 }}
+              tick={TICK_STYLE}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v: number) => `${Math.round(v)}%`}
+              tickFormatter={TICK_PERCENTO}
             />
-            <Tooltip
-              cursor={{ fill: "rgba(255,255,255,0.04)" }}
-              content={({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                const p = payload[0].payload as WeekdayDatum;
-                return (
-                  <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
-                    <p className="font-medium capitalize text-zinc-200">{label}</p>
-                    <p className="mt-1 font-mono tabular-nums text-emerald-400">
-                      5h: {p["Finestra 5h"].toFixed(1)} %/giorno
-                    </p>
-                    <p className="font-mono tabular-nums text-amber-400">
-                      Settimanale: {p.Settimanale.toFixed(1)} %/giorno
-                    </p>
-                  </div>
-                );
-              }}
-            />
+            <Tooltip cursor={TOOLTIP_CURSOR} content={tooltipGiorni} />
             <Bar dataKey="Finestra 5h" fill="#34d399" radius={[3, 3, 0, 0]} isAnimationActive={false} />
             <Bar dataKey="Settimanale" fill="#fbbf24" radius={[3, 3, 0, 0]} isAnimationActive={false} />
           </BarChart>
@@ -874,3 +884,5 @@ function HeatmapSection({
     </div>
   );
 }
+
+export const LongTermAnalysis = React.memo(LongTermAnalysisBase);

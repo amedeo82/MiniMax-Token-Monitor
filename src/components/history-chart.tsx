@@ -22,6 +22,7 @@ import { formatCountdown, formatDateTimeRome, formatDuration, formatShortRome, f
 import { detectCycles, movingAverage } from "@/lib/cycles";
 import { rateSeries } from "@/lib/rate";
 import type { EwmaProjection } from "@/lib/ewma";
+import type { TooltipContentProps } from "recharts";
 import { exportHistoryCsv, exportHistoryJson } from "@/lib/export";
 import { fetchServerHistory, fetchServerHourly, serverPointsToHistory } from "@/lib/server-history";
 import { serverHourlyToHistory } from "@/lib/downsample";
@@ -44,6 +45,55 @@ export interface HistoryPoint {
 
 /** Ampiezza della media mobile (SMA) sovrapponibile al grafico. */
 const SMA_K = 10;
+
+/* I96 — Costanti Recharts a livello MODULO: oggetti e funzioni identici tra i
+   render. Prima ogni commit della pagina ricreava margin/tick/tickFormatter/
+   tooltip content in linea (nuova identità a ogni render): con le sezioni
+   memoizzate queste props ora sono referenzialmente stabili. */
+const TICK_STYLE = { fill: "#71717a", fontSize: 10 } as const;
+const AXIS_LINE_TENUE = { stroke: "rgba(255,255,255,0.08)" } as const;
+const MARGIN_COMPOSED = { top: 8, right: 8, bottom: 0, left: -18 } as const;
+const MARGIN_RATE = { top: 4, right: 8, bottom: 0, left: -14 } as const;
+const RESET_LABEL = { value: "reset", position: "insideTopLeft", fill: "#fb7185", fontSize: 9 } as const;
+const ACTIVE_DOT_INTERVAL = { r: 3.5, fill: "#34d399" } as const;
+const ACTIVE_DOT_WEEKLY = { r: 3.5, fill: "#fbbf24" } as const;
+const tickDataRoma = (t: number) => formatShortRome(t);
+const tickPercento = (v: number) => `${Math.round(v)}%`;
+const tickIntero = (v: number) => `${v}`;
+
+/** Tooltip del grafico storico: «Rimasto» + eventuale media mobile. */
+function tooltipRimasto(props: TooltipContentProps) {
+  const { active, payload } = props;
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload as ChartDatum & { sma: number | null };
+  return (
+    <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+      <p className="font-medium text-zinc-200">{p.label}</p>
+      <p className="mt-1 font-mono tabular-nums text-emerald-400">
+        Rimasto: {p.value.toFixed(1)}%
+      </p>
+      {p.sma !== null ? (
+        <p className="font-mono tabular-nums text-rose-300">
+          Media mobile: {p.sma.toFixed(1)}%
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Tooltip del grafico di ritmo: data Roma + %/h. */
+function tooltipRitmo(props: TooltipContentProps) {
+  const { active, payload } = props;
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload as { t: number; ritmo: number | null };
+  if (p.ritmo === null) return null;
+  return (
+    <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+      <p className="text-zinc-400">{formatDateTimeRome(p.t)}</p>
+      <p className="mt-0.5 font-mono tabular-nums text-sky-300">{p.ritmo.toFixed(2)} %/h</p>
+    </div>
+  );
+}
 
 interface HistoryChartProps {
   history: HistoryPoint[];
@@ -89,8 +139,16 @@ async function exportHourlyFromServer(format: "csv" | "json"): Promise<void> {
   toast.success(`Esportate ${points.length} ore dallo storico orario del server`);
 }
 
-/** Grafico dell'andamento della quota rimanente nel tempo. */
-export function HistoryChart({ history, window: win, onWindowChange, serverCount = null, onStampaReport, intervalLabel = "5 ore" }: HistoryChartProps) {
+/** Grafico dell'andamento della quota rimanente nel tempo (memoizzato: I96). */
+function HistoryChartBase({ history, window: win, onWindowChange, serverCount = null, onStampaReport, intervalLabel = "5 ore" }: HistoryChartProps) {
+  /* I96 — sonda di misura neutra (render del grafico storico) per le verifiche
+     Playwright: conta i render su window (misura prima/dopo in docs/04 §3 I96). */
+  if (typeof window !== "undefined") {
+    const w = window as typeof window & { __mmRenderGrafico?: number };
+    // Sonda diagnostica deliberata: il contatore è lo strumento di misura dell'item.
+    // eslint-disable-next-line react-hooks/immutability
+    w.__mmRenderGrafico = (w.__mmRenderGrafico ?? 0) + 1;
+  }
   const [showSma, setShowSma] = React.useState(false);
   /** I32: overlay dei cicli di finestra (fasce alternate + marker dei reset). */
   const [showCycles, setShowCycles] = React.useState(true);
@@ -302,7 +360,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
           <>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+              <ComposedChart data={chartData} margin={MARGIN_COMPOSED}>
                 <defs>
                   <linearGradient id="gradInterval" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#34d399" stopOpacity={0.45} />
@@ -335,12 +393,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                       stroke="#f43f5e"
                       strokeDasharray="4 4"
                       strokeOpacity={0.65}
-                      label={{
-                        value: "reset",
-                        position: "insideTopLeft",
-                        fill: "#fb7185",
-                        fontSize: 9,
-                      }}
+                      label={RESET_LABEL}
                     />
                   ) : null,
                 )}
@@ -349,38 +402,20 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
-                  tickFormatter={(t: number) => formatShortRome(t)}
-                  tick={{ fill: "#71717a", fontSize: 10 }}
+                  tickFormatter={tickDataRoma}
+                  tick={TICK_STYLE}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+                  axisLine={AXIS_LINE_TENUE}
                   minTickGap={48}
                 />
                 <YAxis
                   domain={domain}
-                  tick={{ fill: "#71717a", fontSize: 10 }}
+                  tick={TICK_STYLE}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(v: number) => `${Math.round(v)}%`}
+                  tickFormatter={tickPercento}
                 />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const p = payload[0].payload as ChartDatum & { sma: number | null };
-                    return (
-                      <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
-                        <p className="font-medium text-zinc-200">{p.label}</p>
-                        <p className="mt-1 font-mono tabular-nums text-emerald-400">
-                          Rimasto: {p.value.toFixed(1)}%
-                        </p>
-                        {p.sma !== null ? (
-                          <p className="font-mono tabular-nums text-rose-300">
-                            Media mobile: {p.sma.toFixed(1)}%
-                          </p>
-                        ) : null}
-                      </div>
-                    );
-                  }}
-                />
+                <Tooltip content={tooltipRimasto} />
                 <ReferenceLine y={10} stroke="rgba(244,63,94,0.4)" strokeDasharray="4 4" />
                 <Area
                   type="monotone"
@@ -390,7 +425,7 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
                   fill={win === "interval" ? "url(#gradInterval)" : "url(#gradWeekly)"}
                   isAnimationActive={false}
                   dot={false}
-                  activeDot={{ r: 3.5, fill: win === "interval" ? "#34d399" : "#fbbf24" }}
+                  activeDot={win === "interval" ? ACTIVE_DOT_INTERVAL : ACTIVE_DOT_WEEKLY}
                 />
                 {showSma ? (
                   <Line
@@ -420,6 +455,8 @@ export function HistoryChart({ history, window: win, onWindowChange, serverCount
     </Card>
   );
 }
+
+export const HistoryChart = React.memo(HistoryChartBase);
 
 export interface TrendStats {
   /** Velocità media di consumo in punti percento all'ora (positiva = consumo). */
@@ -545,8 +582,8 @@ export function computePace(trend: TrendStats, resetAt: number | null): PaceInfo
   };
 }
 
-/** Pannello statistiche: consumo medio, proiezione esaurimento, rilevamenti, verdetto vs reset. */
-export function StatsPanel({
+/** Statistiche di proiezione sotto il grafico (memoizzate: I96). */
+function StatsPanelBase({
   trend,
   win,
   resetAt = null,
@@ -635,6 +672,8 @@ export function StatsPanel({
     </div>
   );
 }
+
+export const StatsPanel = React.memo(StatsPanelBase);
 
 /** Riga di verdetto: la quota durerà fino al reset o si esaurirà prima? */
 function ProjectionVerdict({
@@ -996,7 +1035,8 @@ export function TrendBadge({ trend }: { trend: TrendStats }) {
  * della linea sono informative: corrispondono a buchi di campionamento o
  * reset, non sono dati mancanti da riempire.
  */
-export function RateChart({
+/** Grafico del ritmo di consumo %/h (memoizzato: I96). */
+function RateChartBase({
   history,
   window: win,
   intervalLabel = "5 ore",
@@ -1033,23 +1073,11 @@ export function RateChart({
       </div>
       <div className="h-28 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={dati} margin={{ top: 4, right: 8, bottom: 0, left: -14 }}>
+          <AreaChart data={dati} margin={MARGIN_RATE}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} tickFormatter={(t: number) => formatShortRome(t)} tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} minTickGap={48} />
-            <YAxis tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, maxScale]} tickFormatter={(v: number) => `${v}`} />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const p = payload[0].payload as { t: number; ritmo: number | null };
-                if (p.ritmo === null) return null;
-                return (
-                  <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
-                    <p className="text-zinc-400">{formatDateTimeRome(p.t)}</p>
-                    <p className="mt-0.5 font-mono tabular-nums text-sky-300">{p.ritmo.toFixed(2)} %/h</p>
-                  </div>
-                );
-              }}
-            />
+            <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} tickFormatter={tickDataRoma} tick={TICK_STYLE} tickLine={false} axisLine={AXIS_LINE_TENUE} minTickGap={48} />
+            <YAxis tick={TICK_STYLE} tickLine={false} axisLine={false} domain={[0, maxScale]} tickFormatter={tickIntero} />
+            <Tooltip content={tooltipRitmo} />
             <Area type="monotone" dataKey="ritmo" stroke="#38bdf8" strokeWidth={1.8} fill="rgba(56,189,248,0.10)" connectNulls={false} isAnimationActive={false} dot={false} />
           </AreaChart>
         </ResponsiveContainer>
@@ -1061,3 +1089,5 @@ export function RateChart({
     </div>
   );
 }
+
+export const RateChart = React.memo(RateChartBase);

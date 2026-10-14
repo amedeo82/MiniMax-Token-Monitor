@@ -14,6 +14,7 @@
  * compatta e kiosk come il resto della sezione.
  */
 
+import * as React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,8 +41,6 @@ interface RegionAltPanelProps {
   errore: string | null;
   /** Epoch ms dell'ultimo rilevamento secondario (anche fallito). */
   fetchedAt: number | null;
-  /** Orologio vivo (epoch ms) per i countdown della tabella panoramica. */
-  now: number;
 }
 
 /** Stato di connessione della secondaria → badge di testa. */
@@ -67,7 +66,8 @@ function BadgeStato({ ok, errore }: { ok: boolean; errore: boolean }) {
   );
 }
 
-export function RegionAltPanel({ region, snapshot, errore, fetchedAt, now }: RegionAltPanelProps) {
+/** I53 — pannello della seconda regione (memoizzato: I96; i countdown della tabella sono foglie vive). */
+export const RegionAltPanel = React.memo(function RegionAltPanel({ region, snapshot, errore, fetchedAt }: RegionAltPanelProps) {
   const conErrore = errore !== null && errore !== "";
   const ok = !conErrore && snapshot !== null;
 
@@ -142,7 +142,7 @@ export function RegionAltPanel({ region, snapshot, errore, fetchedAt, now }: Reg
         {/* Modelli della seconda regione (nessun impatto su storico/analisi della primaria) */}
         {snapshot && snapshot.models.length > 0 ? (
           <div className="pt-1">
-            <PanoramicTable models={snapshot.models} now={now} />
+            <PanoramicTable models={snapshot.models} />
           </div>
         ) : !conErrore ? (
           <p className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 text-[11px] leading-relaxed text-zinc-500">
@@ -152,4 +152,4 @@ export function RegionAltPanel({ region, snapshot, errore, fetchedAt, now }: Reg
       </CardContent>
     </Card>
   );
-}
+});

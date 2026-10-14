@@ -20,6 +20,7 @@ import {
 import { LayoutDashboard, TimerReset } from "lucide-react";
 import { ModelQuota, QuotaWindow, statusLabel, quotaLevel } from "@/lib/minimax";
 import { formatCountdown, formatDateTimeRome, msUntil } from "@/lib/time";
+import { useOrologio } from "@/lib/orologio";
 import { windowKindLabel } from "@/components/quota-cards";
 
 const LEVEL_BAR: Record<"ok" | "good" | "warn" | "crit", string> = {
@@ -49,9 +50,29 @@ function MiniBar({ value }: { value: number }) {
   );
 }
 
-function WindowRow({ model, win, kind, now }: { model: ModelQuota; win: QuotaWindow; kind: "interval" | "weekly"; now: number }) {
+/**
+ * I96 — foglia viva della cella «Reset»: si abbona all'orologio condiviso e si
+ * aggiorna al secondo da sola; la tabella e le righe non si ri-renderizzano.
+ * A finestra scaduta/non nota mostra «—» (comportamento pre-I96 invariato).
+ */
+function ResetCell({ end }: { end: number | null }) {
+  const now = useOrologio();
+  const resetIn = now === 0 || end === null ? null : msUntil(end, now);
+  return resetIn !== null ? (
+    <div className="flex items-center gap-1.5">
+      <TimerReset className="size-3.5 shrink-0 text-zinc-500" />
+      <div className="leading-tight">
+        <p className="font-mono text-xs tabular-nums text-zinc-300">{formatCountdown(resetIn)}</p>
+        <p className="text-[10px] text-zinc-600">{formatDateTimeRome(end)}</p>
+      </div>
+    </div>
+  ) : (
+    <span className="text-xs text-zinc-600">—</span>
+  );
+}
+
+function WindowRow({ model, win, kind }: { model: ModelQuota; win: QuotaWindow; kind: "interval" | "weekly" }) {
   const status = statusLabel(win.status);
-  const resetIn = msUntil(win.end, now);
   return (
     <TableRow className="border-white/[0.05] hover:bg-white/[0.02]!">
       <TableCell className="py-2.5">
@@ -76,17 +97,7 @@ function WindowRow({ model, win, kind, now }: { model: ModelQuota; win: QuotaWin
         )}
       </TableCell>
       <TableCell className="py-2.5">
-        {resetIn !== null ? (
-          <div className="flex items-center gap-1.5">
-            <TimerReset className="size-3.5 shrink-0 text-zinc-500" />
-            <div className="leading-tight">
-              <p className="font-mono text-xs tabular-nums text-zinc-300">{formatCountdown(resetIn)}</p>
-              <p className="text-[10px] text-zinc-600">{formatDateTimeRome(win.end)}</p>
-            </div>
-          </div>
-        ) : (
-          <span className="text-xs text-zinc-600">—</span>
-        )}
+        <ResetCell end={win.end} />
       </TableCell>
     </TableRow>
   );
@@ -94,11 +105,10 @@ function WindowRow({ model, win, kind, now }: { model: ModelQuota; win: QuotaWin
 
 interface PanoramicTableProps {
   models: ModelQuota[];
-  now: number;
 }
 
-/** Tabella panoramica di tutti i modelli e tutte le finestre del piano. */
-export function PanoramicTable({ models, now }: PanoramicTableProps) {
+/** Tabella panoramica di tutti i modelli e tutte le finestre del piano (memoizzata: I96). */
+export const PanoramicTable = React.memo(function PanoramicTable({ models }: PanoramicTableProps) {
   if (models.length === 0) return null;
   return (
     <Card className="border-white/[0.07] bg-white/[0.04] backdrop-blur">
@@ -126,8 +136,8 @@ export function PanoramicTable({ models, now }: PanoramicTableProps) {
             <TableBody>
               {models.map((m) => (
                 <React.Fragment key={m.modelName}>
-                  {m.interval ? <WindowRow model={m} win={m.interval} kind="interval" now={now} /> : null}
-                  {m.weekly ? <WindowRow model={m} win={m.weekly} kind="weekly" now={now} /> : null}
+                  {m.interval ? <WindowRow model={m} win={m.interval} kind="interval" /> : null}
+                  {m.weekly ? <WindowRow model={m} win={m.weekly} kind="weekly" /> : null}
                 </React.Fragment>
               ))}
             </TableBody>
@@ -136,4 +146,4 @@ export function PanoramicTable({ models, now }: PanoramicTableProps) {
       </CardContent>
     </Card>
   );
-}
+});

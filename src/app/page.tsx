@@ -34,6 +34,8 @@ import {
 } from "@/lib/kiosk";
 import { SectionBoundary } from "@/components/section-boundary";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { OrologioRoma, OraRomaViva } from "@/components/orologio-roma";
+import { useOrologio } from "@/lib/orologio";
 import { TabIdentity } from "@/lib/tab-identity";
 import { filterHistoryByPreset, RANGE_PRESETS, type RangePreset } from "@/lib/interval";
 import { readCompactMode } from "@/lib/compact";
@@ -139,6 +141,18 @@ function motivoRifiuto(reason: unknown): string {
   return reason instanceof Error ? reason.message : "Errore imprevisto nella richiesta al proxy.";
 }
 
+/**
+ * I96 — foglia viva del countdown «prossimo aggiornamento» (badge «Ultimo
+ * rilevamento» dell'header): si abbona all'orologio condiviso a 1 Hz e si
+ * aggiorna da sola; prima il testo ricalcolava msUntil con `now` della pagina
+ * a ogni tick (60 re-render/min dell'intero albero per un countdown). */
+function ProssimoRefresh({ scadenza }: { scadenza: number | null }) {
+  const now = useOrologio();
+  if (scadenza === null || now === 0) return null;
+  const ms = msUntil(scadenza, now);
+  return ms === null ? null : <> · prossimo tra {formatCountdown(ms)}</>;
+}
+
 function loadSettings(): DashboardSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -169,6 +183,14 @@ function loadHistory(): HistoryPoint[] {
 }
 
 export default function DashboardPage() {
+  /* I96 — sonda di misura neutra per le verifiche Playwright: conta i render
+     della pagina su window (misura prima/dopo documentata in docs/04 §3 I96). */
+  if (typeof window !== "undefined") {
+    const w = window as typeof window & { __mmRenderPagina?: number };
+    // Sonda diagnostica deliberata: il contatore è lo strumento di misura dell'item.
+    // eslint-disable-next-line react-hooks/immutability
+    w.__mmRenderPagina = (w.__mmRenderPagina ?? 0) + 1;
+  }
   const [mounted, setMounted] = React.useState(false);
   const [settings, setSettings] = React.useState<DashboardSettings>(DEFAULT_SETTINGS);
   const [snapshot, setSnapshot] = React.useState<UsageSnapshot | null>(null);
@@ -312,9 +334,15 @@ export default function DashboardPage() {
     })();
   }, []);
 
-  /* Orologio vivo: tick ogni secondo */
+  /* I96 — orologio di PAGINA a MINUTO (tick 30 s): alimenta la finestra
+     scorrevole di filteredHistory, la data «Oggi a Roma», il dimming notturno
+     e il fuso del footer — tutti consumi che non guadagnano nulla dal secondo.
+     I countdown al secondo sono foglie vive (useOrologio in lib/orologio.ts):
+     prima questo intervallo a 1 s ri-renderizzava l'INTERO albero 60 volte al
+     minuto anche a dati fermi (misura pre-refactoring: 60,9 render/min —
+     docs/04 §3 I96). */
   React.useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
 
@@ -890,6 +918,12 @@ export default function DashboardPage() {
     }
   };
 
+  /* I96 — handler stabile per il pulsante di stampa nel grafico: identità
+     costante tra i render, così React.memo su HistoryChart non si rompe. */
+  const handleStampaReport = React.useCallback(() => {
+    stampaReportSettimanale();
+  }, []);
+
   const handleClearEvents = () => {
     clearEvents();
     setEvents([]);
@@ -943,9 +977,11 @@ export default function DashboardPage() {
       : lastEndpoint.startsWith("demo://")
         ? "Modalità demo (nessuna chiamata reale)"
         : lastEndpoint;
-  const nextRefreshIn =
+  /* I96 — scadenza del prossimo aggiornamento (epoch): il countdown al secondo
+     la renderizza la foglia ProssimoRefresh, non lo stato della pagina. */
+  const prossimaScadenza =
     settings.refreshSeconds > 0 && lastFetch && !settings.demoMode
-      ? msUntil(lastFetch + (pollDelayMs ?? settings.refreshSeconds * 1000), now)
+      ? lastFetch + (pollDelayMs ?? settings.refreshSeconds * 1000)
       : null;
 
   const needsSetup = !settings.demoMode && !settings.apiKey;
@@ -1077,14 +1113,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              {/* Orologio Roma */}
-              <div className="hidden items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 md:flex">
-                <MapPin className="size-3.5 text-rose-400" />
-                <div className="text-right leading-tight">
-                  <p className="font-mono text-sm font-semibold tabular-nums text-zinc-100">{mounted ? nowRomeTime() : "--:--:--"}</p>
-                  <p className="text-[10px] text-zinc-500">Europe/Rome · {romeZoneInfo(now)}</p>
-                </div>
-              </div>
+              {/* Orologio Roma — I96: foglia viva a 1 Hz (prima: prop now della pagina) */}
+              <OrologioRoma />
 
               {/* I79 — l'ora è già visibile accanto: niente live region (annunciava
                   OGNI SECONDO — spam per uno screen reader) */}
@@ -1187,11 +1217,7 @@ export default function DashboardPage() {
             {lastFetch ? (
               <Badge variant="outline" className="border-white/10 text-[11px] font-normal text-zinc-400">
                 Ultimo rilevamento: {formatTimeRome(lastFetch)}
-                {settings.refreshSeconds > 0 && !settings.demoMode
-                  ? nextRefreshIn !== null
-                    ? ` · prossimo tra ${formatCountdown(nextRefreshIn)}`
-                    : ""
-                  : ""}
+                <ProssimoRefresh scadenza={prossimaScadenza} />
               </Badge>
             ) : null}
             {/* I79 — regione live del polling: annuncia ogni snapshot riuscito
@@ -1294,7 +1320,7 @@ export default function DashboardPage() {
               <>
                 <div id="quota" className="mm-anchor">
                   <SectionBoundary title="Finestre principali" fallbackHeight="h-64">
-                    <MainWindows general={general} now={now} />
+                    <MainWindows general={general} />
                   </SectionBoundary>
                 </div>
                 <div id="ritmo" className="mm-anchor space-y-3">
@@ -1314,7 +1340,7 @@ export default function DashboardPage() {
 
                 {kioskView === "quote" ? (
                   <>
-                    <MainWindows general={general} now={now} />
+                    <MainWindows general={general} />
                     <p className="text-center text-xs text-zinc-500">
                       Oggi a Roma: <span className="font-medium text-zinc-400">{formatDateRome(now)}</span>
                     </p>
@@ -1369,7 +1395,7 @@ export default function DashboardPage() {
               {/* Anelli principali */}
               <div id="quota" className="mm-anchor">
                 <SectionBoundary title="Finestre principali" fallbackHeight="h-64">
-                  <MainWindows general={general} now={now} />
+                  <MainWindows general={general} />
                 </SectionBoundary>
               </div>
 
@@ -1388,7 +1414,7 @@ export default function DashboardPage() {
                     window={chartWindow}
                     onWindowChange={setChartWindow}
                     serverCount={serverCount}
-                    onStampaReport={() => stampaReportSettimanale()}
+                    onStampaReport={handleStampaReport}
                     intervalLabel={intervalLabel}
                   />
                 </SectionBoundary>
@@ -1415,7 +1441,7 @@ export default function DashboardPage() {
               {/* Vista panoramica: tutte le finestre del piano a confronto */}
               <div id="panoramica" className="mm-anchor">
                 <SectionBoundary title="Vista panoramica" fallbackHeight="h-48">
-                  <PanoramicTable models={snapshot.models} now={now} />
+                  <PanoramicTable models={snapshot.models} />
                 </SectionBoundary>
                 {/* I53 — panoramica della SECONDA regione (solo con 2ª chiave configurata):
                     solo visualizzazione, nessun impatto su storico/analisi/avvisi. */}
@@ -1426,7 +1452,6 @@ export default function DashboardPage() {
                       snapshot={snapshotAlt}
                       errore={altError}
                       fetchedAt={altFetch}
-                      now={now}
                     />
                   </div>
                 ) : null}
@@ -1468,7 +1493,7 @@ export default function DashboardPage() {
                   <SectionBoundary title="Altri modelli" fallbackHeight="h-40">
                     <div className="grid gap-4 md:grid-cols-2">
                       {otherModels.map((m, i) => (
-                        <ModelCard key={m.modelName} model={m} now={now} delay={i * 60} />
+                        <ModelCard key={m.modelName} model={m} delay={i * 60} />
                       ))}
                     </div>
                   </SectionBoundary>
@@ -1532,7 +1557,7 @@ export default function DashboardPage() {
             </p>
             <p>
               Fuso orario: Europe/Rome ({romeZoneInfo(now)}) · Orario locale:{" "}
-              <span className="font-mono tabular-nums">{mounted ? nowRomeTime() : "--:--:--"}</span>
+              <OraRomaViva />
             </p>
           </div>
         </footer>

@@ -457,7 +457,8 @@ interface DiagnosticaPanelProps {
   pollCausa: "offline" | "tab-nascosto" | null;
 }
 
-export function DiagnosticaPanel({ history, events, backoffAttivo, backoffDelayMs, pollCausa }: DiagnosticaPanelProps) {
+/** Diagnostica del monitor (memoizzata: I96) — gli orologi dei reset interni hanno il proprio ritmo. */
+function DiagnosticaPanelBase({ history, events, backoffAttivo, backoffDelayMs, pollCausa }: DiagnosticaPanelProps) {
   const salute = React.useMemo(() => saluteMonitor(events), [events]);
 
   return (
@@ -504,3 +505,5 @@ export function DiagnosticaPanel({ history, events, backoffAttivo, backoffDelayM
     </Card>
   );
 }
+
+export const DiagnosticaPanel = React.memo(DiagnosticaPanelBase);
