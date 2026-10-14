@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "438 test / 1377 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "438 test / 1378 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -703,6 +703,21 @@ const CHECKS = [
   check.file("I95", "tests/lib/api-protezione.test.ts", "test guard (spenta/attiva/401) + rate limit (budget, finestra, per-IP, default 120)"),
   check.file("I95", "tests/lib/api-guard.test.ts", "accettazione route-level: DELETE → 401 senza header, 200 con header"),
   check.file("I95", "tests/lib/header-sicurezza.test.ts", "header di sicurezza presenti; HSTS solo in produzione"),
+
+  /* --- I104 — potatura dipendenze e componenti inutilizzati --- */
+  check.assenza("I104", "package.json", '"next-auth"', "next-auth RIMOSSO (zero import)"),
+  check.assenza("I104", "package.json", '"z-ai-web-dev-sdk"', "z-ai-web-dev-sdk RIMOSSO (zero import)"),
+  check.assenza("I104", "package.json", '"zustand"', "zustand RIMOSSO (zero import)"),
+  check.assenza("I104", "package.json", '"@mdxeditor/editor"', "mdxeditor RIMOSSO (zero import)"),
+  check.assenza("I104", "package.json", '"date-fns"', "date-fns RIMOSSO (calendar inutilizzato)"),
+  check.assenza("I104", "package.json", '"react-hook-form"', "react-hook-form RIMOSSO (form inutilizzato)"),
+  check.assenza("I104", "package.json", '"framer-motion"', "framer-motion RIMOSSO: la premessa della decisione I104 («usato in quota-ring») era venuta meno — restava solo un commento stale, l'import era già sparito"),
+  check.assenza("I104", "package.json", '"@radix-ui/react-tooltip"', "radix tooltip RIMOSSO (ui/tooltip usato solo da sidebar)"),
+  check.nessunFile("I104", "src/components/ui", "(sidebar|skeleton|tooltip|sheet|form|calendar|drawer|command|input-otp|resizable|accordion|alert-dialog)\.tsx", "componenti ui a zero import eliminati (con la loro chiusura: skeleton/tooltip/sheet servivano solo a sidebar)"),
+  check.simbolo("I104", "src/components/ui/toggle-group.tsx", "toggleVariants", "ui/toggle RESTAURATO: importato da toggle-group (il grep della prima stesura l'aveva scartato)"),
+  check.simbolo("I104", "src/components/quota-ring.tsx", "animato via CSS", "commento stale framer-motion corretto (l'animazione è già CSS)"),
+  check.simbolo("I104", "package.json", '"zod"', "zod CONSERVATO (in uso da I103)"),
+  check.simbolo("I104", "package.json", '"recharts"', "recharts conservato (grafici)"),
 ];
 
 /* ------------------------------------------------------------------ */

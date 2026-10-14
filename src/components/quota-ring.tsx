@@ -44,7 +44,7 @@ interface QuotaRingProps {
 }
 
 /**
- * Anello di avanzamento SVG con gradiente, animato con framer-motion.
+ * Anello di avanzamento SVG con gradiente, animato via CSS (transizioni).
  * Mostra la quota rimanente.
  */
 export function QuotaRing({
