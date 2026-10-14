@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CODING_PLAN_ENDPOINTS, REGION_ENDPOINTS, Region, PrimaryFailureKind, shouldTryFallback } from "@/lib/minimax";
 import { parseRetryAfterMs } from "@/lib/backoff";
+import { schemaCorpoProxy } from "@/lib/api-schemi";
 
 export const dynamic = "force-dynamic";
 
@@ -185,7 +186,9 @@ async function tryEndpoint(endpoint: string, apiKey: string, fetchedAt: number):
  * I18). Errori di autenticazione e transitori NON innescano il fallback.
  */
 export async function POST(req: NextRequest) {
-  let body: { apiKey?: string; region?: string };
+  /* I103 — validazione del body con zod (lib/api-schemi.ts): chiave obbligatoria
+     (trim ≥ 1) e regione degradata a «eu» — contratto esterno invariato. */
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
@@ -195,17 +198,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
-  const region: Region = body.region === "cn" ? "cn" : "eu";
-  const endpoint = REGION_ENDPOINTS[region];
-  const fetchedAt = Date.now();
-
-  if (!apiKey) {
+  const parsedCorpo = schemaCorpoProxy.safeParse(body);
+  if (!parsedCorpo.success) {
     return NextResponse.json(
       { ok: false, error: { code: "missing_key", message: "Chiave API mancante." } },
       { status: 400 },
     );
   }
+  const apiKey = parsedCorpo.data.apiKey;
+  const region: Region = parsedCorpo.data.region;
+  const endpoint = REGION_ENDPOINTS[region];
+  const fetchedAt = Date.now();
 
   try {
     const primary = await tryEndpoint(endpoint, apiKey, fetchedAt);

@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T19:54:24.198Z
+# Audit implementazioni — 2026-10-14T20:03:20.226Z
 
-- Verifiche totali: **425** · PASS: **425** · FAIL: **0**
+- Verifiche totali: **441** · PASS: **441** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -430,5 +430,21 @@
 | I99 | client storico server: merge dedup (vince locale), POST/GET/DELETE, normalizzazione I92 | file | PASS | — |
 | I99 | client eventi server: scarto kind non valido, dedup id, contratti HTTP | file | PASS | — |
 | I99 | medianaDi: pari/dispari/vuoto/immutabilità dell'input | file | PASS | — |
+| I103 | schemi zod dei corpi API (proxy + 3 archivi) | file | PASS | — |
+| I103 | proxy: apiKey trim ≥1, region eu|cn degradata a eu (contratto storico) (src/lib/api-schemi.ts) | simbolo | PASS | — |
+| I103 | punto storico normalizzato (t/interval/weekly/source/region) (src/lib/api-schemi.ts) | simbolo | PASS | — |
+| I103 | evento normalizzato (id/t/kind/model/win/message/value) (src/lib/api-schemi.ts) | simbolo | PASS | — |
+| I103 | punto per-modello LONG normalizzato (src/lib/api-schemi.ts) | simbolo | PASS | — |
+| I103 | cap batch 500 come transform (troncamento silenzioso del contratto storico) (src/lib/api-schemi.ts) | simbolo | PASS | — |
+| I103 | zod dichiarato tra le dipendenze (ora davvero usato) (package.json) | simbolo | PASS | — |
+| I103 | proxy: validazione via schema (src/app/api/minimax/usage/route.ts) | simbolo | PASS | — |
+| I103 | check manuale della chiave RIMOSSO (sostituito dallo schema) — assenza richiesta (src/app/api/minimax/usage/route.ts) | assenza | PASS | — |
+| I103 | archivio storico: riga normalizzata dallo schema (src/app/api/history/route.ts) | simbolo | PASS | — |
+| I103 | check manuale dell'array RIMOSSO — assenza richiesta (src/app/api/history/route.ts) | assenza | PASS | — |
+| I103 | archivio eventi: riga normalizzata dallo schema (src/app/api/events/route.ts) | simbolo | PASS | — |
+| I103 | check manuale dell'array RIMOSSO — assenza richiesta (src/app/api/events/route.ts) | assenza | PASS | — |
+| I103 | helper di validazione manuale RIMOSSO (assorbito dallo schema) — assenza richiesta (src/app/api/events/route.ts) | assenza | PASS | — |
+| I103 | archivio per-modello: riga normalizzata dallo schema (src/app/api/history/models/route.ts) | simbolo | PASS | — |
+| I103 | helper di validazione manuale RIMOSSO (assorbito dallo schema) — assenza richiesta (src/app/api/history/models/route.ts) | assenza | PASS | — |
 
-Verdetto: **PASS** (425 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (441 pass, 0 fail, 0 scoperte)

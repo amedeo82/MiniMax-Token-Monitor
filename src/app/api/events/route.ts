@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toEpoch, toFloat } from "@/lib/http-validate";
+import { toEpoch } from "@/lib/http-validate";
+import { schemaCorpoEventi, schemaEventoIngresso } from "@/lib/api-schemi";
 
 export const dynamic = "force-dynamic";
 
@@ -37,23 +38,6 @@ const RETENTION_DAYS = 180;
 
 /** Tipi di evento ammessi (stessa enum di lib/usage-events.ts). */
 const VALID_KINDS = new Set(["reset", "warn", "crit", "error", "info"]);
-/** Finestre ammesse. */
-const VALID_WINS = new Set(["interval", "weekly"]);
-
-interface IncomingEvent {
-  id?: unknown;
-  t?: unknown;
-  kind?: unknown;
-  model?: unknown;
-  win?: unknown;
-  message?: unknown;
-  value?: unknown;
-}
-
-function optionalString(v: unknown, max: number): string | null {
-  return typeof v === "string" && v.trim() !== "" ? v.slice(0, max) : null;
-}
-
 /** Elimina gli eventi più vecchi di RETENTION_DAYS e oltre SERVER_EVENTS_MAX (FIFO). */
 async function pruneEvents(): Promise<void> {
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 3600_000);
@@ -73,9 +57,12 @@ async function pruneEvents(): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { events?: IncomingEvent[] };
+  /* I103 — validazione del body con zod (lib/api-schemi.ts): cap batch 500,
+     normalizzazione campi (id/t/kind/model/win/message/value) negli schemi;
+     contratto esterno invariato (test I99). */
+  let body: unknown;
   try {
-    body = (await req.json()) as { events?: IncomingEvent[] };
+    body = await req.json();
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "bad_request", message: "Il corpo della richiesta non è JSON valido." } },
@@ -83,7 +70,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const incoming = Array.isArray(body.events) ? body.events.slice(0, 500) : [];
+  const parsedCorpo = schemaCorpoEventi.safeParse(body);
+  const incoming = parsedCorpo.success ? parsedCorpo.data : [];
   if (incoming.length === 0) {
     return NextResponse.json(
       { ok: false, error: { code: "bad_request", message: "Nessun evento valido nell'array events." } },
@@ -94,20 +82,20 @@ export async function POST(req: NextRequest) {
   try {
     let stored = 0;
     for (const ev of incoming) {
-      const id = optionalString(ev.id, 64);
-      const t = toEpoch(ev.t);
-      const kind = typeof ev.kind === "string" && VALID_KINDS.has(ev.kind) ? ev.kind : null;
-      const message = optionalString(ev.message, 500);
+      /* I103 — riga normalizzata dallo schema: id/t/kind/message null → scartata. */
+      const parsed = schemaEventoIngresso.safeParse(ev);
+      if (!parsed.success) continue;
+      const { id, t, kind, model, win, message, value } = parsed.data;
       // Servono id, timestamp, tipo e messaggio: altrimenti la riga è scartata.
       if (!id || t === null || !kind || !message) continue;
 
       const data = {
         t: new Date(t),
         kind,
-        model: optionalString(ev.model, 64),
-        win: typeof ev.win === "string" && VALID_WINS.has(ev.win) ? ev.win : null,
+        model,
+        win,
         message,
-        value: toFloat(ev.value),
+        value,
       };
       await db.usageEventRecord.upsert({
         where: { id },

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { toEpoch, toFloat } from "@/lib/http-validate";
+import { toEpoch } from "@/lib/http-validate";
+import { schemaCorpoPunti, schemaPuntoModello } from "@/lib/api-schemi";
 import {
   countModelPoints,
   deleteModelPoints,
@@ -26,28 +27,14 @@ export const dynamic = "force-dynamic";
 
 const MODEL_HISTORY_MAX = 10_000;
 const GET_LIMIT_MAX = 10_000;
-/** Limite difensivo sulla lunghezza del nome modello. */
-const MODEL_NAME_MAX = 32;
-
-interface IncomingModelPoint {
-  t?: unknown;
-  model?: unknown;
-  interval?: unknown;
-  weekly?: unknown;
-  source?: unknown;
-  region?: unknown;
-}
-
-function toModelName(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const name = v.trim().slice(0, MODEL_NAME_MAX);
-  return name.length > 0 ? name : null;
-}
 
 export async function POST(req: NextRequest) {
-  let body: { points?: IncomingModelPoint[] };
+  /* I103 — validazione del body con zod (lib/api-schemi.ts): cap batch 500 e
+     normalizzazione (t/model/finestre/source/region) negli schemi; contratto
+     esterno invariato (test I99). */
+  let body: unknown;
   try {
-    body = (await req.json()) as { points?: IncomingModelPoint[] };
+    body = await req.json();
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "bad_request", message: "Corpo della richiesta non è JSON valido." } },
@@ -55,7 +42,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const points = Array.isArray(body.points) ? body.points.slice(0, 500) : [];
+  const parsedCorpo = schemaCorpoPunti.safeParse(body);
+  const points = parsedCorpo.success ? parsedCorpo.data : [];
   if (points.length === 0) {
     return NextResponse.json(
       { ok: false, error: { code: "bad_request", message: "Nessun punto valido nell'array points." } },
@@ -66,17 +54,15 @@ export async function POST(req: NextRequest) {
   try {
     let stored = 0;
     for (const p of points) {
-      const t = toEpoch(p.t);
-      const model = toModelName(p.model);
+      /* I103 — riga normalizzata dallo schema: t/model null → scartata. */
+      const parsed = schemaPuntoModello.safeParse(p);
+      if (!parsed.success) continue;
+      const { t, model, interval, weekly, source, region } = parsed.data;
       if (t === null || model === null) continue;
-      const source = typeof p.source === "string" && p.source ? p.source.slice(0, 16) : "api";
-      const region = p.region === "cn" ? "cn" : "eu";
       // Formato LONG: una riga per finestra non null (upsert dedup su model+win+t).
-      const interval = toFloat(p.interval);
       if (interval !== null) {
         await upsertModelPoint({ model, win: "interval", t, percent: interval, source, region });
       }
-      const weekly = toFloat(p.weekly);
       if (weekly !== null) {
         await upsertModelPoint({ model, win: "weekly", t, percent: weekly, source, region });
       }

@@ -662,6 +662,24 @@ const CHECKS = [
   check.file("I99", "tests/lib/server-history.test.ts", "client storico server: merge dedup (vince locale), POST/GET/DELETE, normalizzazione I92"),
   check.file("I99", "tests/lib/server-events.test.ts", "client eventi server: scarto kind non valido, dedup id, contratti HTTP"),
   check.file("I99", "tests/lib/stats.test.ts", "medianaDi: pari/dispari/vuoto/immutabilità dell'input"),
+
+  /* --- I103 — validazione dei body con zod --- */
+  check.file("I103", "src/lib/api-schemi.ts", "schemi zod dei corpi API (proxy + 3 archivi)"),
+  check.simbolo("I103", "src/lib/api-schemi.ts", "export const schemaCorpoProxy", "proxy: apiKey trim ≥1, region eu|cn degradata a eu (contratto storico)"),
+  check.simbolo("I103", "src/lib/api-schemi.ts", "export const schemaPuntoStorico", "punto storico normalizzato (t/interval/weekly/source/region)"),
+  check.simbolo("I103", "src/lib/api-schemi.ts", "export const schemaEventoIngresso", "evento normalizzato (id/t/kind/model/win/message/value)"),
+  check.simbolo("I103", "src/lib/api-schemi.ts", "export const schemaPuntoModello", "punto per-modello LONG normalizzato"),
+  check.simbolo("I103", "src/lib/api-schemi.ts", "\\.slice\\(0, 500\\)", "cap batch 500 come transform (troncamento silenzioso del contratto storico)"),
+  check.simbolo("I103", "package.json", '"zod"', "zod dichiarato tra le dipendenze (ora davvero usato)"),
+  check.simbolo("I103", "src/app/api/minimax/usage/route.ts", "schemaCorpoProxy\.safeParse", "proxy: validazione via schema"),
+  check.assenza("I103", "src/app/api/minimax/usage/route.ts", 'typeof body\.apiKey === "string"', "check manuale della chiave RIMOSSO (sostituito dallo schema)"),
+  check.simbolo("I103", "src/app/api/history/route.ts", "schemaPuntoStorico\.safeParse", "archivio storico: riga normalizzata dallo schema"),
+  check.assenza("I103", "src/app/api/history/route.ts", "Array\.isArray\(body\.points\)", "check manuale dell'array RIMOSSO"),
+  check.simbolo("I103", "src/app/api/events/route.ts", "schemaEventoIngresso\.safeParse", "archivio eventi: riga normalizzata dallo schema"),
+  check.assenza("I103", "src/app/api/events/route.ts", "Array\.isArray\(body\.events\)", "check manuale dell'array RIMOSSO"),
+  check.assenza("I103", "src/app/api/events/route.ts", "optionalString", "helper di validazione manuale RIMOSSO (assorbito dallo schema)"),
+  check.simbolo("I103", "src/app/api/history/models/route.ts", "schemaPuntoModello\.safeParse", "archivio per-modello: riga normalizzata dallo schema"),
+  check.assenza("I103", "src/app/api/history/models/route.ts", "toModelName", "helper di validazione manuale RIMOSSO (assorbito dallo schema)"),
 ];
 
 /* ------------------------------------------------------------------ */

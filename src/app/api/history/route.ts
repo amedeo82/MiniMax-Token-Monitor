@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { emptyHourBucket, hourStartOf, mergeHourBucket, type HourStats } from "@/lib/downsample";
-import { toEpoch, toFloat } from "@/lib/http-validate";
+import { toEpoch } from "@/lib/http-validate";
+import { schemaCorpoPunti, schemaPuntoStorico } from "@/lib/api-schemi";
 
 export const dynamic = "force-dynamic";
 
@@ -28,14 +29,6 @@ export const dynamic = "force-dynamic";
 const SERVER_HISTORY_MAX = 10_000;
 /** Limite difensivo per la query GET. */
 const GET_LIMIT_MAX = 10_000;
-
-interface IncomingPoint {
-  t?: unknown;
-  interval?: unknown;
-  weekly?: unknown;
-  source?: unknown;
-  region?: unknown;
-}
 
 /** Elimina i punti più vecchi di 90 giorni e oltre SERVER_HISTORY_MAX (FIFO). */
 async function pruneHistory(): Promise<void> {
@@ -136,9 +129,12 @@ async function updateHourBucket(
 }
 
 export async function POST(req: NextRequest) {
-  let body: { points?: IncomingPoint[] };
+  /* I103 — validazione del body con zod (lib/api-schemi.ts): cap batch 500 e
+     normalizzazione dei campi contrattuali (t/interval/weekly/source/region)
+     ora vivono negli schemi; il contratto esterno è invariato (test I99). */
+  let body: unknown;
   try {
-    body = (await req.json()) as { points?: IncomingPoint[] };
+    body = await req.json();
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "bad_request", message: "Corpo della richiesta non è JSON valido." } },
@@ -146,7 +142,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const points = Array.isArray(body.points) ? body.points.slice(0, 500) : [];
+  const parsedCorpo = schemaCorpoPunti.safeParse(body);
+  const points = parsedCorpo.success ? parsedCorpo.data : [];
   if (points.length === 0) {
     return NextResponse.json(
       { ok: false, error: { code: "bad_request", message: "Nessun punto valido nell'array points." } },
@@ -157,14 +154,12 @@ export async function POST(req: NextRequest) {
   try {
     let stored = 0;
     for (const p of points) {
-      const t = toEpoch(p.t);
+      /* I103 — riga normalizzata dallo schema: t null → scartata (come prima). */
+      const parsed = schemaPuntoStorico.safeParse(p);
+      if (!parsed.success) continue;
+      const { t, interval, weekly, source, region } = parsed.data;
       if (t === null) continue;
-      const data = {
-        interval: toFloat(p.interval),
-        weekly: toFloat(p.weekly),
-        source: typeof p.source === "string" && p.source ? p.source.slice(0, 16) : "api",
-        region: p.region === "cn" ? "cn" : "eu",
-      };
+      const data = { interval, weekly, source, region };
       await db.usagePoint.upsert({
         where: { t: new Date(t) },
         create: { t: new Date(t), ...data },
