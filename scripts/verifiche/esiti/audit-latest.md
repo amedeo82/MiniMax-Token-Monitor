@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T19:42:13.998Z
+# Audit implementazioni — 2026-10-14T19:54:24.198Z
 
-- Verifiche totali: **415** · PASS: **415** · FAIL: **0**
+- Verifiche totali: **425** · PASS: **425** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -420,5 +420,15 @@
 | I96 | sonda di misura del render grafico (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I96 | test store 1 Hz: primo abbonato, stop all'ultimo, multi-abbonato | file | PASS | — |
 | I96 | strumento di misura render/min (prima 60,9 → dopo 3,7) | file | PASS | — |
+| I99 | POST/DELETE dei 3 archivi: validazione, dedup upsert, cap 500, limiti GET (db mockato) | file | PASS | — |
+| I99 | pattern I93: mock.module sul client Prisma + import dinamico delle route (tests/lib/api-archivi.test.ts) | simbolo | PASS | — |
+| I99 | proxy /api/minimax/usage: fetch mockato (429 Retry-After, 401, 1004, fallback I18, bad_json, rete) | file | PASS | — |
+| I99 | fallback I18 verificato: errore del primario + annotazione del tentativo (tests/lib/api-proxy.test.ts) | simbolo | PASS | — |
+| I99 | GET /api/summary: forma KPI, archivio vuoto, read-only | file | PASS | — |
+| I99 | contratti toEpoch (ms/secondi) e toFloat (clamp 0-100) | file | PASS | — |
+| I99 | formati export: CSV ; + BOM + virgola decimali + quoting, JSON incapsulato | file | PASS | — |
+| I99 | client storico server: merge dedup (vince locale), POST/GET/DELETE, normalizzazione I92 | file | PASS | — |
+| I99 | client eventi server: scarto kind non valido, dedup id, contratti HTTP | file | PASS | — |
+| I99 | medianaDi: pari/dispari/vuoto/immutabilità dell'input | file | PASS | — |
 
-Verdetto: **PASS** (415 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (425 pass, 0 fail, 0 scoperte)

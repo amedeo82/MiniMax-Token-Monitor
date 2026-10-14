@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "361 test / 1025 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "425 test / 1216 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -650,6 +650,18 @@ const CHECKS = [
   check.simbolo("I96", "src/components/history-chart.tsx", "__mmRenderGrafico", "sonda di misura del render grafico"),
   check.file("I96", "tests/lib/orologio.test.ts", "test store 1 Hz: primo abbonato, stop all'ultimo, multi-abbonato"),
   check.file("I96", "scripts/verifiche/misura-render-i96.py", "strumento di misura render/min (prima 60,9 → dopo 3,7)"),
+
+  /* --- I99 — copertura test: contratti delle API e moduli lib scoperti --- */
+  check.file("I99", "tests/lib/api-archivi.test.ts", "POST/DELETE dei 3 archivi: validazione, dedup upsert, cap 500, limiti GET (db mockato)"),
+  check.simbolo("I99", "tests/lib/api-archivi.test.ts", "mock\\.module\\(\"@/lib/db\"", "pattern I93: mock.module sul client Prisma + import dinamico delle route"),
+  check.file("I99", "tests/lib/api-proxy.test.ts", "proxy /api/minimax/usage: fetch mockato (429 Retry-After, 401, 1004, fallback I18, bad_json, rete)"),
+  check.simbolo("I99", "tests/lib/api-proxy.test.ts", "fallbackTried", "fallback I18 verificato: errore del primario + annotazione del tentativo"),
+  check.file("I99", "tests/lib/api-summary.test.ts", "GET /api/summary: forma KPI, archivio vuoto, read-only"),
+  check.file("I99", "tests/lib/http-validate.test.ts", "contratti toEpoch (ms/secondi) e toFloat (clamp 0-100)"),
+  check.file("I99", "tests/lib/export.test.ts", "formati export: CSV ; + BOM + virgola decimali + quoting, JSON incapsulato"),
+  check.file("I99", "tests/lib/server-history.test.ts", "client storico server: merge dedup (vince locale), POST/GET/DELETE, normalizzazione I92"),
+  check.file("I99", "tests/lib/server-events.test.ts", "client eventi server: scarto kind non valido, dedup id, contratti HTTP"),
+  check.file("I99", "tests/lib/stats.test.ts", "medianaDi: pari/dispari/vuoto/immutabilità dell'input"),
 ];
 
 /* ------------------------------------------------------------------ */
