@@ -100,6 +100,18 @@ const check = {
       return missing.length === 0 ? null : `file assenti: ${missing.join(", ")}`;
     },
   }),
+  /** Il file contiene il contatore reale valutato ALL'ESCUZIONE (I105: README ↔ audit auto-coerenti). */
+  contatore: (item, rel, forma, what) => ({
+    item,
+    what: `${what} — contatore dinamico`,
+    kind: "simbolo",
+    run: () => {
+      const c = read(rel);
+      if (c === null) return `file assente: ${rel}`;
+      const rx = new RegExp(forma(CHECKS.length), "m");
+      return rx.test(c) ? null : `contatore non allineato in ${rel}: atteso /${forma(CHECKS.length)}/`;
+    },
+  }),
   /** Nessun percorso corrispondente è tracciato da git (I97: artefatti fuori dall'indice). */
   nonTracciato: (item, pattern, what) => ({
     item,
@@ -563,12 +575,23 @@ const CHECKS = [
   /* --- I105 — coerenza di versione, README e metadati (contatori presidiati: aggiornare README a ogni cambio) --- */
   check.simbolo("I105", "package.json", "\"name\": \"minimax-usage-monitor\"", "name npm coerente col progetto (era nextjs_tailwind_shadcn_ts)"),
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
-  check.simbolo("I105", "README.md", "audit-351_PASS", "badge audit allineato al numero reale dei check"),
-  check.simbolo("I105", "README.md", "351 verifiche dichiarative", "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "342 test / 967 asserzioni", "contatori suite §Struttura allineati (erano 330/932)"),
+  check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
+  check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
+  check.simbolo("I105", "README.md", "349 test / 993 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
+
+  /* --- I98 — gestione esplicita della quota localStorage (persistJson unico punto di scrittura) --- */
+  check.simbolo("I98", "src/lib/persist-json.ts", "export function persistJson", "helper centralizzato persistJson (unico punto di scrittura localStorage)"),
+  check.simbolo("I98", "src/lib/persist-json.ts", "QuotaExceededError", "rilevamento esplicito dell'errore di quota (alias Firefox incluso)"),
+  check.simbolo("I98", "src/lib/persist-json.ts", "setQuotaNotifier", "notifica registrabile una tantum per sessione (toast + evento tecnico fuori dal modulo)"),
+  check.assenza("I98", "src/app/page.tsx", "localStorage\\.setItem", "page.tsx: nessun setItem diretto (tutte le scritture passano da persistJson — prima: 4 catch silenziosi)"),
+  check.assenza("I98", "src/lib/usage-events.ts", "localStorage\\.setItem", "usage-events: nessun setItem diretto (prima: catch silenzioso sul registro eventi)"),
+  check.assenza("I98", "src/lib/model-history.ts", "localStorage\\.setItem", "model-history: nessun setItem diretto (prima: catch silenzioso sullo storico per-modello)"),
+  check.assenza("I98", "src/lib/kiosk.ts", "localStorage\\.setItem", "kiosk: nessun setItem diretto (sesto catch silenzioso individuato in implementazione)"),
+  check.simbolo("I98", "src/app/page.tsx", "setQuotaNotifier\\(", "notifier cablato in page.tsx: toast sonner + evento tecnico «error» nel registro"),
+  check.file("I98", "tests/lib/persist-json.test.ts", "test con storage finto che solleva QuotaExceededError (fallback FIFO, rinuncia, notifica una tantum)"),
 ];
 
 /* ------------------------------------------------------------------ */

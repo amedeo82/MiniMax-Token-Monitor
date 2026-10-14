@@ -15,6 +15,8 @@
  *   riferimento dell'intera dashboard, ADR-1).
  */
 
+import { persistJson } from "./persist-json";
+
 export type KioskView = "quote" | "grafico" | "analisi";
 
 /** Ordine di rotazione: quote → grafico → analisi → quote… */
@@ -77,14 +79,10 @@ export function loadKioskState(): KioskState {
   }
 }
 
-/** Persiste lo stato kiosk (best effort: quota piena ignorata). */
+/** Persiste lo stato kiosk (I98: su quota piena rinuncia e notifica una tantum). */
 export function saveKioskState(state: KioskState): void {
   if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KIOSK_STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    /* quota piena: lo stato resta in memoria per la sessione */
-  }
+  persistJson(KIOSK_STORAGE_KEY, state, { etichetta: "stato kiosk" });
 }
 
 /**

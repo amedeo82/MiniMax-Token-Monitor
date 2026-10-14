@@ -12,6 +12,7 @@
  */
 
 import type { UsageSnapshot, QuotaWindow } from "./minimax";
+import { persistJson } from "./persist-json";
 
 /* ------------------------------------------------------------------ */
 /* Registro eventi (localStorage)                                      */
@@ -55,11 +56,13 @@ function readEvents(): UsageEvent[] {
 }
 
 function writeEvents(events: UsageEvent[]): void {
-  try {
-    localStorage.setItem(EVENTS_KEY, JSON.stringify(events.slice(-EVENTS_MAX)));
-  } catch {
-    /* quota localStorage piena: il registro resta solo in memoria */
-  }
+  // I98 — scrittura con gestione esplicita della quota: su storage pieno il
+  // registro viene ridotto FIFO (notifica una tantum, vedi persist-json.ts);
+  // nessun catch silenzioso.
+  persistJson(EVENTS_KEY, events.slice(-EVENTS_MAX), {
+    riduci: (e, n) => e.slice(-n),
+    etichetta: "registro eventi",
+  });
 }
 
 /** Carica il registro eventi (dal più vecchio al più recente). */
