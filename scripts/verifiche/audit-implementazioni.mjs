@@ -577,7 +577,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "354 test / 1003 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "358 test / 1013 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -612,6 +612,12 @@ const CHECKS = [
   check.simbolo("I101", "src/components/pwa-register.tsx", "Ricarica", "azione esplicita del banner"),
   check.simbolo("I101", "src/components/pwa-register.tsx", "controllerchange", "reload SOLO quando la nuova versione prende il controllo"),
   check.simbolo("I101", "tests/components/pwa-update.test.tsx", "SKIP_WAITING", "test componente: niente auto-skip, click → postMessage al worker in attesa"),
+
+  /* --- I102 — skip-link e landmark di destinazione --- */
+  check.simbolo("I102", "src/app/layout.tsx", "Salta al contenuto", "skip-link come PRIMO elemento focusabile (etichetta in italiano)"),
+  check.simbolo("I102", "src/app/layout.tsx", "href=\\\"#contenuto\\\"", "destinazione: <main id=\"contenuto\">"),
+  check.simbolo("I102", "src/app/layout.tsx", "sr-only focus:not-sr-only", "visibile SOLO on-focus (pattern Tailwind, famiglia focus-visible I79)"),
+  check.simbolo("I102", "src/app/page.tsx", "<main id=\\\"contenuto\\\" tabIndex=\\{-1\\}", "main focalizzabile programmaticamente (niente anello gigante: outline-none)"),
 ];
 
 /* ------------------------------------------------------------------ */

@@ -1205,7 +1205,11 @@ export default function DashboardPage() {
         </header>
 
         {/* ------------------------------ Main ------------------------------ */}
-        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
+        {/* I102 — destinazione dello skip-link («Salta al contenuto» in layout.tsx);
+            tabIndex -1 rende il main focalizzabile programmaticamente, focus:outline-none
+            evita l'anello gigante attorno all'intera pagina (il focus visibile resta
+            sugli elementi interattivi, famiglia focus-visible I79). */}
+        <main id="contenuto" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 outline-none focus:outline-none sm:px-6">
         {/* I85 — navigazione sempre visibile durante lo scrolling: la nav è
             figlia DIRETTA di <main>, così il suo contenitore sticky è tutta la
             pagina. Un wrapper alto quanto la barra non le darebbe corsa e
