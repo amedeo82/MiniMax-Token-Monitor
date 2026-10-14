@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-12T09:46:37.220Z
+# Audit implementazioni — 2026-10-14T13:58:21.173Z
 
-- Verifiche totali: **237** · PASS: **237** · FAIL: **0**
+- Verifiche totali: **351** · PASS: **351** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -94,7 +94,7 @@
 | I52 | artefatti PWA | file | PASS | — |
 | I52 | SW usa la fonte unica (public/sw.js) | simbolo | PASS | — |
 | I52 | segreti solo in IndexedDB (ADR-14) (public/sw.js) | simbolo | PASS | — |
-| I52 | cache snapshot solo su ok:true (fix 1004 cachato) (public/sw.js) | simbolo | PASS | — |
+| I52 | nessuna cache delle risposte usage (fix 1004 cachato, superato da I92) — assenza richiesta (public/sw.js) | assenza | PASS | — |
 | I52 | parser condiviso (public/sw-shared.js) | simbolo | PASS | — |
 | I52 | chiavi soglia condivise (public/sw-shared.js) | simbolo | PASS | — |
 | I52 | transizioni condivise (public/sw-shared.js) | simbolo | PASS | — |
@@ -216,7 +216,7 @@
 | I84 | famiglia scuro: placeholder leggibile (src/app/globals.css) | simbolo | PASS | — |
 | I84 | tinte forti → toni 50 pieni (strato chiaro) (src/app/globals.css) | simbolo | PASS | — |
 | I84 | etichette menu text-zinc-500! in famiglia scuro (src/app/globals.css) | simbolo | PASS | — |
-| I85 | nav figlia DIRETTA di main: contenitore sticky = tutta la pagina (src/app/page.tsx) | simbolo | PASS | — |
+| I85 | nav figlia DIRETTA di main: contenitore sticky = tutta la pagina (nascosta in compact e kiosk) (src/app/page.tsx) | simbolo | PASS | — |
 | I85 | niente wrapper attorno alla nav (limiterebbe la corsa dello sticky) — assenza richiesta (src/app/page.tsx) | assenza | PASS | — |
 | I85 | sticky + hidden md:block sulla nav stessa (desktop ≥md) (src/components/section-nav.tsx) | simbolo | PASS | — |
 | I79 | descrizione heatmap per screen reader (modulo puro) (src/lib/a11y.ts) | simbolo | PASS | — |
@@ -242,5 +242,119 @@
 | I82 | etichetta breve della finestra interval dalla durata osservata (src/components/quota-cards.tsx) | simbolo | PASS | — |
 | I82 | etichette finestra parametriche su grafico/statistiche/ritmo (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I82 | storico demo per-modello coerente con i tick dal vivo (src/lib/demo.ts) | simbolo | PASS | — |
+| I86 | route Task 7 api/verifiche RIMOSSA (coerenza ADR-13-R: nessun endpoint che spawn di processi) — nessun file deve esistere | assenza | PASS | — |
+| I86 | scaffold api/route.ts rimosso — nessun file deve esistere | assenza | PASS | — |
+| I86 | campionatore I49 dormiente FUORI campagna / ri-cablato SOLO con blocco marcato CAMPAGNA V8 (ADR-13-R2) | condizione | PASS | — |
+| I86 | contratto del campionatore superstite (dormiente, per la campagna V8) (src/lib/campione.ts) | simbolo | PASS | — |
+| I86 | marcatore versione (I46): fonte unica (src/lib/version.ts) | simbolo | PASS | — |
+| I86 | versione renderizzata nel footer (src/app/page.tsx) | simbolo | PASS | — |
+| I86 | nessun riferimento a file chiave in src/app FUORI dal blocco marcato CAMPAGNA V8 (ADR-13-R intatto) | condizione | PASS | — |
+| I87 | modulo kiosk (puro) + barra di controllo | file | PASS | — |
+| I87 | parsing ?kiosk=1 (semantica readCompactMode) (src/lib/kiosk.ts) | simbolo | PASS | — |
+| I87 | finestra notturna dimming 22:00–06:59 Europe/Rome (src/lib/kiosk.ts) | simbolo | PASS | — |
+| I87 | barra kiosk cablata (sostituisce footer e nav mobile) (src/app/page.tsx) | simbolo | PASS | — |
+| I87 | rotazione automatica delle viste (src/app/page.tsx) | simbolo | PASS | — |
+| I87 | dimming notturno cablato (overlay z-45 sotto la barra) (src/app/page.tsx) | simbolo | PASS | — |
+| I87 | URL sincronizzato via history.replaceState (src/app/page.tsx) | simbolo | PASS | — |
+| I87 | uscita con Esc (src/app/page.tsx) | simbolo | PASS | — |
+| I87 | toggle di ingresso nell'header (src/app/page.tsx) | simbolo | PASS | — |
+| I87 | uscita sempre disponibile dalla barra sticky (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
+| I87 | versione resa anche nella barra kiosk (I46) (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
+| I53 | regione opposta (eu↔cn) (src/lib/minimax.ts) | simbolo | PASS | — |
+| I53 | coppie {region,key} della campagna parallela (dedup chiave doppia) (src/lib/minimax.ts) | simbolo | PASS | — |
+| I53 | settings multi-chiave (seconda chiave opzionale, retrocompatibile) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I53 | etichetta dinamica della seconda regione nel dialog (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I53 | pannello della seconda regione (solo visualizzazione) (src/components/region-alt-panel.tsx) | simbolo | PASS | — |
+| I53 | campagna di fetch PARALLELA per regione (src/app/page.tsx) | simbolo | PASS | — |
+| I53 | coppie di interrogazione derivate dalle impostazioni (src/app/page.tsx) | simbolo | PASS | — |
+| I53 | pannello cablato nella sezione Panoramica (src/app/page.tsx) | simbolo | PASS | — |
+| I53 | riga TechInfo con stato della secondaria (src/components/tech-panels.tsx) | simbolo | PASS | — |
+| I53 | lo snapshot secondario NON entra nello storico (integrità analisi §5.21) — assenza richiesta (src/app/page.tsx) | assenza | PASS | — |
+| I48 | matrice demo ↔ API ri-creata (era §11.2, persa col rollback) (docs/01-api-minimax-ricerca.md) | simbolo | PASS | — |
+| I48 | verdetto della verifica registrato nella docs (docs/01-api-minimax-ricerca.md) | simbolo | PASS | — |
+| I48 | script di verifica riproducibile (bun, zero rete, zero chiavi) (scripts/verifiche/verifica-i48-demo-vs-api.ts) | simbolo | PASS | — |
+| I48 | t_query reale derivato (triangolazione docs/02 §4.2) incorporato (scripts/verifiche/verifica-i48-demo-vs-api.ts) | simbolo | PASS | — |
+| I48 | esito persistente a nome stabile (lezione rollback: nessun verdetto senza artefatto) | file | PASS | — |
+| I54 | matrice live ↔ demo ricostruita (era §5.9, persa col rollback) (docs/03-piano-implementazione.md) | simbolo | PASS | — |
+| I54 | verdetto della verifica registrato nella docs (docs/03-piano-implementazione.md) | simbolo | PASS | — |
+| I54 | script di verifica riproducibile (evidenze statiche su file) (scripts/verifiche/verifica-i54-live-vs-demo.mjs) | simbolo | PASS | — |
+| I54 | assenze richieste verificate esplicitamente (nessun fork nel parser/kiosk) (scripts/verifiche/verifica-i54-live-vs-demo.mjs) | simbolo | PASS | — |
+| I54 | esito persistente a nome stabile | file | PASS | — |
+| I49 | analizzatore fuso reset ri-creato + file campione commesso come prova grezza (205 righe: 122 del 09/10 recuperate + 83 fresche) | file | PASS | — |
+| I56 | verdetto V8 «blocchi fissi UTC» su esito stabile a nome persistente | file | PASS | — |
+| I56 | esiti rapidi con chiave reale commessi (V4/V5/V6, 12/10) | file | PASS | — |
+| I88 | descrittore originale catturato (happy-dom window===globalThis: il delete eliminava la proprietà own PER SEMRE) (tests/lib/kiosk.test.ts) | simbolo | PASS | — |
+| I88 | ripristino del descrittore in afterEach (mai delete secco) (tests/lib/kiosk.test.ts) | simbolo | PASS | — |
+| I88 | secondo polluter (mock usage-events) ripristinato con afterAll (tests/lib/usage-events.test.ts) | simbolo | PASS | — |
+| I88 | prova meccanista window===globalThis commessa (prima/durante/dopo) | file | PASS | — |
+| I89 | ui/chart.tsx shadcn RIMOSSO (dead code 353 righe incompatibile con recharts 3, precedente I86) — nessun file deve esistere | assenza | PASS | — |
+| I89 | voci tenute indietro con motivo documentato (TS 7, Prisma 7/8, eslint 10) (docs/04-stato-avanzamento.md) | simbolo | PASS | — |
+| I89 | wrapper shadcn non importati tenuti indietro con motivo (upgrade con rigenerazione) (docs/04-stato-avanzamento.md) | simbolo | PASS | — |
+| I90 | set-state-in-effect RIATTIVATA (niente più off in config) — assenza richiesta (eslint.config.mjs) | assenza | PASS | — |
+| I90 | refs RIATTIVATA (niente più off in config) — assenza richiesta (eslint.config.mjs) | assenza | PASS | — |
+| I90 | motivazione della riattivazione documentata in config (eslint.config.mjs) | simbolo | PASS | — |
+| I90 | ui/carousel.tsx shadcn RIMOSSO (dead code a zero import, precedente I86) — nessun file deve esistere | assenza | PASS | — |
+| I90 | hook shadcn convertito (niente setState sincrono in effect) (src/hooks/use-mobile.ts) | simbolo | PASS | — |
+| I90 | mounted-guard senza setState in effect (src/components/theme-toggle.tsx) | simbolo | PASS | — |
+| I90 | offset nav come misura da store esterno (src/components/section-nav.tsx) | simbolo | PASS | — |
+| I90 | caricamento persisted differito a microtask (init senza setState sincroni) (src/app/page.tsx) | simbolo | PASS | — |
+| I90 | ritardo scheduler come STATO (le ref non si leggono in render) (src/app/page.tsx) | simbolo | PASS | — |
+| I90 | reset pivot in fase di render (coppia remoteRef+serverVersion eliminata) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I90 | reset form all'apertura con aggiustamento in render (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I90 | casi istantanei AnimatedPercent con aggiustamento in render (src/lib/ring-color.ts) | simbolo | PASS | — |
+| I91 | vecchia guardia codice morto RIMOSSA da pushHistory (produceva punto finto {100,100}) — assenza richiesta (src/app/page.tsx) | assenza | PASS | — |
+| I91 | punto flat «general» costruito con la funzione pura condivisa (src/app/page.tsx) | simbolo | PASS | — |
+| I91 | costruzione del punto flat estratta e testabile (src/lib/model-history.ts) | simbolo | PASS | — |
+| I91 | transizioni azzerate al cambio connessione (niente falsi reset eu→cn / demo→api) (src/app/page.tsx) | simbolo | PASS | — |
+| I91 | disgiuntiva irraggiungibile rimossa (la risalita copre già il reset) — assenza richiesta (src/lib/rate.ts) | assenza | PASS | — |
+| I91 | disgiuntiva irraggiungibile rimossa + import ripulito — assenza richiesta (src/lib/ewma.ts) | assenza | PASS | — |
+| I91 | mediana condivisa (DRY: era duplicata in sampling/rate-anomalies/cycles) (src/lib/stats.ts) | simbolo | PASS | — |
+| I91 | copia locale rimossa (usa lib/stats) — assenza richiesta (src/lib/sampling.ts) | assenza | PASS | — |
+| I91 | copia locale rimossa (usa lib/stats) — assenza richiesta (src/lib/rate-anomalies.ts) | assenza | PASS | — |
+| I91 | validazione HTTP condivisa (DRY: era duplicata in 3 routes) (src/lib/http-validate.ts) | simbolo | PASS | — |
+| I91 | copia locale rimossa (usa lib/http-validate) — assenza richiesta (src/app/api/events/route.ts) | assenza | PASS | — |
+| I91 | copia locale rimossa (usa lib/http-validate) — assenza richiesta (src/app/api/history/models/route.ts) | assenza | PASS | — |
+| I91 | test di regressione del punto finto {100,100} (tests/lib/flat-history.test.ts) | simbolo | PASS | — |
+| I92 | cache «ultimo snapshot» RIMOSSA (payload senza consumatore GET, avvelenava il fallback offline) — assenza richiesta (public/sw.js) | assenza | PASS | — |
+| I92 | cache bump a v2 (attivazione elimina le voci stale mm-dash-v1) (public/sw.js) | simbolo | PASS | — |
+| I92 | normalizzazione condivisa delle risposte archivio (total garantito number) (src/lib/server-response.ts) | simbolo | PASS | — |
+| I92 | fetchServerHistory usa il normalizzatore (src/lib/server-history.ts) | simbolo | PASS | — |
+| I92 | fetchServerHourly usa il normalizzatore (src/lib/server-history.ts) | simbolo | PASS | — |
+| I92 | fetchServerEvents usa il normalizzatore (src/lib/server-events.ts) | simbolo | PASS | — |
+| I92 | test di regressione del payload degradato {ok:true} senza total (tests/lib/server-response.test.ts) | simbolo | PASS | — |
+| I92 | cleanup PwaRegister COMPLETO (prima: listener anonimo mai rimosso) (src/components/pwa-register.tsx) | simbolo | PASS | — |
+| I92 | listener message del SW rimosso nel cleanup (src/components/pwa-register.tsx) | simbolo | PASS | — |
+| I92 | stack shadcn toast RIMOSSO (dead code: la dashboard usa sonner) — nessun file deve esistere | assenza | PASS | — |
+| I92 | hook use-toast RIMOSSO (dead code, unico consumatore era ui/toaster) — nessun file deve esistere | assenza | PASS | — |
+| I92 | dipendenze morte rimosse (@radix-ui/react-toast, embla-carousel-react senza consumatori) — assenza richiesta (package.json) | assenza | PASS | — |
+| I93 | GET storico: la fetta servita è la PIÙ RECENTE (era asc = più vecchi) (src/app/api/history/route.ts) | simbolo | PASS | — |
+| I93 | GET storico: output restaurato cronologico dopo la selezione desc (src/app/api/history/route.ts) | simbolo | PASS | — |
+| I93 | GET eventi: la fetta servita è la PIÙ RECENTE (era asc = più vecchi) (src/app/api/events/route.ts) | simbolo | PASS | — |
+| I93 | GET eventi: output restaurato cronologico dopo la selezione desc (src/app/api/events/route.ts) | simbolo | PASS | — |
+| I93 | findModelPoints: fetta PIÙ RECENTE (era ASC = righe più vecchie) (src/lib/server-model-history.ts) | simbolo | PASS | — |
+| I93 | findModelPoints: output restaurato cronologico dopo la selezione DESC (src/lib/server-model-history.ts) | simbolo | PASS | — |
+| I93 | test di regressione route-level con db mockato (query desc + output cronologico) (tests/lib/archive-recent.test.ts) | simbolo | PASS | — |
+| I93 | parametro parseWindow «prefix» RIMOSSO (dead code: mai usato) — assenza richiesta (src/lib/minimax.ts) | assenza | PASS | — |
+| I93 | variabile «p» RIMOSSA dal parseWindow del mirror SW (dead code, mai letta) — assenza richiesta (public/sw-shared.js) | assenza | PASS | — |
+| I94 | tsconfig esclude examples/ (scaffolding non-progetto: tsc onesto su tutto il repo) (tsconfig.json) | simbolo | PASS | — |
+| I94 | tsconfig esclude skills/ (scaffolding non-progetto) (tsconfig.json) | simbolo | PASS | — |
+| I94 | next.config NON maschera più i tipi al build (ignoreBuildErrors rimosso) — assenza richiesta (next.config.ts) | assenza | PASS | — |
+| I94 | script typecheck dichiarato in package.json (package.json) | simbolo | PASS | — |
+| I94 | script audit dichiarato in package.json (package.json) | simbolo | PASS | — |
+| I94 | workflow CI GitHub Actions presente | file | PASS | — |
+| I94 | CI esegue il typecheck (.github/workflows/ci.yml) | simbolo | PASS | — |
+| I94 | CI esegue la suite (.github/workflows/ci.yml) | simbolo | PASS | — |
+| I94 | CI esegue l'audit di riconciliazione (.github/workflows/ci.yml) | simbolo | PASS | — |
+| I94 | dependabot settimanale (npm + actions) presente | file | PASS | — |
+| I97 | .gitignore: esiti/ ignorati (contenuto, non la directory) (.gitignore) | simbolo | PASS | — |
+| I97 | .gitignore: audit-latest.md esplicitamente NON ignorato (unica evidenza tracciata) (.gitignore) | simbolo | PASS | — |
+| I97 | .gitignore: database runtime ignorato (fine dei commit DB separati, lezione I30) (.gitignore) | simbolo | PASS | — |
+| I97 | entry ambigua «test» rimossa (ignorava QUALSIASI file/dir «test» nel repo) → sostituita da /test — assenza richiesta (.gitignore) | assenza | PASS | — |
+| I97 | esito audit corrente tracciato con nome fisso (evidenza pubblica) | file | PASS | — |
+| I97 | tool-results/ fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I97 | upload/ fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I97 | db runtime fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I97 | PNG di verifica di sessione fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I97 | esiti storici fuori dall'indice (restano su disco e nella storia git) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 
-Verdetto: **PASS** (237 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (351 pass, 0 fail, 0 scoperte)
