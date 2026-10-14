@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "425 test / 1216 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "438 test / 1377 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -680,6 +680,29 @@ const CHECKS = [
   check.assenza("I103", "src/app/api/events/route.ts", "optionalString", "helper di validazione manuale RIMOSSO (assorbito dallo schema)"),
   check.simbolo("I103", "src/app/api/history/models/route.ts", "schemaPuntoModello\.safeParse", "archivio per-modello: riga normalizzata dallo schema"),
   check.assenza("I103", "src/app/api/history/models/route.ts", "toModelName", "helper di validazione manuale RIMOSSO (assorbito dallo schema)"),
+
+  /* --- I95 — hardening delle API pubbliche --- */
+  check.file("I95", "src/lib/api-protezione.ts", "guard ADMIN_TOKEN + rate limit scritture in-memory per-IP"),
+  check.simbolo("I95", "src/lib/api-protezione.ts", "export function bloccoScrittura", "guardia composta (401/429) per le route di scrittura"),
+  check.simbolo("I95", "src/lib/api-protezione.ts", "process.env.ADMIN_TOKEN", "guard attiva SOLO con env impostata (default: uso locale invariato)"),
+  check.simbolo("I95", "src/lib/api-protezione.ts", "x-admin-token", "header richiesto alle scritture quando la guard è attiva"),
+  check.simbolo("I95", "src/lib/api-protezione.ts", "timingSafeEqual", "confronto del token timing-safe (SHA-256)"),
+  check.simbolo("I95", "src/lib/api-protezione.ts", "x-forwarded-for", "IP del client (per-IP; fallback «locale»)"),
+  check.simbolo("I95", "src/lib/api-protezione.ts", "RATE_LIMIT_WRITES_PER_MINUTO", "budget scritture/minuto configurabile (default 120, per-istanza su serverless)"),
+  check.simbolo("I95", "src/app/api/history/route.ts", "bloccoScrittura\\(req\\)", "POST+DELETE storico protetti"),
+  check.simbolo("I95", "src/app/api/events/route.ts", "bloccoScrittura\\(req\\)", "POST+DELETE eventi protetti"),
+  check.simbolo("I95", "src/app/api/history/models/route.ts", "bloccoScrittura\\(req\\)", "POST+DELETE per-modello protetti"),
+  check.simbolo("I95", "src/app/api/minimax/usage/route.ts", "bloccoScrittura\\(req\\)", "proxy: rate limit (senza ADMIN_TOKEN: canale della chiave dell'utente)"),
+  check.assenza("I95", "src/app/api/summary/route.ts", "bloccoScrittura", "summary read-only resta pubblica per design (I80)"),
+  check.simbolo("I95", "next.config.ts", "X-Content-Type-Options", "header nosniff su tutte le risposte"),
+  check.simbolo("I95", "next.config.ts", "X-Frame-Options", "header SAMEORIGIN"),
+  check.simbolo("I95", "next.config.ts", "Referrer-Policy", "header strict-origin-when-cross-origin"),
+  check.simbolo("I95", "next.config.ts", "Permissions-Policy", "header minima (camera/microfono/geolocalizzazione)"),
+  check.simbolo("I95", "next.config.ts", "Content-Security-Policy-Report-Only", "CSP in report-only (prima passata senza rischi)"),
+  check.simbolo("I95", "next.config.ts", "NODE_ENV === \"production\"", "HSTS solo se servito https (produzione)"),
+  check.file("I95", "tests/lib/api-protezione.test.ts", "test guard (spenta/attiva/401) + rate limit (budget, finestra, per-IP, default 120)"),
+  check.file("I95", "tests/lib/api-guard.test.ts", "accettazione route-level: DELETE → 401 senza header, 200 con header"),
+  check.file("I95", "tests/lib/header-sicurezza.test.ts", "header di sicurezza presenti; HSTS solo in produzione"),
 ];
 
 /* ------------------------------------------------------------------ */

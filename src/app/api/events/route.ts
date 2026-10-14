@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toEpoch } from "@/lib/http-validate";
 import { schemaCorpoEventi, schemaEventoIngresso } from "@/lib/api-schemi";
+import { bloccoScrittura } from "@/lib/api-protezione";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,10 @@ async function pruneEvents(): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
+  /* I95 — hardening: guard ADMIN_TOKEN (default spenta) + rate limit scritture. */
+  const blocco = bloccoScrittura(req);
+  if (blocco) return blocco;
+
   /* I103 — validazione del body con zod (lib/api-schemi.ts): cap batch 500,
      normalizzazione campi (id/t/kind/model/win/message/value) negli schemi;
      contratto esterno invariato (test I99). */
@@ -161,7 +166,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+  /* I95 — hardening: guard ADMIN_TOKEN (default spenta) + rate limit scritture. */
+  const blocco = bloccoScrittura(req);
+  if (blocco) return blocco;
+
   try {
     const deleted = await db.usageEventRecord.deleteMany({});
     return NextResponse.json({ ok: true, deleted: deleted.count });

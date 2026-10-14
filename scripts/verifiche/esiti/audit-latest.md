@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T20:03:20.226Z
+# Audit implementazioni — 2026-10-14T20:09:49.179Z
 
-- Verifiche totali: **441** · PASS: **441** · FAIL: **0**
+- Verifiche totali: **462** · PASS: **462** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -446,5 +446,26 @@
 | I103 | helper di validazione manuale RIMOSSO (assorbito dallo schema) — assenza richiesta (src/app/api/events/route.ts) | assenza | PASS | — |
 | I103 | archivio per-modello: riga normalizzata dallo schema (src/app/api/history/models/route.ts) | simbolo | PASS | — |
 | I103 | helper di validazione manuale RIMOSSO (assorbito dallo schema) — assenza richiesta (src/app/api/history/models/route.ts) | assenza | PASS | — |
+| I95 | guard ADMIN_TOKEN + rate limit scritture in-memory per-IP | file | PASS | — |
+| I95 | guardia composta (401/429) per le route di scrittura (src/lib/api-protezione.ts) | simbolo | PASS | — |
+| I95 | guard attiva SOLO con env impostata (default: uso locale invariato) (src/lib/api-protezione.ts) | simbolo | PASS | — |
+| I95 | header richiesto alle scritture quando la guard è attiva (src/lib/api-protezione.ts) | simbolo | PASS | — |
+| I95 | confronto del token timing-safe (SHA-256) (src/lib/api-protezione.ts) | simbolo | PASS | — |
+| I95 | IP del client (per-IP; fallback «locale») (src/lib/api-protezione.ts) | simbolo | PASS | — |
+| I95 | budget scritture/minuto configurabile (default 120, per-istanza su serverless) (src/lib/api-protezione.ts) | simbolo | PASS | — |
+| I95 | POST+DELETE storico protetti (src/app/api/history/route.ts) | simbolo | PASS | — |
+| I95 | POST+DELETE eventi protetti (src/app/api/events/route.ts) | simbolo | PASS | — |
+| I95 | POST+DELETE per-modello protetti (src/app/api/history/models/route.ts) | simbolo | PASS | — |
+| I95 | proxy: rate limit (senza ADMIN_TOKEN: canale della chiave dell'utente) (src/app/api/minimax/usage/route.ts) | simbolo | PASS | — |
+| I95 | summary read-only resta pubblica per design (I80) — assenza richiesta (src/app/api/summary/route.ts) | assenza | PASS | — |
+| I95 | header nosniff su tutte le risposte (next.config.ts) | simbolo | PASS | — |
+| I95 | header SAMEORIGIN (next.config.ts) | simbolo | PASS | — |
+| I95 | header strict-origin-when-cross-origin (next.config.ts) | simbolo | PASS | — |
+| I95 | header minima (camera/microfono/geolocalizzazione) (next.config.ts) | simbolo | PASS | — |
+| I95 | CSP in report-only (prima passata senza rischi) (next.config.ts) | simbolo | PASS | — |
+| I95 | HSTS solo se servito https (produzione) (next.config.ts) | simbolo | PASS | — |
+| I95 | test guard (spenta/attiva/401) + rate limit (budget, finestra, per-IP, default 120) | file | PASS | — |
+| I95 | accettazione route-level: DELETE → 401 senza header, 200 con header | file | PASS | — |
+| I95 | header di sicurezza presenti; HSTS solo in produzione | file | PASS | — |
 
-Verdetto: **PASS** (441 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (462 pass, 0 fail, 0 scoperte)

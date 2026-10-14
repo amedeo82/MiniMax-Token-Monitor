@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CODING_PLAN_ENDPOINTS, REGION_ENDPOINTS, Region, PrimaryFailureKind, shouldTryFallback } from "@/lib/minimax";
 import { parseRetryAfterMs } from "@/lib/backoff";
 import { schemaCorpoProxy } from "@/lib/api-schemi";
+import { bloccoScrittura } from "@/lib/api-protezione";
 
 export const dynamic = "force-dynamic";
 
@@ -186,6 +187,12 @@ async function tryEndpoint(endpoint: string, apiKey: string, fetchedAt: number):
  * I18). Errori di autenticazione e transitori NON innescano il fallback.
  */
 export async function POST(req: NextRequest) {
+  /* I95 — hardening: rate limit scritture (il proxy inoltra a MiniMax: la
+     rotazione abusiva costa all'infrastruttura). La guardia ADMIN_TOKEN NON
+     si applica qui: il proxy è il canale dell'utente per la SUA chiave. */
+  const blocco = bloccoScrittura(req);
+  if (blocco) return blocco;
+
   /* I103 — validazione del body con zod (lib/api-schemi.ts): chiave obbligatoria
      (trim ≥ 1) e regione degradata a «eu» — contratto esterno invariato. */
   let body: unknown;

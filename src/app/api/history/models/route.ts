@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toEpoch } from "@/lib/http-validate";
 import { schemaCorpoPunti, schemaPuntoModello } from "@/lib/api-schemi";
+import { bloccoScrittura } from "@/lib/api-protezione";
 import {
   countModelPoints,
   deleteModelPoints,
@@ -29,6 +30,10 @@ const MODEL_HISTORY_MAX = 10_000;
 const GET_LIMIT_MAX = 10_000;
 
 export async function POST(req: NextRequest) {
+  /* I95 — hardening: guard ADMIN_TOKEN (default spenta) + rate limit scritture. */
+  const blocco = bloccoScrittura(req);
+  if (blocco) return blocco;
+
   /* I103 — validazione del body con zod (lib/api-schemi.ts): cap batch 500 e
      normalizzazione (t/model/finestre/source/region) negli schemi; contratto
      esterno invariato (test I99). */
@@ -105,6 +110,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  /* I95 — hardening: guard ADMIN_TOKEN (default spenta) + rate limit scritture. */
+  const blocco = bloccoScrittura(req);
+  if (blocco) return blocco;
+
   const url = new URL(req.url);
   const modelRaw = url.searchParams.get("model") ?? undefined;
   try {

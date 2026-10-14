@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { emptyHourBucket, hourStartOf, mergeHourBucket, type HourStats } from "@/lib/downsample";
 import { toEpoch } from "@/lib/http-validate";
 import { schemaCorpoPunti, schemaPuntoStorico } from "@/lib/api-schemi";
+import { bloccoScrittura } from "@/lib/api-protezione";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,10 @@ async function updateHourBucket(
 }
 
 export async function POST(req: NextRequest) {
+  /* I95 — hardening: guard ADMIN_TOKEN (default spenta) + rate limit scritture. */
+  const blocco = bloccoScrittura(req);
+  if (blocco) return blocco;
+
   /* I103 — validazione del body con zod (lib/api-schemi.ts): cap batch 500 e
      normalizzazione dei campi contrattuali (t/interval/weekly/source/region)
      ora vivono negli schemi; il contratto esterno è invariato (test I99). */
@@ -267,7 +272,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+  /* I95 — hardening: guard ADMIN_TOKEN (default spenta) + rate limit scritture. */
+  const blocco = bloccoScrittura(req);
+  if (blocco) return blocco;
+
   try {
     const deleted = await db.usagePoint.deleteMany({});
     return NextResponse.json({ ok: true, deleted: deleted.count });
