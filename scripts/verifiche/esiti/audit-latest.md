@@ -1,11 +1,11 @@
-# Audit implementazioni — 2026-10-14T14:22:28.237Z
+# Audit implementazioni — 2026-10-14T18:50:58.232Z
 
 - Verifiche totali: **388** · PASS: **388** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
 |------|----------|------|-------|-----------|
-| I12 | screenshot verifiche agent-browser (scripts/*.png ≥ 1) | file | PASS | — |
+| I12 | screenshot verifiche browser (scripts/*.png oppure docs/assets/*.png ≥ 1) | file | PASS | — |
 | I1 | dipendenze Next/React/Tailwind (package.json) | simbolo | PASS | — |
 | I1 | componenti shadcn/ui | file | PASS | — |
 | I2 | parser principale (src/lib/minimax.ts) | simbolo | PASS | — |
@@ -347,7 +347,7 @@
 | I94 | CI esegue l'audit di riconciliazione (.github/workflows/ci.yml) | simbolo | PASS | — |
 | I94 | dependabot settimanale (npm + actions) presente | file | PASS | — |
 | I97 | .gitignore: esiti/ ignorati (contenuto, non la directory) (.gitignore) | simbolo | PASS | — |
-| I97 | .gitignore: audit-latest.md esplicitamente NON ignorato (unica evidenza tracciata) (.gitignore) | simbolo | PASS | — |
+| I97 | .gitignore: audit-latest.md esplicitamente NON ignorato (evidenza corrente tracciata) (.gitignore) | simbolo | PASS | — |
 | I97 | .gitignore: database runtime ignorato (fine dei commit DB separati, lezione I30) (.gitignore) | simbolo | PASS | — |
 | I97 | entry ambigua «test» rimossa (ignorava QUALSIASI file/dir «test» nel repo) → sostituita da /test — assenza richiesta (.gitignore) | assenza | PASS | — |
 | I97 | esito audit corrente tracciato con nome fisso (evidenza pubblica) | file | PASS | — |
@@ -355,7 +355,7 @@
 | I97 | upload/ fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | db runtime fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | PNG di verifica di sessione fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
-| I97 | esiti storici fuori dall'indice (restano su disco e nella storia git) — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I97 | esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I105 | name npm coerente col progetto (era nextjs_tailwind_shadcn_ts) (package.json) | simbolo | PASS | — |
 | I105 | name generico scaffolding RIMOSSO — assenza richiesta (package.json) | assenza | PASS | — |
 | I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |

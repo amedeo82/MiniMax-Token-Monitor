@@ -133,7 +133,10 @@ const check = {
 const CHECKS = [
   /* --- F0–F5 (I1–I14) ---------------------------------------------- */
   ...[
-    { item: "I12", what: "screenshot verifiche agent-browser (scripts/*.png ≥ 1)", kind: "file", run: () => (readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".png")).length > 0 ? null : "nessuno screenshot in scripts/") },
+    /* I12 — dalla politica I97 i PNG di sessione sono fuori dall'indice: in CI il
+       checkout non li contiene. Evidenza durevole ammessa anche in docs/assets/
+       (5 PNG tracciati, catture browser README). Fix CI 15/10: OR tra le due sedi. */
+    { item: "I12", what: "screenshot verifiche browser (scripts/*.png oppure docs/assets/*.png ≥ 1)", kind: "file", run: () => { const n = (existsSync(join(ROOT, "scripts")) ? readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".png")).length : 0) + (existsSync(join(ROOT, "docs", "assets")) ? readdirSync(join(ROOT, "docs", "assets")).filter((f) => f.endsWith(".png")).length : 0); return n > 0 ? null : "nessuno screenshot in scripts/ né in docs/assets/"; } },
     check.simbolo("I1", "package.json", '"next"|"react"|"tailwindcss"', "dipendenze Next/React/Tailwind"),
     check.file("I1", "src/components/ui", "componenti shadcn/ui"),
     check.simbolo("I2", "src/lib/minimax.ts", "export function parseUsageResponse", "parser principale"),
@@ -562,7 +565,7 @@ const CHECKS = [
 
   /* --- I97 — igiene del repository git: artefatti di sessione fuori dall'indice --- */
   check.simbolo("I97", ".gitignore", "scripts/verifiche/esiti/\\*", ".gitignore: esiti/ ignorati (contenuto, non la directory)"),
-  check.simbolo("I97", ".gitignore", "!scripts/verifiche/esiti/audit-latest\\.md", ".gitignore: audit-latest.md esplicitamente NON ignorato (unica evidenza tracciata)"),
+  check.simbolo("I97", ".gitignore", "!scripts/verifiche/esiti/audit-latest\\.md", ".gitignore: audit-latest.md esplicitamente NON ignorato (evidenza corrente tracciata)"),
   check.simbolo("I97", ".gitignore", "db/\\*\\.db", ".gitignore: database runtime ignorato (fine dei commit DB separati, lezione I30)"),
   check.assenza("I97", ".gitignore", "^test$", "entry ambigua «test» rimossa (ignorava QUALSIASI file/dir «test» nel repo) → sostituita da /test"),
   check.file("I97", "scripts/verifiche/esiti/audit-latest.md", "esito audit corrente tracciato con nome fisso (evidenza pubblica)"),
@@ -570,7 +573,7 @@ const CHECKS = [
   check.nonTracciato("I97", "upload/.*", "upload/ fuori dall'indice"),
   check.nonTracciato("I97", "db/.*\\.db", "db runtime fuori dall'indice"),
   check.nonTracciato("I97", "scripts/.*\\.png", "PNG di verifica di sessione fuori dall'indice"),
-  check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!audit-latest\\.md).+", "esiti storici fuori dall'indice (restano su disco e nella storia git)"),
+  check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!(?:audit-latest\\.md|i48-demo-vs-api-latest\\.md|i54-live-vs-demo-latest\\.md|v8-fuso-reset-latest\\.md|v4-2026-10-12T12-56-18\\.json|v5-2026-10-12T12-56-24\\.json|v6-2026-10-12T13-19-29\\.json)$).+", "esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56)"),
 
   /* --- I105 — coerenza di versione, README e metadati (contatori presidiati: aggiornare README a ogni cambio) --- */
   check.simbolo("I105", "package.json", "\"name\": \"minimax-usage-monitor\"", "name npm coerente col progetto (era nextjs_tailwind_shadcn_ts)"),

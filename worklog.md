@@ -1039,3 +1039,23 @@ Stage Summary:
 - Lezione 3: annunciare SOLO verdetto di audit LETTO (l'output tagliato con tail ha permesso 2 contatori sbagliati che il check dinamico I105 ha comunque beccato: la rete di sicurezza funziona)
 - Prossima sessione: Ondata 2 = I96 (perf render, da sola con misure prima/dopo) → I99 (test contratti) → I103 (zod, dopo I99) → I95 (hardening, dopo I103) → I104 (potatura dipendenze, per ultima); Ondata 3 = I106 (persistenza portabile Turso)
 - Aperture docs/04: invariate (resta la ❓ «primo utilizzo»); V1 resta l'unica verifica aperta
+
+---
+Task ID: 44
+Agent: Super Z (main)
+Task: Fix primo run CI GitHub Actions rosso (audit --strict exit 1: 383 pass / 5 fail «file assente») + verifica repo remoto
+
+Work Log:
+- Diagnosi dal log CI utente (run 14/10 14:26 UTC): pipeline verde fino all'ultimo step, `audit --strict` exit 1 con verdetto **FAIL (383 pass, 5 fail, 0 scoperte)** — tutti controlli «file assente»: I12 (PNG in scripts/), I48 (esiti/i48-demo-vs-api-latest.md), I54 (i54-live-vs-demo-latest.md), I56 (v8-fuso-reset-latest.md + v4/v5/v6-2026-10-12*.json)
+- CAUSA (contraddizione strutturale I97): i file esistono su disco locale ma sono gitignore dal blocco I97 (`scripts/**/*.png`, `esiti/*` con sola eccezione audit-latest.md) → in un checkout CI fresco NON esistono; contemporaneamente i check I48/I54/I56 li descrivono «commessi» e i check I97 `nonTracciato` vogliono gli stessi percorsi FUORI dall'indice — insoddisfabile su checkout fresco per costruzione
+- PULIZIA PRELIMINARE: trovati e rimossi 20 file FANTOMI di ere precedenti riapparsi su disco dopo il crash/restart di sessione (timestamps 05/10–09/10 preservati): TokenTracker F6a (api/minimax/chat, token-log.ts, token-tracker.tsx), backup.ts/restore.ts, kiosk-view/rate-chart/tab-identity component, shadcn toast/chart/carousel + use-toast, scaffold api/route.ts + api/verifiche/, i43/i45 test scripts, 3 test vecchi — zero riferimenti in HEAD (verificato git grep HEAD), avrebbero rotto i check nessunFile I86/I89/I90/I92 e inquinato bun test
+- FIX DI PRINCIPIO (coerente con la filosofia «nessun verdetto senza artefatto»): le 6 evidenze a nome stabile richieste da I48/I54/I56 (piccoli file md/json, verdetti della campagna 12/10) tornano COMMESSE come eccezioni nominate nel .gitignore — stesso pattern già usato per audit-latest.md; regex `nonTracciato` I97 aggiornata con lookahead di esenzione sulle stesse 6 (l'igiene sulle centinaia di esiti timestamp resta intatta); check I12 esteso a `scripts/*.png OPPURE docs/assets/*.png` (5 PNG tracciati del README, catture browser genuine — nessun binario aggiunto); testo check 565 «unica evidenza tracciata» → «evidenza corrente tracciata»
+- docs/04: riga §3 I12 (evidenza aggiornata alle due sedi) + nota correzione inline nella riga I97 + riga §8 changelog 2026-10-15
+- Protocollo: tsc 0 (repo intero), lint 0, suite **358/358** / 1013 asserzioni, audit **388/388 PASS 0 scoperte** (verdetto letto), audit-latest.md rigenerato e aggiornato
+- CHIUSURA: commit con percorsi espliciti (chmod 644 preventivo anti-rumore permessi) → push origin main → verifica remota via API GitHub (run CI sul nuovo SHA + metadati repo: description, topics, visibilità)
+
+Stage Summary:
+- CI risanata alla radice: l'audit passa ora sia in locale sia su checkout fresco; la politica I97 resta invariata nel suo scopo (rumore di sessione fuori dall'indice) con le uniche eccezioni DOCUMENTATE delle evidenze esigite dall'audit stesso
+- Lezione: quando una politica di igiene (I97) rimuove dall'indice file che ALTRE regole dell'audit esigono «commessi», la contraddizione esplode al primo checkout fresco (CI) — le regole di un sistema di verifica vanno testate anche LORO su clone pulito
+- Lezione: un crash di sessione può RESUSCITARE su disco file rimossi da ere precedenti (timestamps originali preservati) — prima di ogni protocollo controllare `git status` per gli untracked e confrontarli con i check nessunFile dell'audit
+- Repo remoto verificato post-push: run CI sul nuovo commit atteso verde (esito riportato in chat); aperte decisioni utente: visibilità repo (privato), tag monitoring/shadcn-ui, description
