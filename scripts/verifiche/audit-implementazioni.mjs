@@ -604,6 +604,14 @@ const CHECKS = [
   check.simbolo("I100", "src/app/page.tsx", "ritardoPolling\\(ms, document\\.visibilityState === \"hidden\"\\)", "schedule applica la dilatazione ×4 a tab nascosta"),
   check.simbolo("I100", "src/components/diagnostica-panel.tsx", "pollCausa", "Diagnostica mostra la causa dell'attesa (offline / tab nascosta; backoff già badge I51)"),
   check.simbolo("I100", "tests/lib/backoff.test.ts", "tickAllaVisibilita", "test delle decisioni pure di rete/visibilità"),
+
+  /* --- I101 — prompt «nuova versione disponibile» per la PWA --- */
+  check.simbolo("I101", "src/components/pwa-register.tsx", "setAggiornamentoPronto\\(true\\)", "nuovo SW installato in attesa → stato banner (prima: SKIP_WAITING automatico silenzioso)"),
+  check.assenza("I101", "src/components/pwa-register.tsx", "nuovo\\.postMessage", "niente SKIP_WAITING AUTOMATICO sul worker installing (l'attivazione è esplicita via banner)"),
+  check.simbolo("I101", "src/components/pwa-register.tsx", "Nuova versione disponibile", "banner persistente con testo esplicito"),
+  check.simbolo("I101", "src/components/pwa-register.tsx", "Ricarica", "azione esplicita del banner"),
+  check.simbolo("I101", "src/components/pwa-register.tsx", "controllerchange", "reload SOLO quando la nuova versione prende il controllo"),
+  check.simbolo("I101", "tests/components/pwa-update.test.tsx", "SKIP_WAITING", "test componente: niente auto-skip, click → postMessage al worker in attesa"),
 ];
 
 /* ------------------------------------------------------------------ */
