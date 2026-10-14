@@ -1,0 +1,44 @@
+# I94 — CI GitHub Actions.
+#
+# Pipeline di verifica identica al protocollo manuale del progetto:
+# tsc (typecheck) → lint → test → audit di riconciliazione codice↔docs.
+# Nessun segreto richiesto; il push/PR su main attiva la pipeline.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verifica:
+    name: typecheck · lint · test · audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Installa dipendenze
+        run: bun install --frozen-lockfile
+
+      - name: Genera client Prisma
+        run: bun run db:generate
+
+      - name: Typecheck (tsc --noEmit, repo intero)
+        run: bun run typecheck
+
+      - name: Lint (eslint)
+        run: bun run lint
+
+      - name: Test (bun test)
+        run: bun run test
+
+      - name: Audit di riconciliazione codice ↔ documentazione
+        run: bun run audit -- --strict

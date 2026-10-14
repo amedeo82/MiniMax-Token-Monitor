@@ -12,6 +12,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![Prisma 6 + SQLite](https://img.shields.io/badge/Prisma_6_%2B_SQLite-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
 [![Bun](https://img.shields.io/badge/Bun-runtime-F472B6?logo=bun&logoColor=white)](https://bun.sh)
 
+[![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
 [![Test 342 pass](https://img.shields.io/badge/test-342_pass-31C48D)](tests)
 [![Audit 331 PASS](https://img.shields.io/badge/audit-331_PASS-31C48D)](scripts/verifiche)

@@ -522,6 +522,18 @@ const CHECKS = [
   check.simbolo("I93", "tests/lib/archive-recent.test.ts", "fetta PIÙ RECENTE", "test di regressione route-level con db mockato (query desc + output cronologico)"),
   check.assenza("I93", "src/lib/minimax.ts", "prefix", "parametro parseWindow «prefix» RIMOSSO (dead code: mai usato)"),
   check.assenza("I93", "public/sw-shared.js", "var p = kind === \"weekly\"", "variabile «p» RIMOSSA dal parseWindow del mirror SW (dead code, mai letta)"),
+
+  /* --- I94 — CI GitHub Actions + baseline dei tipi onesta --- */
+  check.simbolo("I94", "tsconfig.json", "\"examples\"", "tsconfig esclude examples/ (scaffolding non-progetto: tsc onesto su tutto il repo)"),
+  check.simbolo("I94", "tsconfig.json", "\"skills\"", "tsconfig esclude skills/ (scaffolding non-progetto)"),
+  check.assenza("I94", "next.config.ts", "ignoreBuildErrors", "next.config NON maschera più i tipi al build (ignoreBuildErrors rimosso)"),
+  check.simbolo("I94", "package.json", "\"typecheck\": \"tsc --noEmit\"", "script typecheck dichiarato in package.json"),
+  check.simbolo("I94", "package.json", "\"audit\": \"node scripts/verifiche/audit-implementazioni.mjs\"", "script audit dichiarato in package.json"),
+  check.file("I94", ".github/workflows/ci.yml", "workflow CI GitHub Actions presente"),
+  check.simbolo("I94", ".github/workflows/ci.yml", "bun run typecheck", "CI esegue il typecheck"),
+  check.simbolo("I94", ".github/workflows/ci.yml", "bun run test", "CI esegue la suite"),
+  check.simbolo("I94", ".github/workflows/ci.yml", "bun run audit", "CI esegue l'audit di riconciliazione"),
+  check.file("I94", ".github/dependabot.yml", "dependabot settimanale (npm + actions) presente"),
 ];
 
 /* ------------------------------------------------------------------ */
