@@ -181,8 +181,34 @@ read-only (I80), rimozione token counter (ADR-8, con check di assenza nell'audit
 
 ## 7. Registro delle decisioni (clarify del 14/10/2026)
 
-> Compilato subito dopo il clarify con l'utente (una domanda per proposta + domanda
-> d'esecuzione); è la selezione che governa il §4 e i prossimi item di `docs/04` §3.
+Clarify eseguito in un'unica sessione di domande raggruppate: **una domanda per ciascuna
+delle 13 proposte** (scelta dell'ondata: Ondata 1 / Ondata 2 / Scarta, con descrizione
+concreta di ciò che l'ondata comporta) **+ una domanda di esecuzione** (cosa fare subito
+dopo il commit del piano). Esiti:
 
-_In attesa del clarify — questa sezione viene completata prima del commit._
+| Proposta | Decisione | Note |
+|----------|-----------|------|
+| I94 CI + baseline tipi | **Ondata 1** | Prima tappa: il CI presidia le ondate successive |
+| I95 Hardening API | **Ondata 2** | Default compatibili: `ADMIN_TOKEN` disattivato se non configurato |
+| I96 Perf render | **Ondata 2** | Da sola, con misure React Profiler prima/dopo documentate |
+| I97 Igiene git | **Ondata 1** | Variante con `esiti/audit-latest.md` come unica evidenza pubblica tracciata |
+| I98 Quota storage | **Ondata 1** | `persistJson` centralizzato + test con storage finto |
+| I99 Test contratti | **Ondata 2** | Precede I103/I95: rete di sicurezza prima delle riscritture |
+| I100 Poller rete/visibilità | **Ondata 1** | online → tick immediato; tab nascosto ×4 (NON sospeso) |
+| I101 PWA prompt | **Ondata 1** | Banner «Ricarica», niente auto-skip |
+| I102 Skip-link | **Ondata 1** | «Salta al contenuto» → `<main id="contenuto">` |
+| I103 zod | **Ondata 2** | Dopo I99; contratto esterno invariato |
+| I104 Potatura dipendenze | **Ondata 2** | A ondate verificate; si mantiene zod (I103) e framer-motion (USATO in quota-ring) |
+| I105 Metadati | **Ondata 1** | Fix README stale + `name`; il changelog canonico resta `docs/04` §8 |
+| I106 Persistenza portabile | **Ondata 3** | Alternativa A: libsql+Turso con fallback automatico a SQLite in locale |
+| **Esecuzione** | **Solo piano** | Commit+push della sola documentazione; l'implementazione delle ondate parte in una sessione successiva con il protocollo standard |
+
+Il piano del §4 resta **INVARIATO** (le decisioni coincidono con le ondate proposte):
+Ondata 1 = I94 · I97 · I105 · I98 · I100 · I101 · I102 — Ondata 2 = I96 · I99 · I103 ·
+I95 · I104 — Ondata 3 = I106.
+
+> **Nota di tracciabilità**: la prima versione di questo documento (§1–§6 con §7
+> segnaposto) è entrata nel repo col commit di piattaforma a messaggio UUID `09fa8cc`
+> del 14/10 (lezione Task 40: i commit UUID rompono il legame docs↔git); la versione
+> definitiva col presente registro arriva nel commit descrittivo della sessione.
 
