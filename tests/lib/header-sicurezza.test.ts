@@ -6,9 +6,10 @@
 import { describe, test, expect, afterEach } from "bun:test";
 import nextConfig from "../../next.config";
 
-const NODE_ENV_ORIGINE = process.env.NODE_ENV;
+const env = process.env as Record<string, string | undefined>;
+const NODE_ENV_ORIGINE = env["NODE_ENV"];
 afterEach(() => {
-  process.env.NODE_ENV = NODE_ENV_ORIGINE;
+  env["NODE_ENV"] = NODE_ENV_ORIGINE;
 });
 
 async function headerDi(): Promise<Map<string, string>> {
@@ -22,7 +23,7 @@ async function headerDi(): Promise<Map<string, string>> {
 
 describe("I95 — header di sicurezza in next.config", () => {
   test("header comuni presenti (XCTO, Referrer-Policy, Permissions-Policy, XFO, CSP report-only)", async () => {
-    delete process.env.NODE_ENV;
+    env["NODE_ENV"] = undefined;
     const h = await headerDi();
     expect(h.get("X-Content-Type-Options")).toBe("nosniff");
     expect(h.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
@@ -35,7 +36,7 @@ describe("I95 — header di sicurezza in next.config", () => {
   });
 
   test("HSTS solo quando il deployment serve https (produzione)", async () => {
-    process.env.NODE_ENV = "production";
+    env["NODE_ENV"] = "production";
     const h = await headerDi();
     expect(h.get("Strict-Transport-Security")).toContain("max-age=31536000");
   });

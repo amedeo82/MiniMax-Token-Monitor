@@ -44,13 +44,14 @@ describe("I95 — accettazione route: DELETE /api/history con ADMIN_TOKEN", () =
     expect(senza.status).toBe(401);
     expect(((await senza.json())["error"] as Record<string, unknown>)["code"]).toBe("unauthorized");
 
-    const sbagliato = (await delStorico(new Request("http://localhost:3000/api/history", { method: "DELETE", headers: { "x-admin-token": "nope" } }))) as unknown as { status: number };
+    const sbagliato = (await delStorico(new Request("http://localhost:3000/api/history", { method: "DELETE", headers: { "x-admin-token": "nope" } }))) as unknown as { status: number; json: () => Promise<Record<string, unknown>> };
     expect(sbagliato.status).toBe(401);
+    expect(((await sbagliato.json())["error"] as Record<string, unknown>)["code"]).toBe("unauthorized");
   });
 
   test("guard ATTIVA + header corretto → 200 (accettazione I95)", async () => {
     process.env.ADMIN_TOKEN = "segreto-demo";
-    const res = (await delStorico(new Request("http://localhost:3000/api/history", { method: "DELETE", headers: { "x-admin-token": "segreto-demo" } }))) as unknown as { status: number };
+    const res = (await delStorico(new Request("http://localhost:3000/api/history", { method: "DELETE", headers: { "x-admin-token": "segreto-demo" } }))) as unknown as { status: number; json: () => Promise<Record<string, unknown>> };
     expect(res.status).toBe(200);
     expect((await res.json())["ok"]).toBe(true);
   });
