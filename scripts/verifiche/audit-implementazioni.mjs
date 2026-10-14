@@ -19,6 +19,7 @@
 
 import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { execSync } from "node:child_process";
 
 const ROOT = resolve(import.meta.dirname, "..", "..");
 const DOCS04 = join(ROOT, "docs", "04-stato-avanzamento.md");
@@ -97,6 +98,18 @@ const check = {
     run: () => {
       const missing = rels.filter((r) => !existsSync(join(ROOT, r)));
       return missing.length === 0 ? null : `file assenti: ${missing.join(", ")}`;
+    },
+  }),
+  /** Nessun percorso corrispondente è tracciato da git (I97: artefatti fuori dall'indice). */
+  nonTracciato: (item, pattern, what) => ({
+    item,
+    what: `${what} — nessun file tracciato deve corrispondere`,
+    kind: "assenza",
+    run: () => {
+      const tracked = execSync("git ls-files", { cwd: ROOT, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+      const rx = new RegExp(`^${pattern}$`, "m");
+      const hit = tracked.split("\n").filter((f) => rx.test(f));
+      return hit.length === 0 ? null : `file ancora tracciati che devono restare fuori dall'indice: ${hit.slice(0, 8).join(", ")}${hit.length > 8 ? ` (+${hit.length - 8} altri)` : ""}`;
     },
   }),
 };
@@ -534,6 +547,18 @@ const CHECKS = [
   check.simbolo("I94", ".github/workflows/ci.yml", "bun run test", "CI esegue la suite"),
   check.simbolo("I94", ".github/workflows/ci.yml", "bun run audit", "CI esegue l'audit di riconciliazione"),
   check.file("I94", ".github/dependabot.yml", "dependabot settimanale (npm + actions) presente"),
+
+  /* --- I97 — igiene del repository git: artefatti di sessione fuori dall'indice --- */
+  check.simbolo("I97", ".gitignore", "scripts/verifiche/esiti/\\*", ".gitignore: esiti/ ignorati (contenuto, non la directory)"),
+  check.simbolo("I97", ".gitignore", "!scripts/verifiche/esiti/audit-latest\\.md", ".gitignore: audit-latest.md esplicitamente NON ignorato (unica evidenza tracciata)"),
+  check.simbolo("I97", ".gitignore", "db/\\*\\.db", ".gitignore: database runtime ignorato (fine dei commit DB separati, lezione I30)"),
+  check.assenza("I97", ".gitignore", "^test$", "entry ambigua «test» rimossa (ignorava QUALSIASI file/dir «test» nel repo) → sostituita da /test"),
+  check.file("I97", "scripts/verifiche/esiti/audit-latest.md", "esito audit corrente tracciato con nome fisso (evidenza pubblica)"),
+  check.nonTracciato("I97", "tool-results/.*", "tool-results/ fuori dall'indice"),
+  check.nonTracciato("I97", "upload/.*", "upload/ fuori dall'indice"),
+  check.nonTracciato("I97", "db/.*\\.db", "db runtime fuori dall'indice"),
+  check.nonTracciato("I97", "scripts/.*\\.png", "PNG di verifica di sessione fuori dall'indice"),
+  check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!audit-latest\\.md).+", "esiti storici fuori dall'indice (restano su disco e nella storia git)"),
 ];
 
 /* ------------------------------------------------------------------ */

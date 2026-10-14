@@ -46,8 +46,8 @@ local-*
 *.log
 dev.log
 dev.out.log
-test
-prompt
+/test
+/prompt
 
 server.log
 # Skills directory
@@ -62,3 +62,12 @@ scripts/verifiche/sessione-*.log
 
 # frame intermedi della GIF README (Task 41, non deliverable)
 scripts/gif-frames/
+
+# I97 — igiene repo: artefatti di sessione NON piu tracciati (restano su disco;
+# evidenza storica recuperabile dalla storia git e dai changelog docs/04)
+scripts/**/*.png
+scripts/verifiche/esiti/*
+!scripts/verifiche/esiti/audit-latest.md
+scripts/verifiche/esiti-backup/
+upload/
+db/*.db
