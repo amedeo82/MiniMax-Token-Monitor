@@ -559,6 +559,16 @@ const CHECKS = [
   check.nonTracciato("I97", "db/.*\\.db", "db runtime fuori dall'indice"),
   check.nonTracciato("I97", "scripts/.*\\.png", "PNG di verifica di sessione fuori dall'indice"),
   check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!audit-latest\\.md).+", "esiti storici fuori dall'indice (restano su disco e nella storia git)"),
+
+  /* --- I105 — coerenza di versione, README e metadati (contatori presidiati: aggiornare README a ogni cambio) --- */
+  check.simbolo("I105", "package.json", "\"name\": \"minimax-usage-monitor\"", "name npm coerente col progetto (era nextjs_tailwind_shadcn_ts)"),
+  check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
+  check.simbolo("I105", "README.md", "audit-351_PASS", "badge audit allineato al numero reale dei check"),
+  check.simbolo("I105", "README.md", "351 verifiche dichiarative", "contatore audit §Qualità allineato"),
+  check.simbolo("I105", "README.md", "342 test / 967 asserzioni", "contatori suite §Struttura allineati (erano 330/932)"),
+  check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
+  check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
+  check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
 ];
 
 /* ------------------------------------------------------------------ */

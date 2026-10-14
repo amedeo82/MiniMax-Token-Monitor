@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T13:58:21.173Z
+# Audit implementazioni — 2026-10-14T14:00:58.821Z
 
-- Verifiche totali: **351** · PASS: **351** · FAIL: **0**
+- Verifiche totali: **359** · PASS: **359** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -356,5 +356,13 @@
 | I97 | db runtime fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | PNG di verifica di sessione fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | esiti storici fuori dall'indice (restano su disco e nella storia git) — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I105 | name npm coerente col progetto (era nextjs_tailwind_shadcn_ts) (package.json) | simbolo | PASS | — |
+| I105 | name generico scaffolding RIMOSSO — assenza richiesta (package.json) | assenza | PASS | — |
+| I105 | badge audit allineato al numero reale dei check (README.md) | simbolo | PASS | — |
+| I105 | contatore audit §Qualità allineato (README.md) | simbolo | PASS | — |
+| I105 | contatori suite §Struttura allineati (erano 330/932) (README.md) | simbolo | PASS | — |
+| I105 | indice documentazione README completo (docs/08 incluso) (README.md) | simbolo | PASS | — |
+| I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
+| I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
 
-Verdetto: **PASS** (351 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (359 pass, 0 fail, 0 scoperte)

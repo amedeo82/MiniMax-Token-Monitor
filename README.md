@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
 [![Test 342 pass](https://img.shields.io/badge/test-342_pass-31C48D)](tests)
-[![Audit 331 PASS](https://img.shields.io/badge/audit-331_PASS-31C48D)](scripts/verifiche)
+[![Audit 351 PASS](https://img.shields.io/badge/audit-351_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -123,7 +123,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 **Qualità** (I50/I55)
 - **Suite test automatica**: 342 test / 967 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 331 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 351 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
 
@@ -140,6 +140,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | [`docs/05-verifiche-empiriche.md`](docs/05-verifiche-empiriche.md) | Runbook delle verifiche empiriche V1–V6 con il toolkit `scripts/verifiche/`: prerequisiti, comandi, verdetti automatici, piano di esecuzione in una giornata, registro delle esecuzioni | Prima di eseguire o interpretare le verifiche V1–V6 |
 | [`docs/06-abbellimenti-dashboard.md`](docs/06-abbellimenti-dashboard.md) | Catalogo degli abbellimenti UI I57–I67 (spreco per ciclo, calendario, ritmo %/h, orologio dei reset, istogramma, salute del monitor, prevedibilità, anelli continui, nav sticky con scrollspy, identità del tab) | Prima di toccare anelli, analisi di lungo periodo o navigazione |
 | [`docs/07-analisi-miglioramenti-aggiuntivi.md`](docs/07-analisi-miglioramenti-aggiuntivi.md) | Catalogo dei miglioramenti I68–I82 (downsampling, selettore intervallo, anomalie, campionamento, EWMA, modalità compatta, nav mobile, vista stampa, error boundary, filtri eventi, tema chiaro, audit a11y, `/api/summary`, test di componente, multi-modello) — **15 di 15 implementate** | Prima di estendere analisi o UX; le note di implementazione rimandano a `docs/03` §5.x |
+| [`docs/08-analisi-codebase-miglioramenti.md`](docs/08-analisi-codebase-miglioramenti.md) | Analisi della codebase (14/10) e backlog dei miglioramenti I94–I106: 13 proposte con problema/proposta/impatto/rischio/accettazione, piano a 3 ondate, decisioni del clarify (§7) | Prima di proporre o implementare miglioramenti: una proposta già catalogata NON va riproposta |
 
 > **Protocollo per le prossime sessioni**: leggere prima `docs/04-stato-avanzamento.md`
 > (e questo README), lavorare, poi aggiornare lo stato e il changelog. In più
@@ -244,12 +245,17 @@ src/
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (25 file) + components/ (8 file) = 330 test / 932 asserzioni
-docs/          # Questa documentazione (01–07)
+tests/                               # Suite bun: lib/ (27 file) + components/ (7 componenti) = 342 test / 967 asserzioni
+docs/          # Questa documentazione (01–08)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro
 ```
+
+**Versione e changelog di riferimento** (I105): la versione di riferimento è il footer
+`APP_VERSION` («AAAA-MM-GG · I<n>», `src/lib/version.ts`); la `version` npm non è un
+contatore di rilascio. Il changelog canonico è **`docs/04` §8** — non esiste (e non
+va introdotto) un CHANGELOG.md duplicato.
 
 > **Campionatore I49 — campagna V8 ESEGUITA e smontata (12/10; dettagli in `docs/03` §5.23 e
 > `docs/05` §11)**: `src/lib/campione.ts` è stato ri-cablato nel proxy per la giornata di
