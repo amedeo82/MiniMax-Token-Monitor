@@ -31,7 +31,7 @@ import { formatDateTimeRome, formatTimeRome, formatCountdown, formatDuration } f
 import { descrizioneResetClock } from "@/lib/a11y";
 import type { HistoryPoint } from "@/components/history-chart";
 import type { UsageEvent } from "@/lib/usage-events";
-import { Activity, Clock4, HeartPulse, TimerReset, Radar, Gauge } from "lucide-react";
+import { Activity, Clock4, EyeOff, HeartPulse, TimerReset, Radar, Gauge, WifiOff } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /* I60 — Orologio dei reset                                            */
@@ -132,15 +132,30 @@ export function MonitorHealth({
   salute,
   backoffAttivo,
   backoffDelayMs,
+  pollCausa,
 }: {
   salute: SaluteMonitor;
   backoffAttivo: boolean;
   backoffDelayMs: number | null;
+  /** I100 — causa dell'attesa attuale (fuori dal normale scheduling): offline o tab nascosta. */
+  pollCausa: "offline" | "tab-nascosto" | null;
 }) {
   return (
     <div className="space-y-3">
       {/* Stato operativo */}
       <div className="flex flex-wrap items-center gap-2">
+        {pollCausa === "offline" ? (
+          <Badge variant="outline" className="gap-1 border-red-400/30 bg-red-400/10 text-[11px] text-red-300">
+            <WifiOff className="size-3" />
+            Offline — al rientro della rete tick immediato (I100)
+          </Badge>
+        ) : null}
+        {pollCausa === "tab-nascosto" ? (
+          <Badge variant="outline" className="gap-1 border-sky-400/30 bg-sky-400/10 text-[11px] text-sky-300">
+            <EyeOff className="size-3" />
+            Tab nascosta — polling dilatato ×4 (I100)
+          </Badge>
+        ) : null}
         {backoffAttivo ? (
           <Badge variant="outline" className="gap-1 border-amber-400/30 bg-amber-400/10 text-[11px] text-amber-300">
             <TimerReset className="size-3" />
@@ -438,9 +453,11 @@ interface DiagnosticaPanelProps {
   events: UsageEvent[];
   backoffAttivo: boolean;
   backoffDelayMs: number | null;
+  /** I100 — causa dell'attesa: «offline» | «tab-nascosto» | null (scheduling regolare). */
+  pollCausa: "offline" | "tab-nascosto" | null;
 }
 
-export function DiagnosticaPanel({ history, events, backoffAttivo, backoffDelayMs }: DiagnosticaPanelProps) {
+export function DiagnosticaPanel({ history, events, backoffAttivo, backoffDelayMs, pollCausa }: DiagnosticaPanelProps) {
   const salute = React.useMemo(() => saluteMonitor(events), [events]);
 
   return (
@@ -467,7 +484,7 @@ export function DiagnosticaPanel({ history, events, backoffAttivo, backoffDelayM
             <HeartPulse className="size-3.5 text-zinc-500" />
             Salute del monitor
           </h3>
-          <MonitorHealth salute={salute} backoffAttivo={backoffAttivo} backoffDelayMs={backoffDelayMs} />
+          <MonitorHealth salute={salute} backoffAttivo={backoffAttivo} backoffDelayMs={backoffDelayMs} pollCausa={pollCausa} />
         </section>
         <section aria-label="Anomalie del ritmo">
           <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">

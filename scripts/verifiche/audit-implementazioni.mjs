@@ -577,7 +577,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "349 test / 993 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "354 test / 1003 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -592,6 +592,18 @@ const CHECKS = [
   check.assenza("I98", "src/lib/kiosk.ts", "localStorage\\.setItem", "kiosk: nessun setItem diretto (sesto catch silenzioso individuato in implementazione)"),
   check.simbolo("I98", "src/app/page.tsx", "setQuotaNotifier\\(", "notifier cablato in page.tsx: toast sonner + evento tecnico «error» nel registro"),
   check.file("I98", "tests/lib/persist-json.test.ts", "test con storage finto che solleva QuotaExceededError (fallback FIFO, rinuncia, notifica una tantum)"),
+
+  /* --- I100 — poller consapevole di rete e visibilità --- */
+  check.simbolo("I100", "src/lib/backoff.ts", "export function ritardoPolling", "dilatazione ×4 a tab nascosta (pura, testata)"),
+  check.simbolo("I100", "src/lib/backoff.ts", "export function tickAllaVisibilita", "tick al ritorno in visibilità solo se dati più vecchi di metà intervallo base"),
+  check.simbolo("I100", "src/lib/backoff.ts", "FATTORE_TAB_NASCOSTA = 4", "dilatazione NON sospensione (coerenza badge/registri e verifiche V1–V6)"),
+  check.simbolo("I100", "src/app/page.tsx", "addEventListener\\(\"online\", onOnline\\)", "scheduler: rientro rete → tick immediato (prima: attesa backoff fino a 10 min)"),
+  check.simbolo("I100", "src/app/page.tsx", "addEventListener\\(\"visibilitychange\", onVisibility\\)", "scheduler: ritorno in visibilità → tick condizionato"),
+  check.simbolo("I100", "src/app/page.tsx", "const tickImmediato", "tick immediato con reset del backoff (attempt riparte da 0)"),
+  check.simbolo("I100", "src/app/page.tsx", "lastRilevamentoRef", "epoch ultimo rilevamento per il tick condizionato alla visibilità"),
+  check.simbolo("I100", "src/app/page.tsx", "ritardoPolling\\(ms, document\\.visibilityState === \"hidden\"\\)", "schedule applica la dilatazione ×4 a tab nascosta"),
+  check.simbolo("I100", "src/components/diagnostica-panel.tsx", "pollCausa", "Diagnostica mostra la causa dell'attesa (offline / tab nascosta; backoff già badge I51)"),
+  check.simbolo("I100", "tests/lib/backoff.test.ts", "tickAllaVisibilita", "test delle decisioni pure di rete/visibilità"),
 ];
 
 /* ------------------------------------------------------------------ */

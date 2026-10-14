@@ -113,3 +113,34 @@ export function delayAfterFailure(
     : null;
   return ra !== null ? Math.max(backoff, ra) : backoff;
 }
+
+/* ------------------------------------------------------------------ */
+/* I100 — poller consapevole di rete e visibilità                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Fattore di dilatazione del polling a tab nascosta. DILATAZIONE, non
+ * sospensione: le notifiche a tab chiuso passano dal Service Worker (I52),
+ * ma badge/registri/verifiche V1–V6 presuppongono un polling vivo (più lento),
+ * non assente.
+ */
+export const FATTORE_TAB_NASCOSTA = 4;
+
+/** Ritardo effettivo del polling: a tab nascosta dilatato ×4, in visibilità invariato. */
+export function ritardoPolling(msBase: number, nascosta: boolean): number {
+  return nascosta ? msBase * FATTORE_TAB_NASCOSTA : msBase;
+}
+
+/**
+ * Al ritorno in visibilità: tick solo se l'ultimo rilevamento è più vecchio
+ * della METÀ dell'intervallo base (la dilatazione ×4 a tab nascosta può aver
+ * lasciato dati stantii, ma un tick a ogni flap di visibilità sarebbe rumore).
+ * Mai rilevato → tick (null = nessuna informazione: meglio aggiornare).
+ */
+export function tickAllaVisibilita(
+  ultimoRilevamento: number | null,
+  adesso: number,
+  baseMs: number,
+): boolean {
+  return ultimoRilevamento === null || adesso - ultimoRilevamento > baseMs / 2;
+}

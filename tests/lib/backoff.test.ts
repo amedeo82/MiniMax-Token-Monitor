@@ -10,6 +10,9 @@ import {
   nextBackoffMs,
   parseRetryAfterMs,
   delayAfterFailure,
+  ritardoPolling,
+  tickAllaVisibilita,
+  FATTORE_TAB_NASCOSTA,
 } from "@/lib/backoff";
 
 const fisso = (v: number) => () => v;
@@ -111,5 +114,40 @@ describe("backoff: delayAfterFailure (Retry-After come floor del client)", () =>
 
   test("Retry-After < backoff → vince il backoff", () => {
     expect(delayAfterFailure(4, 3_000, { random: fisso(0.5) })).toBe(BACKOFF_BASE_MS * 16);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* I100 — poller consapevole di rete e visibilità                      */
+/* ------------------------------------------------------------------ */
+
+describe("backoff I100: ritardoPolling (dilatazione a tab nascosta)", () => {
+  test("in visibilità il ritardo è invariato", () => {
+    expect(ritardoPolling(10_000, false)).toBe(10_000);
+    expect(ritardoPolling(60_000, false)).toBe(60_000);
+  });
+
+  test("a tab nascosta il polling si DILATA ×4 (non si sospende: mai 0/Infinity)", () => {
+    expect(ritardoPolling(10_000, true)).toBe(40_000);
+    expect(ritardoPolling(60_000, true)).toBe(240_000);
+    expect(FATTORE_TAB_NASCOSTA).toBe(4);
+  });
+});
+
+describe("backoff I100: tickAllaVisibilita (tick solo se dati stantii)", () => {
+  const BASE = 30_000; // intervallo base 30 s → metà = 15 s
+
+  test("mai rilevato (null) → tick", () => {
+    expect(tickAllaVisibilita(null, 1_000_000, BASE)).toBe(true);
+  });
+
+  test("ultimo rilevamento più vecchio di metà intervallo → tick", () => {
+    expect(tickAllaVisibilita(1_000_000 - 15_001, 1_000_000, BASE)).toBe(true);
+    expect(tickAllaVisibilita(1_000_000 - 60_000, 1_000_000, BASE)).toBe(true);
+  });
+
+  test("rilevamento recente (entro metà intervallo) → NO tick (niente rumore al flap)", () => {
+    expect(tickAllaVisibilita(1_000_000 - 15_000, 1_000_000, BASE)).toBe(false);
+    expect(tickAllaVisibilita(1_000_000 - 1_000, 1_000_000, BASE)).toBe(false);
   });
 });
