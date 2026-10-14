@@ -54,7 +54,7 @@ import {
 } from "@/lib/usage-events";
 import { Region, REGION_LABELS, UsageSnapshot, ApiError, chiaviPerRegione, findModel, parseUsageResponse, inferServerTime, regioneAlt } from "@/lib/minimax";
 import { persistJson, setQuotaNotifier } from "@/lib/persist-json";
-import { delayAfterFailure } from "@/lib/backoff";
+import { delayAfterFailure, ritardoPolling, tickAllaVisibilita } from "@/lib/backoff";
 import { makeDemoSnapshot, makeDemoHistory, makeDemoModelHistory } from "@/lib/demo";
 import {
   appendModelPoints,
@@ -106,6 +106,21 @@ import {
 const SETTINGS_KEY = "mm-dash-settings-v1";
 const HISTORY_KEY = "mm-dash-history-v1";
 const HISTORY_MAX = 600;
+
+/* I100 — iscrizioni a sistemi esterni per useSyncExternalStore (livello modulo:
+   stabili tra i render, rimosse allo smontaggio da React). */
+function iscriviVisibilita(callback: () => void): () => void {
+  document.addEventListener("visibilitychange", callback);
+  return () => document.removeEventListener("visibilitychange", callback);
+}
+function iscriviRete(callback: () => void): () => void {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
 
 /** Risposta del proxy /api/minimax/usage (forma storica I3 + estensioni I18/I51/I53). */
 interface RispostaProxy {
@@ -205,6 +220,9 @@ export default function DashboardPage() {
   const pollTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollAttemptRef = React.useRef(0);
   const lastRetryAfterRef = React.useRef<number | null>(null);
+  /* I100 — epoch dell'ultimo rilevamento COMPLETATO: guida il tick al ritorno
+     in visibilità (tick solo se i dati sono più vecchi di metà intervallo base). */
+  const lastRilevamentoRef = React.useRef<number | null>(null);
   /* I90 — il ritardo programmato serve al render (badge countdown, diagnostica):
      è STATO, non ref (le ref non si leggono durante il render, regola v7).
      Il ref era scrutto solo qui e nell'effetto scheduler — vedi schedule(). */
@@ -310,6 +328,22 @@ export default function DashboardPage() {
     });
     return () => setQuotaNotifier(null);
   }, []);
+
+  /* I100 — stato rete/visibilità REATTIVO per la causa d'attesa in Diagnostica.
+     useSyncExternalStore (pattern I90: use-mobile/theme-toggle): il documento e
+     navigator.onLine sono SISTEMI ESTERNI al render — niente setState in effect;
+     il listener «online» che fa il TICK vive nello scheduler, qui solo snapshot.
+     Server snapshot false = nessun mismatch di idratazione. */
+  const tabNascosta = React.useSyncExternalStore(
+    iscriviVisibilita,
+    () => document.visibilityState === "hidden",
+    () => false,
+  );
+  const reteOffline = React.useSyncExternalStore(
+    iscriviRete,
+    () => !navigator.onLine,
+    () => false,
+  );
 
   /* --------------------------- kiosk (I87) --------------------------- */
   const kioskAttivo = mounted && !compact && kioskState.enabled;
@@ -706,16 +740,20 @@ export default function DashboardPage() {
     if (!settings.demoMode && !settings.apiKey) return;
 
     let cancelled = false;
+    const base = Math.max(5, settings.refreshSeconds) * 1000;
     const schedule = (ms: number) => {
-      setPollDelayMs(ms);
+      /* I100 — a tab nascosta il polling si DILATA ×4 (non si sospende). */
+      const effettivo = ritardoPolling(ms, document.visibilityState === "hidden");
+      setPollDelayMs(effettivo);
       pollTimerRef.current = setTimeout(() => {
         if (!cancelled) void tick();
-      }, ms);
+      }, effettivo);
     };
     const tick = async () => {
       const s = settingsRef.current;
       const ok = await fetchData(s, true);
       if (cancelled) return;
+      lastRilevamentoRef.current = Date.now();
       if (ok) {
         pollAttemptRef.current = 0;
         lastRetryAfterRef.current = null;
@@ -726,16 +764,40 @@ export default function DashboardPage() {
         schedule(delay);
       }
     };
+    /* I100 — tick immediato con reset del backoff (rientro rete / visibilità):
+       l'attempt riparte da 0, così un eventuale nuovo fallimento non eredita
+       il ritardo cresciuto della vecchia serie. */
+    const tickImmediato = () => {
+      if (cancelled) return;
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      pollAttemptRef.current = 0;
+      lastRetryAfterRef.current = null;
+      void tick();
+    };
+    /* I100 — rientro della rete: tick immediato (prima: attesa del prossimo
+       tick di backoff, fino a 10 min di monitor cieco dopo un'interruzione). */
+    const onOnline = () => tickImmediato();
+    /* I100 — ritorno in visibilità: tick solo se l'ultimo rilevamento è più
+       vecchio della metà dell'intervallo base (la dilatazione ×4 può aver
+       lasciato dati stantii, ma un tick a ogni flap sarebbe rumore). */
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      if (tickAllaVisibilita(lastRilevamentoRef.current, Date.now(), base)) tickImmediato();
+    };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisibility);
     /* I90 — avvio differito di un tick: schedule (che scrive stato) gira in
        callback, non sincrono nel corpo dell'effetto (regola v7). Finché il
        ritardo programmato è null il badge usa il fallback all'intervallo base
        (stessa semantica del ref a null pre-refactoring). */
-    const avvio = setTimeout(() => schedule(Math.max(5, settings.refreshSeconds) * 1000), 0);
+    const avvio = setTimeout(() => schedule(base), 0);
 
     return () => {
       cancelled = true;
       clearTimeout(avvio);
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisibility);
       setPollDelayMs(null);
     };
   }, [mounted, settings.demoMode, settings.apiKey, settings.refreshSeconds, fetchData]);
@@ -1387,6 +1449,7 @@ export default function DashboardPage() {
                     events={events}
                     backoffAttivo={lastOk === false}
                     backoffDelayMs={pollDelayMs}
+                    pollCausa={reteOffline ? "offline" : tabNascosta ? "tab-nascosto" : null}
                   />
                 </SectionBoundary>
               </div>

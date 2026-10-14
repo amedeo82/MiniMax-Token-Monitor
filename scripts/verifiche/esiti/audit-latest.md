@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T14:08:36.854Z
+# Audit implementazioni — 2026-10-14T14:15:30.330Z
 
-- Verifiche totali: **368** · PASS: **368** · FAIL: **0**
+- Verifiche totali: **378** · PASS: **378** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -373,5 +373,15 @@
 | I98 | kiosk: nessun setItem diretto (sesto catch silenzioso individuato in implementazione) — assenza richiesta (src/lib/kiosk.ts) | assenza | PASS | — |
 | I98 | notifier cablato in page.tsx: toast sonner + evento tecnico «error» nel registro (src/app/page.tsx) | simbolo | PASS | — |
 | I98 | test con storage finto che solleva QuotaExceededError (fallback FIFO, rinuncia, notifica una tantum) | file | PASS | — |
+| I100 | dilatazione ×4 a tab nascosta (pura, testata) (src/lib/backoff.ts) | simbolo | PASS | — |
+| I100 | tick al ritorno in visibilità solo se dati più vecchi di metà intervallo base (src/lib/backoff.ts) | simbolo | PASS | — |
+| I100 | dilatazione NON sospensione (coerenza badge/registri e verifiche V1–V6) (src/lib/backoff.ts) | simbolo | PASS | — |
+| I100 | scheduler: rientro rete → tick immediato (prima: attesa backoff fino a 10 min) (src/app/page.tsx) | simbolo | PASS | — |
+| I100 | scheduler: ritorno in visibilità → tick condizionato (src/app/page.tsx) | simbolo | PASS | — |
+| I100 | tick immediato con reset del backoff (attempt riparte da 0) (src/app/page.tsx) | simbolo | PASS | — |
+| I100 | epoch ultimo rilevamento per il tick condizionato alla visibilità (src/app/page.tsx) | simbolo | PASS | — |
+| I100 | schedule applica la dilatazione ×4 a tab nascosta (src/app/page.tsx) | simbolo | PASS | — |
+| I100 | Diagnostica mostra la causa dell'attesa (offline / tab nascosta; backoff già badge I51) (src/components/diagnostica-panel.tsx) | simbolo | PASS | — |
+| I100 | test delle decisioni pure di rete/visibilità (tests/lib/backoff.test.ts) | simbolo | PASS | — |
 
-Verdetto: **PASS** (368 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (378 pass, 0 fail, 0 scoperte)
