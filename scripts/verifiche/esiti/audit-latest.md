@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T14:00:58.821Z
+# Audit implementazioni — 2026-10-14T14:08:36.854Z
 
-- Verifiche totali: **359** · PASS: **359** · FAIL: **0**
+- Verifiche totali: **368** · PASS: **368** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -358,11 +358,20 @@
 | I97 | esiti storici fuori dall'indice (restano su disco e nella storia git) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I105 | name npm coerente col progetto (era nextjs_tailwind_shadcn_ts) (package.json) | simbolo | PASS | — |
 | I105 | name generico scaffolding RIMOSSO — assenza richiesta (package.json) | assenza | PASS | — |
-| I105 | badge audit allineato al numero reale dei check (README.md) | simbolo | PASS | — |
-| I105 | contatore audit §Qualità allineato (README.md) | simbolo | PASS | — |
-| I105 | contatori suite §Struttura allineati (erano 330/932) (README.md) | simbolo | PASS | — |
+| I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
+| I105 | contatore audit §Qualità allineato — contatore dinamico | simbolo | PASS | — |
+| I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
 | I105 | indice documentazione README completo (docs/08 incluso) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
+| I98 | helper centralizzato persistJson (unico punto di scrittura localStorage) (src/lib/persist-json.ts) | simbolo | PASS | — |
+| I98 | rilevamento esplicito dell'errore di quota (alias Firefox incluso) (src/lib/persist-json.ts) | simbolo | PASS | — |
+| I98 | notifica registrabile una tantum per sessione (toast + evento tecnico fuori dal modulo) (src/lib/persist-json.ts) | simbolo | PASS | — |
+| I98 | page.tsx: nessun setItem diretto (tutte le scritture passano da persistJson — prima: 4 catch silenziosi) — assenza richiesta (src/app/page.tsx) | assenza | PASS | — |
+| I98 | usage-events: nessun setItem diretto (prima: catch silenzioso sul registro eventi) — assenza richiesta (src/lib/usage-events.ts) | assenza | PASS | — |
+| I98 | model-history: nessun setItem diretto (prima: catch silenzioso sullo storico per-modello) — assenza richiesta (src/lib/model-history.ts) | assenza | PASS | — |
+| I98 | kiosk: nessun setItem diretto (sesto catch silenzioso individuato in implementazione) — assenza richiesta (src/lib/kiosk.ts) | assenza | PASS | — |
+| I98 | notifier cablato in page.tsx: toast sonner + evento tecnico «error» nel registro (src/app/page.tsx) | simbolo | PASS | — |
+| I98 | test con storage finto che solleva QuotaExceededError (fallback FIFO, rinuncia, notifica una tantum) | file | PASS | — |
 
-Verdetto: **PASS** (359 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (368 pass, 0 fail, 0 scoperte)

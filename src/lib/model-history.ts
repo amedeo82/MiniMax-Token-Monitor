@@ -21,6 +21,7 @@
  */
 
 import type { HistoryPoint } from "@/components/history-chart";
+import { persistJson } from "./persist-json";
 
 /** Un punto grezzo dello storico per-modello (valori nullable). */
 export interface ModelHistoryPoint {
@@ -75,11 +76,12 @@ export function loadModelHistory(): ModelHistoryPoint[] {
 
 export function saveModelHistory(points: ModelHistoryPoint[]): void {
   if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(MODEL_HISTORY_KEY, JSON.stringify(points.slice(-MODEL_HISTORY_MAX)));
-  } catch {
-    /* quota piena: ignora (il server conserva la replica) */
-  }
+  // I98 — scrittura con gestione esplicita della quota: riduzione FIFO al
+  // fallback (notifica una tantum, vedi persist-json.ts); nessun catch silenzioso.
+  persistJson(MODEL_HISTORY_KEY, points.slice(-MODEL_HISTORY_MAX), {
+    riduci: (p, n) => p.slice(-n),
+    etichetta: "storico per-modello",
+  });
 }
 
 /* --------------------------- acquisizione -------------------------- */

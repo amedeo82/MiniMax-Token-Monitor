@@ -53,6 +53,7 @@ import {
   type BannerInfo,
 } from "@/lib/usage-events";
 import { Region, REGION_LABELS, UsageSnapshot, ApiError, chiaviPerRegione, findModel, parseUsageResponse, inferServerTime, regioneAlt } from "@/lib/minimax";
+import { persistJson, setQuotaNotifier } from "@/lib/persist-json";
 import { delayAfterFailure } from "@/lib/backoff";
 import { makeDemoSnapshot, makeDemoHistory, makeDemoModelHistory } from "@/lib/demo";
 import {
@@ -260,11 +261,8 @@ export default function DashboardPage() {
       const merged = mergeHistories(historyRef.current, remote).slice(-HISTORY_MAX);
       historyRef.current = merged;
       setHistory(merged);
-      try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
-      } catch {
-        /* quota piena: ignora */
-      }
+      // I98 — gestione esplicita della quota (riduzione FIFO + notifica una tantum)
+      persistJson(HISTORY_KEY, merged, { riduci: (h, n) => h.slice(-n), etichetta: "storico" });
     })();
 
     /* I82 — scarica lo storico per-modello conservato sul server e fondilo con
@@ -300,6 +298,17 @@ export default function DashboardPage() {
   React.useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  /* I98 — notifica quota storage UNA TANTUM per sessione: toast sonner +
+     evento tecnico «error» nel registro (fuori da persist-json per evitare
+     l'import ciclico e il loop «registro pieno che si notifica»). */
+  React.useEffect(() => {
+    setQuotaNotifier((notice) => {
+      toast.warning("Storage locale pieno", { description: notice.message });
+      setEvents(appendEvents(makeEvent("error", notice.message)));
+    });
+    return () => setQuotaNotifier(null);
   }, []);
 
   /* --------------------------- kiosk (I87) --------------------------- */
@@ -364,11 +373,8 @@ export default function DashboardPage() {
       const trimmed = next.slice(-HISTORY_MAX);
       historyRef.current = trimmed;
       setHistory(trimmed);
-      try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
-      } catch {
-        /* quota piena: ignora */
-      }
+      // I98 — gestione esplicita della quota (riduzione FIFO + notifica una tantum)
+      persistJson(HISTORY_KEY, trimmed, { riduci: (h, n) => h.slice(-n), etichetta: "storico" });
       // I16: replica il punto sul server (fire-and-forget, silenzioso in caso di errore)
       pushPointToServer(point, {
         source: snap.source,
@@ -475,11 +481,8 @@ export default function DashboardPage() {
             const merged = mergeHistories(historyRef.current, demoHist).slice(-HISTORY_MAX);
             historyRef.current = merged;
             setHistory(merged);
-            try {
-              localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
-            } catch {
-              /* noop */
-            }
+            // I98 — gestione esplicita della quota (riduzione FIFO + notifica una tantum)
+            persistJson(HISTORY_KEY, merged, { riduci: (h, n) => h.slice(-n), etichetta: "storico" });
           }
           // Registra anche i rilevamenti demo nello storico (locale + replica server, source "demo")
           pushHistory(snap);
@@ -773,14 +776,14 @@ export default function DashboardPage() {
       (!s.demoMode &&
         (s.apiKey !== settings.apiKey || s.region !== settings.region || s.apiKeyAlt !== settings.apiKeyAlt));
     setSettings(s);
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-      // I52 — il Service Worker legge i segreti dal localStorage solo via
-      // postMessage: avvisalo che le impostazioni sono cambiate.
-      window.dispatchEvent(new Event("mm-dash-settings-updated"));
-    } catch {
-      /* noop */
-    }
+    // I98 — gestione esplicita della quota: le impostazioni NON sono riducibili
+    // (oggetto senza elementi FIFO): su storage pieno la scrittura rinuncia e
+    // notifica una tantum; le impostazioni restano in memoria per la sessione.
+    persistJson(SETTINGS_KEY, s, { etichetta: "impostazioni" });
+    // I52 — il Service Worker legge i segreti dal localStorage solo via
+    // postMessage: avvisalo che le impostazioni sono cambiate (fuori dal try:
+    // l'evento deve partire comunque, il salvataggio è gestito da persistJson).
+    window.dispatchEvent(new Event("mm-dash-settings-updated"));
     if (connChanged) {
       setSnapshot(null);
       setError(null);
