@@ -52,6 +52,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          {/* I102 — skip-link: PRIMO elemento focusabile della pagina; visibile
+              solo on-focus (pattern Tailwind sr-only/not-sr-only, famiglia
+              focus-visible I79). Destinazione: <main id="contenuto"> in page.tsx. */}
+          <a
+            href="#contenuto"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-lg focus:border focus:border-white/20 focus:bg-zinc-900 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          >
+            Salta al contenuto
+          </a>
           {children}
           <PwaRegister />
           {/* Il wrapper shadcn del Toaster legge già useTheme (I78): niente forzatura dark */}
