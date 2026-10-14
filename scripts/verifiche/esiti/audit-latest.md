@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T14:15:30.330Z
+# Audit implementazioni — 2026-10-14T14:19:40.091Z
 
-- Verifiche totali: **378** · PASS: **378** · FAIL: **0**
+- Verifiche totali: **384** · PASS: **381** · FAIL: **3**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -358,9 +358,9 @@
 | I97 | esiti storici fuori dall'indice (restano su disco e nella storia git) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I105 | name npm coerente col progetto (era nextjs_tailwind_shadcn_ts) (package.json) | simbolo | PASS | — |
 | I105 | name generico scaffolding RIMOSSO — assenza richiesta (package.json) | assenza | PASS | — |
-| I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
-| I105 | contatore audit §Qualità allineato — contatore dinamico | simbolo | PASS | — |
-| I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
+| I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | FAIL | contatore non allineato in README.md: atteso /audit-384_PASS/ |
+| I105 | contatore audit §Qualità allineato — contatore dinamico | simbolo | FAIL | contatore non allineato in README.md: atteso /384 verifiche dichiarative/ |
+| I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | FAIL | simbolo/pattern non trovato in README.md: /354 test / 1003 asserzioni/ |
 | I105 | indice documentazione README completo (docs/08 incluso) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
@@ -383,5 +383,11 @@
 | I100 | schedule applica la dilatazione ×4 a tab nascosta (src/app/page.tsx) | simbolo | PASS | — |
 | I100 | Diagnostica mostra la causa dell'attesa (offline / tab nascosta; backoff già badge I51) (src/components/diagnostica-panel.tsx) | simbolo | PASS | — |
 | I100 | test delle decisioni pure di rete/visibilità (tests/lib/backoff.test.ts) | simbolo | PASS | — |
+| I101 | nuovo SW installato in attesa → stato banner (prima: SKIP_WAITING automatico silenzioso) (src/components/pwa-register.tsx) | simbolo | PASS | — |
+| I101 | niente SKIP_WAITING AUTOMATICO sul worker installing (l'attivazione è esplicita via banner) — assenza richiesta (src/components/pwa-register.tsx) | assenza | PASS | — |
+| I101 | banner persistente con testo esplicito (src/components/pwa-register.tsx) | simbolo | PASS | — |
+| I101 | azione esplicita del banner (src/components/pwa-register.tsx) | simbolo | PASS | — |
+| I101 | reload SOLO quando la nuova versione prende il controllo (src/components/pwa-register.tsx) | simbolo | PASS | — |
+| I101 | test componente: niente auto-skip, click → postMessage al worker in attesa (tests/components/pwa-update.test.tsx) | simbolo | PASS | — |
 
-Verdetto: **PASS** (378 pass, 0 fail, 0 scoperte)
+Verdetto: **FAIL** (381 pass, 3 fail, 0 scoperte)
