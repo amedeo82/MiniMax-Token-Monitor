@@ -10,9 +10,19 @@ import { adminRichiesto, adminAutorizzato, sottoLimiteScritture, bloccoScrittura
 
 const ENV_ORIGINE = { ...process.env };
 
+/* I95 — ripristino robusto dell'env: assegnare `undefined` a process.env è
+   AMBIENTE-DIPENDENTE (Node e alcune versioni di bun lo coercizzano nella
+   stringa "undefined", truthy → la guardia restava attiva a cascata e la CI
+   falliva con 401). Cancellare la chiave è l'unico modo portabile. */
+function ripristinaEnv(nome: string): void {
+  const valore = ENV_ORIGINE[nome];
+  if (valore === undefined) delete process.env[nome];
+  else process.env[nome] = valore;
+}
+
 afterEach(() => {
-  process.env.ADMIN_TOKEN = ENV_ORIGINE["ADMIN_TOKEN"];
-  process.env.RATE_LIMIT_WRITES_PER_MINUTO = ENV_ORIGINE["RATE_LIMIT_WRITES_PER_MINUTO"];
+  ripristinaEnv("ADMIN_TOKEN");
+  ripristinaEnv("RATE_LIMIT_WRITES_PER_MINUTO");
   ripulisciProtezione();
 });
 

@@ -8,8 +8,15 @@
 import { describe, test, expect, afterEach } from "bun:test";
 
 const ENV_ORIGINE = { ...process.env };
+/* I95 — ripristino robusto (vedi api-protezione.test.ts: undefined → "undefined"
+   su alcune versioni di runtime → guardia attiva a cascata). */
+function ripristinaEnv(nome: string): void {
+  const valore = ENV_ORIGINE[nome];
+  if (valore === undefined) delete process.env[nome];
+  else process.env[nome] = valore;
+}
 afterEach(() => {
-  process.env.ADMIN_TOKEN = ENV_ORIGINE["ADMIN_TOKEN"];
+  ripristinaEnv("ADMIN_TOKEN");
   ripulisciProtezione();
 });
 

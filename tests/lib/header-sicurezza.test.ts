@@ -8,8 +8,10 @@ import nextConfig from "../../next.config";
 
 const env = process.env as Record<string, string | undefined>;
 const NODE_ENV_ORIGINE = env["NODE_ENV"];
+/* I95 — ripristino robusto (undefined → "undefined" stringa su alcuni runtime). */
 afterEach(() => {
-  env["NODE_ENV"] = NODE_ENV_ORIGINE;
+  if (NODE_ENV_ORIGINE === undefined) delete env["NODE_ENV"];
+  else env["NODE_ENV"] = NODE_ENV_ORIGINE;
 });
 
 async function headerDi(): Promise<Map<string, string>> {
