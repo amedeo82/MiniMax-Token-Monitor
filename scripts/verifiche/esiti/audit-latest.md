@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-15T10:31:33.721Z
+# Audit implementazioni — 2026-10-15T11:00:59.326Z
 
-- Verifiche totali: **490** · PASS: **490** · FAIL: **0**
+- Verifiche totali: **504** · PASS: **504** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -495,5 +495,19 @@
 | I106 | esito verifica I106 tracciato con nome fisso (evidenza pubblica, eccezione .gitignore) | file | PASS | — |
 | I106 | README documenta le env del deployment persistente (Vercel + Turso) (README.md) | simbolo | PASS | — |
 | I106 | README dichiara la persistenza portabile (SQLite in locale, Turso su Vercel) (README.md) | simbolo | PASS | — |
+| I107 | route diagnostica persistenza (modalità, host sanificato, test connessione, conteggi) | file | PASS | — |
+| I107 | endpoint SOLO GET (read-only: fuori dalla guardia I95, non altera nulla) (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
+| I107 | nessuna mutazione: l'endpoint non espone POST/DELETE/PUT/PATCH — assenza richiesta (src/app/api/persistenza/route.ts) | assenza | PASS | — |
+| I107 | host ridotto all'hostname: userinfo/porta/percorso/query scartati (il token non attraversa mai la risposta) (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
+| I107 | test di connessione reale sul motore attivo con latenza misurata (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
+| I107 | modalità dal MODULO PROPRIO (il shim @/lib/db resta { db } per i mock di processo I99/I95 — bun applica il primo mock per specificatore) (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
+| I107 | regola ambiente→modalità in unità pura separata (solo TURSO_DATABASE_URL decide, token da solo non basta) | file | PASS | — |
+| I107 | ri-esportazione dalla factory: superficie pubblica stabile per lo shim db.ts e i test I106 (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I107 | pannello nel tab Dati: modalità attiva, host, test connessione, conteggi (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I107 | il pannello consuma l'endpoint di diagnostica (fetch all'apertura + bottone Aggiorna) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I107 | badge modalità attiva distinto per ramo turso/locale (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I107 | contratto route: forma, modalità env-driven, segreti MAI nella risposta, 500 db_read | file | PASS | — |
+| I107 | test componente pannello: stati dati/errore, it-IT, ricarica manuale | file | PASS | — |
+| I107 | README documenta l'endpoint e il pannello Impostazioni→Dati → Persistenza server (README.md) | simbolo | PASS | — |
 
-Verdetto: **PASS** (490 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (504 pass, 0 fail, 0 scoperte)

@@ -12,10 +12,9 @@
 > registro di `docs/04` §3 (ultimo item: I106) con la convenzione di `docs/07`/`docs/08`:
 > le proposte ricevono un numero prima dell'implementazione.
 >
-> Stato: **2 proposte numerate I107–I108, 4 decisioni raccolte (§8, 15/10/2026)** —
-> la strada primaria SQLite/libSQL è CONFERMATA (D1), I107 è il primo item
-> dell'Ondata 4 (D2), I108 resta porta pronta in backlog (D3), l'osservatorio
-> Turso Sync/MCP è confermato (D4).
+> Stato: **strada primaria confermata (D1), I107 IMPLEMENTATO il 15/10/2026 come
+> primo item dell'Ondata 4 (D2)** — I108 resta porta pronta in backlog (D3),
+> l'osservatorio Turso Sync/MCP è confermato (D4). Registro completo in §8.
 
 ---
 
@@ -275,13 +274,17 @@ Concretamente, in ordine di priorità:
    Vercel). Zero doppio schema, zero doppio dialetto, SQL raw già portabile dentro la
    famiglia, tier gratuiti sovradimensionati per il profilo (§2). Questa risposta
    «non fare» è la scelta a costo zero più robusta dell'intera lista.
-2. **I107 — Pannello «Persistenza» in UI (proposta, piccola):** esporre nelle
-   impostazioni/diagnostica ciò che `modalitaPersistenza()` già sa (modalità attiva
-   locale/turso, URL diagnostica senza credenziali), un test di connessione e i conteggi
-   righe per tabella. Dà all'utente la visibilità del database SCELTO dalle impostazioni
-   ambiente — la versione onesta del requisito «impostare il database dall'app», senza
-   mai mettere credenziali nel localStorage (vincolo di sicurezza del progetto: la chiave
-   MiniMax resta l'unico segreto del browser).
+2. **I107 — Pannello «Persistenza» in UI — IMPLEMENTATO 15/10/2026 (Ondata 4):**
+   esposto nelle impostazioni (tab Dati → «Persistenza server») ciò che
+   `modalitaPersistenza()` già sa (modalità attiva locale/turso, URL diagnostica
+   senza credenziali), un test di connessione reale (`SELECT 1` con latenza) e i
+   conteggi righe per tabella, via `GET /api/persistenza` (read-only, senza
+   chiave; host ridotto al solo hostname — mai token nel localStorage né nella
+   risposta). Dà all'utente la visibilità del database SCELTO dalle impostazioni
+   ambiente — la versione onesta del requisito «impostare il database dall'app»,
+   senza mai mettere credenziali nel localStorage (vincolo di sicurezza del
+   progetto: la chiave MiniMax resta l'unico segreto del browser). Dettagli in
+   `docs/04` §3 (I107).
 3. **I108 — Provider Postgres opzionale Neon/Supabase (proposta, media):** doppio schema
    Prisma selezionato a build (`PRISMA_SCHEMA`/script), ramo PG in `db-factory` con
    `@prisma/adapter-pg` o `@prisma/adapter-neon`, variante `db-push` per PG, verifica
@@ -302,7 +305,7 @@ dell'implementazione. Decisioni espresse dall'utente il **15/10/2026**:
 | # | Domanda | Opzioni | Decisione |
 |---|---|---|---|
 | D1 | Confermi la strada primaria SQLite/libSQL (locale=SQLite nativo, cloud=Turso già implementato) senza migrazione? | (a) sì, confermata · (b) no, voglio la via Postgres come primaria | **(a) CONFERMATA** — zero migrazione, §7.1 in vigore |
-| D2 | I107 pannello «Persistenza» in UI: si implementa come primo item dell'Ondata 4? | (a) sì, Ondata 4 · (b) sì, ma più avanti · (c) no | **(a) CONFERMATA** — I107 è il primo item dell'Ondata 4 |
+| D2 | I107 pannello «Persistenza» in UI: si implementa come primo item dell'Ondata 4? | (a) sì, Ondata 4 · (b) sì, ma più avanti · (c) no | **(a) CONFERMATA** — I107 è il primo item dell'Ondata 4 (**implementato il 15/10/2026**, docs/04 §3) |
 | D3 | I108 provider Postgres (Neon o Supabase): si implementa ora o resta porta pronta documentata? | (a) ora, Neon · (b) ora, Supabase · (c) backlog | **(c) BACKLOG** — resta porta pronta documentata (§7.3) |
 | D4 | Turso Sync/embedded replicas e bridge MCP/Composio: entrano nel backlog osservatorio (§7.4) o si scartano? | (a) backlog · (b) scartati | **(a) BACKLOG OSSERVATORIO** — confermato (§7.4) |
 

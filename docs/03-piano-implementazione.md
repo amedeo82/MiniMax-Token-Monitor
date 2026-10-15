@@ -123,6 +123,7 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/components/print-report.tsx` | Report settimanale stampabile (I75) |
 | `src/components/pwa-register.tsx` | Registrazione Service Worker + sync notifiche a tab chiuso (I52) |
 | `src/app/api/summary/route.ts` | `GET /api/summary` read-only senza chiave: KPI aggregati per widget esterni (I80) |
+| `src/app/api/persistenza/route.ts` | `GET /api/persistenza` read-only senza chiave: diagnostica persistenza — modalità attiva (SQLite/Turso), host sanificato senza credenziali, test connessione `SELECT 1` con latenza, conteggi 4 tabelle (I107); consumato dal pannello Impostazioni → Dati → Persistenza server |
 | `src/app/api/history/models/route.ts` | GET/POST/DELETE storico per-modello su `ModelUsagePoint` (I82) |
 | `src/app/manifest.ts` + `public/sw.js` + `public/sw-shared.js` | PWA: manifest, icone, cache offline, notifiche a tab chiuso (I52) |
 | `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (278 verifiche + coverage check) (I55, esteso a ogni item) |

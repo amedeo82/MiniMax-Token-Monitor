@@ -102,6 +102,23 @@ function thresholdOptionsFor(value: number): { value: number; label: string }[] 
 
 type SettingsTab = "connection" | "alerts" | "aspetto" | "data";
 
+/** I107 — risposta di GET /api/persistenza (diagnostica senza credenziali). */
+interface StatoPersistenza {
+  ok: true;
+  modalita: "locale" | "turso";
+  host: string;
+  test: { ok: boolean; latenzaMs: number };
+  tabelle: { tabella: string; etichetta: string; righe: number }[];
+  totale: number;
+  generatoIl: string;
+}
+
+/** Forma standard degli errori delle route API (contratto I99). */
+interface ErroreApi {
+  ok: false;
+  error: { code: string; message: string };
+}
+
 /** I78 — opzioni del tema (next-themes: class su <html>, default scuro). */
 const THEME_OPTIONS = [
   { value: "system", label: "Sistema (segue il dispositivo)" },
@@ -133,6 +150,39 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   const [jsonText, setJsonText] = React.useState("");
   const [jsonError, setJsonError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<SettingsTab>("connection");
+
+  /* I107 — diagnostica della persistenza server (tab Dati): modalità attiva,
+     host sanificato, test di connessione e conteggi. SOLO LETTURA: il database
+     si sceglie dall'AMBIENTE (I106, docs/09 §6–§8) — l'app lo rende visibile,
+     non lo cambia a runtime, e non vede mai le credenziali (restano nel server). */
+  const [statoPersistenza, setStatoPersistenza] = React.useState<StatoPersistenza | null>(null);
+  const [caricamentoPersistenza, setCaricamentoPersistenza] = React.useState(false);
+  const [errorePersistenza, setErrorePersistenza] = React.useState<string | null>(null);
+
+  const caricaStatoPersistenza = React.useCallback(async () => {
+    setCaricamentoPersistenza(true);
+    setErrorePersistenza(null);
+    try {
+      const res = await fetch("/api/persistenza", { cache: "no-store" });
+      const body = (await res.json()) as StatoPersistenza | ErroreApi;
+      if (!res.ok || !body.ok) {
+        throw new Error(("error" in body && body.error?.message) || `HTTP ${res.status}`);
+      }
+      setStatoPersistenza(body);
+    } catch (e) {
+      setStatoPersistenza(null);
+      setErrorePersistenza(e instanceof Error ? e.message : "Verifica non disponibile.");
+    } finally {
+      setCaricamentoPersistenza(false);
+    }
+  }, []);
+
+  /* Caricamento all'APERTURA del dialogo (non al mount dell'app): la chiamata
+     parte in microtask come da passata I90 (regola react-hooks/set-state-in-effect). */
+  React.useEffect(() => {
+    if (!open) return;
+    queueMicrotask(() => void caricaStatoPersistenza());
+  }, [open, caricaStatoPersistenza]);
 
   /* I90 — il reset del modulo a ogni apertura usa l'aggiustamento di stato in
      fase di render (pattern React «adjusting state when a prop changes») al
@@ -561,6 +611,72 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                   <ClipboardPaste className="size-3.5" />
                   Analizza il JSON incollato
                 </Button>
+              </div>
+
+              <Separator className="bg-white/[0.06]" />
+
+              {/* ---------------- I107 — Persistenza server ---------------- */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+                    <Database className="size-3.5 text-zinc-400" />
+                    Persistenza server
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void caricaStatoPersistenza()}
+                    disabled={caricamentoPersistenza}
+                    className="h-7 px-2 text-[11px] text-zinc-400 hover:bg-white/5! hover:text-zinc-200!"
+                  >
+                    {caricamentoPersistenza ? "Verifica…" : "Aggiorna"}
+                  </Button>
+                </div>
+                {errorePersistenza ? (
+                  <p className="text-[11px] font-medium text-rose-400">
+                    Verifica non disponibile: {errorePersistenza}
+                  </p>
+                ) : statoPersistenza ? (
+                  <div className="space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-zinc-500">Modalità attiva</span>
+                      <span className="rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 font-medium text-zinc-200">
+                        {statoPersistenza.modalita === "turso" ? "Turso (libsql)" : "SQLite locale"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-zinc-500">Database</span>
+                      <span
+                        className="max-w-[220px] truncate font-mono text-zinc-400"
+                        title={statoPersistenza.host}
+                      >
+                        {statoPersistenza.host}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-zinc-500">Test di connessione</span>
+                      <span className="text-zinc-300">
+                        {statoPersistenza.test.ok
+                          ? `ok · ${statoPersistenza.test.latenzaMs} ms`
+                          : "fallito"}
+                      </span>
+                    </div>
+                    <Separator className="bg-white/[0.06]" />
+                    {statoPersistenza.tabelle.map((t) => (
+                      <div key={t.tabella} className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="text-zinc-500">{t.etichetta}</span>
+                        <span className="font-mono text-zinc-300">{t.righe.toLocaleString("it-IT")}</span>
+                      </div>
+                    ))}
+                    <p className="pt-1 text-[10px] leading-relaxed text-zinc-600">
+                      Il database si sceglie dalle variabili d&apos;ambiente del server (locale = SQLite,
+                      cloud = Turso): questa verifica mostra solo modalità, host e conteggi — le
+                      credenziali restano nell&apos;ambiente e non arrivano mai al browser.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-500">Verifica in corso…</p>
+                )}
               </div>
 
               <Separator className="bg-white/[0.06]" />

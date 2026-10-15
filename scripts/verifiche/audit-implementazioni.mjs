@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "446 test / 1400 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "459 test / 1458 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–09", "indice documentazione README completo (docs/09 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -735,6 +735,22 @@ const CHECKS = [
   check.file("I106", "scripts/verifiche/esiti/i106-persistenza-latest.md", "esito verifica I106 tracciato con nome fisso (evidenza pubblica, eccezione .gitignore)"),
   check.simbolo("I106", "README.md", "TURSO_DATABASE_URL", "README documenta le env del deployment persistente (Vercel + Turso)"),
   check.simbolo("I106", "README.md", "persistenza portabile", "README dichiara la persistenza portabile (SQLite in locale, Turso su Vercel)"),
+
+  /* --- I107 — diagnostica persistenza: route read-only + pannello Impostazioni→Dati --- */
+  check.file("I107", "src/app/api/persistenza/route.ts", "route diagnostica persistenza (modalità, host sanificato, test connessione, conteggi)"),
+  check.simbolo("I107", "src/app/api/persistenza/route.ts", "export async function GET", "endpoint SOLO GET (read-only: fuori dalla guardia I95, non altera nulla)"),
+  check.assenza("I107", "src/app/api/persistenza/route.ts", "export async function (POST|DELETE|PUT|PATCH)", "nessuna mutazione: l'endpoint non espone POST/DELETE/PUT/PATCH"),
+  check.simbolo("I107", "src/app/api/persistenza/route.ts", "hostDiagnostico", "host ridotto all'hostname: userinfo/porta/percorso/query scartati (il token non attraversa mai la risposta)"),
+  check.simbolo("I107", "src/app/api/persistenza/route.ts", "SELECT 1", "test di connessione reale sul motore attivo con latenza misurata"),
+  check.simbolo("I107", "src/app/api/persistenza/route.ts", 'from "@/lib/modalita-persistenza"', "modalità dal MODULO PROPRIO (il shim @/lib/db resta { db } per i mock di processo I99/I95 — bun applica il primo mock per specificatore)"),
+  check.file("I107", "src/lib/modalita-persistenza.ts", "regola ambiente→modalità in unità pura separata (solo TURSO_DATABASE_URL decide, token da solo non basta)"),
+  check.simbolo("I107", "src/lib/db-factory.ts", 'export { modalitaPersistenza', "ri-esportazione dalla factory: superficie pubblica stabile per lo shim db.ts e i test I106"),
+  check.simbolo("I107", "src/components/settings-dialog.tsx", "Persistenza server", "pannello nel tab Dati: modalità attiva, host, test connessione, conteggi"),
+  check.simbolo("I107", "src/components/settings-dialog.tsx", "api/persistenza", "il pannello consuma l'endpoint di diagnostica (fetch all'apertura + bottone Aggiorna)"),
+  check.simbolo("I107", "src/components/settings-dialog.tsx", "Turso \\(libsql\\)", "badge modalità attiva distinto per ramo turso/locale"),
+  check.file("I107", "tests/lib/api-persistenza.test.ts", "contratto route: forma, modalità env-driven, segreti MAI nella risposta, 500 db_read"),
+  check.file("I107", "tests/components/settings-persistenza.test.tsx", "test componente pannello: stati dati/errore, it-IT, ricarica manuale"),
+  check.simbolo("I107", "README.md", "api/persistenza", "README documenta l'endpoint e il pannello Impostazioni→Dati → Persistenza server"),
 ];
 
 /* ------------------------------------------------------------------ */

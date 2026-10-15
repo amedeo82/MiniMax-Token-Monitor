@@ -1168,3 +1168,22 @@ Work Log:
 Stage Summary:
 - Registro decisioni D1-D4 CHIUSO: la roadmap persistenza è ora vincolante (SQLite/libSQL strada unica, I107 in esecuzione come Ondata 4, I108 porta pronta, osservatorio confermato)
 - Il commit apre l'Ondata 4: la registrazione della decisione PRECEDE l'implementazione I107 (convenzione docs/08 §7 rispettata)
+
+---
+Task ID: 50
+Agent: main (Super Z)
+Task: Ondata 4 / I107 — pannello «Persistenza» in UI (decisione D2 di docs/09 §8): diagnostica read-only del database attivo, poi commit e push
+
+Work Log:
+- Fase A — route GET /api/persistenza (read-only, senza chiave, fuori dalla guardia I95): modalita (locale/turso), host SANIFICATO (hostDiagnostico(): solo hostname di libsql:// — userinfo/porta/percorso/query scartati; percorso file per file: e SQLite nativo), test connessione REALE (SELECT 1 con latenza performance.now), conteggi 4 tabelle (UsagePoint/DownsampledPoint/UsageEventRecord/ModelUsagePoint), 500 db_read sui guasti motore
+- Fase B — pannello «Persistenza server» nel tab Dati di settings-dialog: badge modalità («Turso (libsql)»/«SQLite locale»), host monospazio con title, test connessione (ok · N ms), conteggi toLocaleString("it-IT"), bottone «Aggiorna», fetch all'APERTURA del dialogo (queueMicrotask, pattern I90 — regola react-hooks/set-state-in-effect), nota «le credenziali restano nell'ambiente»; MAI credenziali nel localStorage (vincolo docs/09 §7.2)
+- LEZIONE MOCK BUN (riprodotta e bisecata su 3 file): bun applica il PRIMO mock registrato per specificatore — aggiungere un import nominato a "@/lib/db" (già mockato con la sola { db } da api-guard/api-summary/api-archivi) rompe il LINK ESM dell'intera suite («Export named 'modalitaPersistenza' not found»); FIX secondo il pattern I106 «unità pura in modulo proprio»: regola ambiente→modalità estratta in src/lib/modalita-persistenza.ts (NUOVO), db-factory la ri-esporta (superficie stabile per shim db.ts e test I106), la route la importa dal modulo suo
+- Test +13 effettivi (suite 446→459, 1400→1458 asserzioni): tests/lib/api-persistenza.test.ts (8: forma, DATABASE_URL, turso, SICUREZZA userinfo/query/porta MAI nella risposta, file:, 500 su SELECT e count, token-da-solo non basta) + tests/components/settings-persistenza.test.tsx (5: dati/errore, it-IT, fetch apertura + Aggiorna, nota sicurezza); LEZIONE TEST: i trigger Radix Tabs attivano su mousedown non su click (verificato con dump DOM in happy-dom)
+- Audit: +14 check I107 (route GET-only con check di ASSENZA POST/DELETE/PATCH, hostDiagnostico, SELECT 1, modulo proprio, ri-esportazione, pannello, test, README) → 490→504; contatore I105 allineato (README badge audit-504_PASS, §Qualità 504 verifiche); literal contatori suite 459/1458
+- Docs: README (badge 459 test, §API diagnostica I107, §Persistenza con pannello, struttura lib 27→28 file e tests 42+9), docs/03 (riga route), docs/04 (§3 I107 completa + §8 changelog), docs/09 (§7.2 IMPLEMENTATO + intestazione stato + D2 con nota implementazione), version.ts → «2026-10-15 · I107»
+- Protocollo: tsc 0, lint 0, suite 459/459 (1458 asserzioni), audit 504/504 PASS 0 scoperte, next build VERDE (/api/persistenza registrata ƒ dynamic); commit percorsi espliciti; push + verifica CI via API GitHub
+
+Stage Summary:
+- Ondata 4 APERTA e primo item CHIUSO: il database scelto dall'ambiente è ora VISIBILE dall'app (Impostazioni → Dati → Persistenza server) senza mai esporre credenziali — la «versione onesta» del requisito originale «impostare il database dall'app»
+- Due lezioni persistite nei docs: (1) semantica mock bun = primo-vincitore per specificatore → i moduli nuovi vanno in file propri (pattern I106 esteso); (2) Radix Tabs = mousedown
+- Restano in backlog decisi: I108 porta pronta Postgres (D3=c), osservatorio Turso Sync/MCP (D4=a)

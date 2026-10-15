@@ -25,18 +25,13 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 
-export type ModalitaPersistenza = "turso" | "locale";
-
-/** URL Turso/libsql dall'ambiente (trim: gli spazi incidono sul protocollo). */
-function urlTurso(): string | undefined {
-  const url = process.env.TURSO_DATABASE_URL?.trim();
-  return url ? url : undefined;
-}
-
-/** Modalità attuale della persistenza server (diagnostica/documentazione). */
-export function modalitaPersistenza(): ModalitaPersistenza {
-  return urlTurso() ? "turso" : "locale";
-}
+/* I107 — la regola ambiente→modalità vive nel MODULO PROPRIO
+   src/lib/modalita-persistenza.ts (pattern «unità pura separata»): le route
+   la importano da lì senza aggiungere import nominati a "@/lib/db" (i mock
+   di processo I99/I95 del modulo shim espongono solo `{ db }` — bun applica
+   il PRIMO mock registrato per specificatore). La ri-esportazione mantiene
+   stabile la superficie pubblica per lo shim db.ts e i test I106. */
+export { modalitaPersistenza, type ModalitaPersistenza } from "./modalita-persistenza";
 
 /**
  * Factory dell'istanza PrismaClient secondo l'ambiente. Esportata per i test
@@ -44,7 +39,7 @@ export function modalitaPersistenza(): ModalitaPersistenza {
  * chiamano questa funzione con ambienti diversi invece di re-importare).
  */
 export function creaPrismaClient(): PrismaClient {
-  const url = urlTurso();
+  const url = process.env.TURSO_DATABASE_URL?.trim();
   if (url) {
     // I106 — ramo portabile: adapter libsql. Il token è opzionale (database
     // Turso pubblici e URL `file:` non lo richiedono); mai stampato.
