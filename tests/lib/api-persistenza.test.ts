@@ -13,8 +13,16 @@
  * `modalitaPersistenza` fornita rispecchia quella reale (solo TURSO_DATABASE_URL,
  * lezione I106) e l'igiene dell'ambiente usa DELETE, mai undefined (lezione
  * Task 45: su CI «undefined» coerza nella stringa truthy "undefined").
+ *
+ * I107-fix2 — il mirror di `urlPersistenzaLocale` DEVE seguire la regola reale
+ * (src/lib/modalita-persistenza.ts): default nel tmpdir con VERCEL=1. È il
+ * motivo per cui db.test.ts (che gira DOPO questo file in suite completa e
+ * vede questo mock — bun applica il primo mock per specificatore) verifica la
+ * regola serverless: il mirror è la fonte vista in-process. Aggiornarli INSIEME.
  */
 import { describe, test, expect, beforeEach, afterAll } from "bun:test";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 /* ------------------------------------------------------------------ */
 /* Mock del modulo canonico @/lib/db                                    */
@@ -58,12 +66,16 @@ mock.module("@/lib/db", () => ({
    quindi "@/lib/db" NON deve crescere di esportazioni richieste dalle route. */
 mock.module("@/lib/modalita-persistenza", () => ({
   modalitaPersistenza: () => (process.env.TURSO_DATABASE_URL?.trim() ? "turso" : "locale"),
-  // I107-fix: mirror dell'helper reale (URL EFFETTIVO del ramo SQLite nativo,
-  // unica fonte di verità per factory e host diagnostico). Default ASSOLUTO:
-  // Prisma risolve i file: relativi rispetto a prisma/schema.prisma e NON al
-  // CWD (probe empirica I107-fix).
+  // I107-fix/I107-fix2: mirror dell'helper reale (URL EFFETTIVO del ramo SQLite
+  // nativo, unica fonte di verità per factory e host diagnostico). Default
+  // ASSOLUTO dal CWD (Prisma risolve i file: relativi rispetto a
+  // prisma/schema.prisma — probe empirica I107-fix); con VERCEL=1 il CWD è
+  // read-only e il default vive nel tmpdir scrivibile (I107-fix2).
   urlPersistenzaLocale: () =>
-    process.env.DATABASE_URL?.trim() || `file:${process.cwd()}/db/custom.db`,
+    process.env.DATABASE_URL?.trim() ||
+    (process.env.VERCEL === "1"
+      ? `file:${join(tmpdir(), "db", "custom.db")}`
+      : `file:${process.cwd()}/db/custom.db`),
 }));
 
 const getPersistenza = (await import("@/app/api/persistenza/route")).GET as unknown as () => Promise<Response>;
@@ -72,7 +84,7 @@ const getPersistenza = (await import("@/app/api/persistenza/route")).GET as unkn
 /* Igiene dell'ambiente: ripristino con DELETE (lezione Task 45)        */
 /* ------------------------------------------------------------------ */
 
-const CHIAVI = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "DATABASE_URL"] as const;
+const CHIAVI = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "DATABASE_URL", "VERCEL"] as const;
 const origine = new Map<string, string | undefined>(CHIAVI.map((k) => [k, process.env[k]]));
 
 function impostaEnv(valori: Partial<Record<(typeof CHIAVI)[number], string>>) {
@@ -99,7 +111,7 @@ beforeEach(() => {
   conteggi = { usagePoint: 1234, downsampledPoint: 56, usageEventRecord: 7, modelUsagePoint: 89 };
   queryRawOk = true;
   countOk = true;
-  impostaEnv({ TURSO_DATABASE_URL: undefined, TURSO_AUTH_TOKEN: undefined, DATABASE_URL: undefined });
+  impostaEnv({ TURSO_DATABASE_URL: undefined, TURSO_AUTH_TOKEN: undefined, DATABASE_URL: undefined, VERCEL: undefined });
 });
 
 describe("I107 — GET /api/persistenza (diagnostica, solo lettura)", () => {
@@ -131,6 +143,14 @@ describe("I107 — GET /api/persistenza (diagnostica, solo lettura)", () => {
     const body = (await res.json()) as Record<string, unknown>;
     expect(body["host"]).toBe("file:/percorso/archivio.db");
     expect(body["modalita"]).toBe("locale");
+  });
+
+  test("I107-fix2 — VERCEL=1 senza DATABASE_URL → host = default serverless nel tmpdir (pannello su Vercel senza env)", async () => {
+    impostaEnv({ DATABASE_URL: undefined, VERCEL: "1" });
+    const res = await getPersistenza();
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body["modalita"]).toBe("locale");
+    expect(body["host"]).toBe(`file:${join(tmpdir(), "db", "custom.db")}`);
   });
 
   test("modalità turso: TURSO_DATABASE_URL decide e l'host è il solo hostname", async () => {

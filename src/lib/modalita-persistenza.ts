@@ -16,6 +16,9 @@
  * Il token da solo NON basta (lezione I106, testato in tests/lib/db.test.ts).
  */
 
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 export type ModalitaPersistenza = "turso" | "locale";
 
 /** Modalità attuale della persistenza server (diagnostica/documentazione). */
@@ -42,7 +45,23 @@ export function modalitaPersistenza(): ModalitaPersistenza {
  * variabili configurate). Il ramo adapter libsql NON ne ha bisogno (il driver
  * gestisce la connessione), il motore nativo SÌ — quindi il ramo nativo passa
  * SEMPRE un URL esplicito via questa funzione.
+ *
+ * I107-fix2 — regola SERVERLESS: su Vercel (`VERCEL=1`) il filesystem del
+ * deployment è READ-ONLY (solo `/tmp` è scrivibile) e la directory `db/` non
+ * esiste nel bundle: il default dal CWD atterra su `/var/task/db/custom.db` e
+ * SQLite muore al primo `$queryRaw` con «Error code 14: Unable to open the
+ * database file» (SQLITE_CANTOPEN, bug riprodotto dal report utente). Con
+ * `VERCEL=1` il default va quindi in `tmpdir()/db/custom.db` — scrivibile;
+ * la factory prepara la directory padre (vedi `preparaDirectoryFile` in
+ * db-factory.ts: SQLite NON crea le cartelle). Il file resta EFFIMERO (ogni
+ * istanza serverless parte vuota): per la persistenza duratura su Vercel si
+ * imposta `TURSO_DATABASE_URL` (README §Persistenza). `DATABASE_URL` esplicita
+ * vince SEMPRE, anche su Vercel (passthrough invariato).
  */
 export function urlPersistenzaLocale(): string {
-  return process.env.DATABASE_URL?.trim() || `file:${process.cwd()}/db/custom.db`;
+  const env = process.env.DATABASE_URL?.trim();
+  if (env) return env;
+  // Serverless (Vercel): CWD read-only → il default vive nel tmpdir scrivibile.
+  if (process.env.VERCEL === "1") return `file:${join(tmpdir(), "db", "custom.db")}`;
+  return `file:${process.cwd()}/db/custom.db`;
 }

@@ -284,7 +284,16 @@ Concretamente, in ordine di priorità:
    ambiente — la versione onesta del requisito «impostare il database dall'app»,
    senza mai mettere credenziali nel localStorage (vincolo di sicurezza del
    progetto: la chiave MiniMax resta l'unico segreto del browser). Dettagli in
-   `docs/04` §3 (I107).
+   `docs/04` §3 (I107). **Fix 15/10 (due ondate, entrambe da report utente sul
+   pannello)**: (a) senza `.env` il client nativo esigeva `env("DATABASE_URL")`
+   («Environment variable not found») → `urlPersistenzaLocale()` come unica
+   fonte di verità con default incorporato assoluto; (b) su Vercel il default
+   dal CWD atterrava su filesystem read-only con `db/` assente («Error code 14:
+   Unable to open the database file», SQLITE_CANTOPEN — SQLite non crea le
+   cartelle) → con `VERCEL=1` il default va in `/tmp/db/custom.db`, la factory
+   prepara la directory padre e il pannello dichiara l'EFFIMERO del file locale
+   su serverless: la persistenza duratura su Vercel resta la via Turso (env
+   `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`, README §Persistenza).
 3. **I108 — Provider Postgres opzionale Neon/Supabase (proposta, media):** doppio schema
    Prisma selezionato a build (`PRISMA_SCHEMA`/script), ramo PG in `db-factory` con
    `@prisma/adapter-pg` o `@prisma/adapter-neon`, variante `db-push` per PG, verifica

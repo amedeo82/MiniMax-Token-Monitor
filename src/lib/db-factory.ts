@@ -22,6 +22,9 @@
  * nessun valore viene loggato o esposto al client (le route API non lo
  * ritornano mai).
  */
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 
@@ -55,14 +58,40 @@ export function creaPrismaClient(): PrismaClient {
   }
   // Ramo locale (default): URL SEMPRE esplicito via urlPersistenzaLocale()
   // (DATABASE_URL se presente, altrimenti il default documentato db/custom.db
-  // come percorso assoluto — vedi la nota in modalita-persistenza.ts).
+  // come percorso assoluto — vedi la nota in modalita-persistenza.ts; su Vercel
+  // senza env il default vive nel tmpdir scrivibile, I107-fix2).
   // BUG I107-fix: senza override il client esigeva env("DATABASE_URL") dallo
   // schema e il primo $queryRaw esplodeva «Environment variable not found:
   // DATABASE_URL» in ogni ambiente senza file .env (riprodotto: pannello
   // «Persistenza» su deployment senza variabili configurate). Con
   // `datasourceUrl` il comportamento con DATABASE_URL impostata è IDENTICO
   // (stesso valore che env() avrebbe risolto); senza, vale il default.
-  return new PrismaClient({ datasourceUrl: urlPersistenzaLocale(), log: ["query"] });
+  const urlLocale = urlPersistenzaLocale();
+  preparaDirectoryFile(urlLocale);
+  return new PrismaClient({ datasourceUrl: urlLocale, log: ["query"] });
+}
+
+/**
+ * I107-fix2 — SQLite NON crea le cartelle del file: apre il percorso così com'è
+ * e fallisce con SQLITE_CANTOPEN («Error code 14: Unable to open the database
+ * file») se la directory padre manca o non è scrivibile — clone fresco senza
+ * `db/` (è gitignored: solo `db/*.db` lo è, la cartella non arriva nel checkout)
+ * e Vercel, dove il bundle è read-only. Per gli URL `file:` con percorso
+ * ASSOLUTO prepara la directory padre, best-effort: un eventuale guasto (es.
+ * filesystem davvero read-only) NON viene mascherato — riemerge dal motore
+ * SQLite col messaggio preciso. I percorsi RELATIVI sono lasciati a Prisma
+ * (li risolve contro prisma/schema.prisma, non al CWD — probe I107-fix:
+ * ricostruirne la regola qui la duplicherebbe con il rischio di sbagliarsela).
+ */
+function preparaDirectoryFile(url: string): void {
+  if (!url.startsWith("file:")) return;
+  const percorso = url.slice("file:".length).split("?")[0] ?? "";
+  if (!percorso.startsWith("/")) return;
+  try {
+    mkdirSync(dirname(percorso), { recursive: true });
+  } catch {
+    // best-effort: il guasto reale riemerge dal motore SQLite (es. error 14)
+  }
 }
 
 /** Singleton alla convenzione Next (hot-reload dev: una sola istanza). */

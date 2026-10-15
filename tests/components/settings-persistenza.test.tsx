@@ -5,8 +5,9 @@
  * modalità attiva (Turso/SQLite), host sanificato, esito del test di connessione
  * e conteggi per tabella. Qui si verifica la VISTA con fetch globale mockato
  * (contratto API già coperto da tests/lib/api-persistenza.test.ts):
- * stati caricamento/dati/errore, formattazione it-IT dei conteggi e ricarica
- * manuale con «Aggiorna».
+ * stati caricamento/dati/errore, formattazione it-IT dei conteggi, ricarica
+ * manuale con «Aggiorna» e nota I107-fix2 sull'effimero del file locale su
+ * serverless (visibile solo nel ramo locale, mai in quello Turso).
  *
  * Il provider next-themes è REALE (pattern theme-toggle/I78): il dialog usa
  * useTheme nel tab Aspetto e il provider evita mock del modulo.
@@ -100,6 +101,9 @@ describe("I107 componenti: pannello Persistenza (tab Dati)", () => {
     expect(screen.getByText("Bucket orari")).toBeDefined();
     expect(screen.getByText("Punti per modello")).toBeDefined();
     expect(screen.getByText("89")).toBeDefined();
+    /* La nota sull'effimero è SOLO del ramo locale (I107-fix2): con Turso il
+       database è remoto e duraturo — la nota non deve comparire. */
+    expect(screen.queryByText(/effimero/)).toBeNull();
   });
 
   test("modalità locale: badge SQLite e percorso del file dal contratto", async () => {
@@ -109,6 +113,16 @@ describe("I107 componenti: pannello Persistenza (tab Dati)", () => {
     await waitFor(() => expect(screen.getByText("SQLite locale")).toBeDefined());
     expect(screen.getByText("db/custom.db")).toBeDefined();
     expect(screen.queryByText("Turso (libsql)")).toBeNull();
+  });
+
+  test("I107-fix2 — modalità locale su serverless: nota sull'effimero del file (host /tmp)", async () => {
+    risposta = { ...STATO_TURSO, modalita: "locale", host: "/tmp/db/custom.db" };
+    mount();
+    await apriTabDati();
+    await waitFor(() => expect(screen.getByText("SQLite locale")).toBeDefined());
+    expect(screen.getByText("/tmp/db/custom.db")).toBeDefined();
+    expect(screen.getByText(/effimero e ogni istanza parte vuota/)).toBeDefined();
+    expect(screen.getByText(/TURSO_DATABASE_URL/)).toBeDefined();
   });
 
   test("API in errore: messaggio con la causa, nessun pannello dati", async () => {

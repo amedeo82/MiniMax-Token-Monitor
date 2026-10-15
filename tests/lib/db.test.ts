@@ -19,6 +19,13 @@
  *   variabili configurate). Default ASSOLUTO db/custom.db: Prisma risolve i
  *   percorsi file: relativi rispetto a prisma/schema.prisma, NON al CWD
  *   (probe empirica I107-fix).
+ * - I107-fix2: con VERCEL=1 (serverless, filesystem read-only tranne /tmp) il
+ *   default NON va nel CWD ma in tmpdir()/db/custom.db; DATABASE_URL esplicita
+ *   vince SEMPRE (passthrough anche su Vercel). La factory prepara la
+ *   directory padre degli URL file: ASSOLUTI (SQLite non crea le cartelle:
+ *   senza, clone fresco senza db/ e Vercel senza env esplodevano con
+ *   «Error code 14: Unable to open the database file» — SQLITE_CANTOPEN,
+ *   bug riprodotto dal report utente sul pannello «Persistenza»).
  *
  * La factory è in un modulo PROPRI (src/lib/db-factory.ts) perché i test dei
  * contratti HTTP (I99) e dei guard (I95) mockano "@/lib/db" a livello di
@@ -28,6 +35,9 @@
  * chiamano creaPrismaClient() invece di re-importare il modulo.
  */
 import { describe, test, expect, beforeEach, afterAll, mock } from "bun:test";
+import { existsSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 /* ------------------------------------------------------------------ */
 /* Mock dei costruttori con cattura degli argomenti                    */
@@ -64,7 +74,7 @@ const { creaPrismaClient, modalitaPersistenza } = mod;
 /* Igiene dell'ambiente: ripristino con DELETE (lezione Task 45)       */
 /* ------------------------------------------------------------------ */
 
-const CHIAVI = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "DATABASE_URL"] as const;
+const CHIAVI = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "DATABASE_URL", "VERCEL"] as const;
 const origine = new Map<string, string | undefined>(
   CHIAVI.map((k) => [k, process.env[k]]),
 );
@@ -185,6 +195,56 @@ describe("I106 — selezione del motore guidata dall'ambiente", () => {
     creaPrismaClient();
     expect(configsAdapter[0]?.["url"]).toBe("file:/tmp/i106-prova.db");
     expect(modalitaPersistenza()).toBe("turso");
+  });
+});
+
+describe("I107-fix2 — default serverless (VERCEL) e preparazione della directory", () => {
+  /* NOTA mock bun (lezione I107/I107-fix2): in suite COMPLETA questo file vede
+     urlPersistenzaLocale() attraverso il MIRROR mockato in
+     tests/lib/api-persistenza.test.ts (bun applica il PRIMO mock registrato per
+     specificatore — api-persistenza gira prima in ordine alfabetico). In
+     isolamento vede il modulo reale. I due devono restare identici: aggiornarli
+     INSIEME a ogni cambio di regola (il mirror è commentato nello stesso senso). */
+  const DIR_PROVA = join(tmpdir(), "i107-fix2-factory-dir");
+
+  beforeEach(() => {
+    costruttoriClient.length = 0;
+    configsAdapter.length = 0;
+    ripristinoEnv();
+    rmSync(DIR_PROVA, { recursive: true, force: true });
+  });
+
+  afterAll(() => {
+    rmSync(DIR_PROVA, { recursive: true, force: true });
+  });
+
+  test("VERCEL=1 senza DATABASE_URL → default nel tmpdir del serverless, NON nel CWD read-only", () => {
+    impostaEnv({ DATABASE_URL: undefined, VERCEL: "1" });
+    const url = mod.urlPersistenzaLocale();
+    expect(url).toBe(`file:${join(tmpdir(), "db", "custom.db")}`);
+    expect(url.startsWith(`file:${process.cwd()}`)).toBe(false);
+    creaPrismaClient();
+    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe(url);
+  });
+
+  test("VERCEL=1 con DATABASE_URL → passthrough identico (la env esplicita vince anche su Vercel)", () => {
+    impostaEnv({ DATABASE_URL: "file:/dati/esterni.db", VERCEL: "1" });
+    expect(mod.urlPersistenzaLocale()).toBe("file:/dati/esterni.db");
+    creaPrismaClient();
+    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe("file:/dati/esterni.db");
+  });
+
+  test("la factory prepara la directory padre del file SQLite (SQLite NON crea le cartelle)", () => {
+    impostaEnv({ DATABASE_URL: `file:${join(DIR_PROVA, "profonda", "custom.db")}` });
+    expect(existsSync(join(DIR_PROVA, "profonda"))).toBe(false);
+    creaPrismaClient();
+    expect(existsSync(join(DIR_PROVA, "profonda"))).toBe(true);
+  });
+
+  test("percorsi file: relativi → nessuna cartella inventata (Prisma li risolve contro prisma/schema.prisma)", () => {
+    impostaEnv({ DATABASE_URL: "file:i107-fix2-relativo/inesistente.db" });
+    creaPrismaClient();
+    expect(existsSync("i107-fix2-relativo")).toBe(false);
   });
 });
 

@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "463 test / 1465 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "469 test / 1481 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–09", "indice documentazione README completo (docs/09 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -745,7 +745,7 @@ const CHECKS = [
   check.simbolo("I107", "src/app/api/persistenza/route.ts", 'from "@/lib/modalita-persistenza"', "modalità dal MODULO PROPRIO (il shim @/lib/db resta { db } per i mock di processo I99/I95 — bun applica il primo mock per specificatore)"),
   check.file("I107", "src/lib/modalita-persistenza.ts", "regola ambiente→modalità in unità pura separata (solo TURSO_DATABASE_URL decide, token da solo non basta)"),
   check.simbolo("I107", "src/lib/db-factory.ts", "modalitaPersistenza,", "ri-esportazione dalla factory: superficie pubblica stabile per lo shim db.ts e i test I106 (I107-fix: multi-riga con urlPersistenzaLocale)"),
-  check.simbolo("I107", "src/lib/db-factory.ts", "datasourceUrl: urlPersistenzaLocale()", "I107-fix: ramo nativo con URL SEMPRE esplicito (senza, Prisma esige env(\"DATABASE_URL\") dallo schema e il primo $queryRaw esplode in ambienti senza .env)"),
+  check.simbolo("I107", "src/lib/db-factory.ts", "datasourceUrl: urlLocale", "I107-fix: ramo nativo con URL SEMPRE esplicito via urlPersistenzaLocale() (senza, Prisma esige env(\"DATABASE_URL\") dallo schema e il primo $queryRaw esplode in ambienti senza .env)"),
   check.simbolo("I107", "src/lib/modalita-persistenza.ts", "urlPersistenzaLocale", "I107-fix: URL effettivo del ramo nativo (DATABASE_URL o default assoluto db/custom.db dal CWD — i file: relativi Prisma li risolve contro prisma/schema.prisma)"),
   check.simbolo("I107", "src/components/settings-dialog.tsx", "Persistenza server", "pannello nel tab Dati: modalità attiva, host, test connessione, conteggi"),
   check.simbolo("I107", "src/components/settings-dialog.tsx", "api/persistenza", "il pannello consuma l'endpoint di diagnostica (fetch all'apertura + bottone Aggiorna)"),
@@ -753,6 +753,10 @@ const CHECKS = [
   check.file("I107", "tests/lib/api-persistenza.test.ts", "contratto route: forma, modalità env-driven, segreti MAI nella risposta, 500 db_read"),
   check.file("I107", "tests/components/settings-persistenza.test.tsx", "test componente pannello: stati dati/errore, it-IT, ricarica manuale"),
   check.simbolo("I107", "README.md", "api/persistenza", "README documenta l'endpoint e il pannello Impostazioni→Dati → Persistenza server"),
+  /* I107-fix2 — serverless: default nel tmpdir, directory preparata, nota effimero */
+  check.simbolo("I107", "src/lib/modalita-persistenza.ts", 'VERCEL === "1"', "I107-fix2: con VERCEL=1 il default NON va nel CWD read-only ma in tmpdir()/db/custom.db (report utente: «Error code 14: Unable to open the database file» — SQLITE_CANTOPEN su Vercel, filesystem read-only)"),
+  check.simbolo("I107", "src/lib/db-factory.ts", "preparaDirectoryFile", "I107-fix2: la factory prepara la directory padre degli URL file: ASSOLUTI (SQLite NON crea le cartelle: clone fresco senza db/ e Vercel senza env esplodevano al primo $queryRaw; i percorsi relativi restano a Prisma)"),
+  check.simbolo("I107", "src/components/settings-dialog.tsx", "effimero", "I107-fix2: nel ramo locale il pannello dichiara l'effimero del file su serverless (ogni istanza parte vuota — la durata richiede TURSO_DATABASE_URL)"),
 ];
 
 /* ------------------------------------------------------------------ */
