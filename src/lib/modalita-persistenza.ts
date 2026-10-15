@@ -22,3 +22,27 @@ export type ModalitaPersistenza = "turso" | "locale";
 export function modalitaPersistenza(): ModalitaPersistenza {
   return process.env.TURSO_DATABASE_URL?.trim() ? "turso" : "locale";
 }
+
+/**
+ * I107-fix — URL effettivo del ramo SQLite nativo: `DATABASE_URL` se presente,
+ * altrimenti il default DOCUMENTATO «db/custom.db» (README §Persistenza:
+ * «nessuna env extra», docs/09 §6).
+ *
+ * Il default è un percorso ASSOLUTO qualificato dal CWD del processo server
+ * (`file:${cwd}/db/custom.db`): Prisma risolve i percorsi `file:` relativi
+ * rispetto a prisma/schema.prisma e NON rispetto al CWD (probe empirica
+ * I107-fix: `file:./db/custom.db` dal costruttore atterrava su
+ * `prisma/db/custom.db`) — il default relativo sarebbe stato creato/aperto
+ * nel posto sbagliato.
+ *
+ * Motivo dell'esistenza: `new PrismaClient()` SENZA `datasourceUrl` esplicito
+ * esige `env("DATABASE_URL")` dallo schema e il primo `$queryRaw` esplode con
+ * «Environment variable not found: DATABASE_URL» in ogni ambiente senza file
+ * `.env` (bug I107 riprodotto: pannello «Persistenza» in deployment senza
+ * variabili configurate). Il ramo adapter libsql NON ne ha bisogno (il driver
+ * gestisce la connessione), il motore nativo SÌ — quindi il ramo nativo passa
+ * SEMPRE un URL esplicito via questa funzione.
+ */
+export function urlPersistenzaLocale(): string {
+  return process.env.DATABASE_URL?.trim() || `file:${process.cwd()}/db/custom.db`;
+}

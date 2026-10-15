@@ -11,7 +11,14 @@
  *   e passato al client (ramo portabile Turso);
  * - token assente/vuoto → `authToken: undefined` (MAI la stringa «undefined»,
  *   lezione Task 45: l'igiene dell'env è fatta con delete, mai con undefined);
- * - url/token con spazi → trim (gli spazi incidono sul protocollo libsql://).
+ * - url/token con spazi → trim (gli spazi incidono sul protocollo libsql://);
+ * - I107-fix: il ramo nativo passa SEMPRE `datasourceUrl` esplicito — senza,
+ *   Prisma esige env("DATABASE_URL") dallo schema e il primo $queryRaw esplode
+ *   «Environment variable not found: DATABASE_URL» in ogni ambiente senza
+ *   file .env (bug riprodotto: pannello «Persistenza» su deployment senza
+ *   variabili configurate). Default ASSOLUTO db/custom.db: Prisma risolve i
+ *   percorsi file: relativi rispetto a prisma/schema.prisma, NON al CWD
+ *   (probe empirica I107-fix).
  *
  * La factory è in un modulo PROPRI (src/lib/db-factory.ts) perché i test dei
  * contratti HTTP (I99) e dei guard (I95) mockano "@/lib/db" a livello di
@@ -57,7 +64,7 @@ const { creaPrismaClient, modalitaPersistenza } = mod;
 /* Igiene dell'ambiente: ripristino con DELETE (lezione Task 45)       */
 /* ------------------------------------------------------------------ */
 
-const CHIAVI = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"] as const;
+const CHIAVI = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "DATABASE_URL"] as const;
 const origine = new Map<string, string | undefined>(
   CHIAVI.map((k) => [k, process.env[k]]),
 );
@@ -104,8 +111,37 @@ describe("I106 — selezione del motore guidata dall'ambiente", () => {
     expect(configsAdapter.length).toBe(0); // l'adapter non è mai costruito
     expect(costruttoriClient.length).toBe(1);
     expect(costruttoriClient[0]?.["adapter"]).toBeUndefined();
+    expect(costruttoriClient[0]?.["datasourceUrl"]).toBeDefined(); // I107-fix: URL sempre esplicito
     expect(client).toBeDefined();
     expect(modalitaPersistenza()).toBe("locale");
+  });
+
+  test("I107-fix: DATABASE_URL assente → datasourceUrl = default ASSOLUTO db/custom.db (nessuna env richiesta)", () => {
+    impostaEnv({ DATABASE_URL: undefined });
+    creaPrismaClient();
+    expect(costruttoriClient[0]?.["adapter"]).toBeUndefined();
+    // Percorso ASSOLUTO dal CWD: un default relativo (file:./db/custom.db)
+    // sarebbe risolto contro prisma/ (schema) e atterrato su prisma/db/.
+    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe(`file:${process.cwd()}/db/custom.db`);
+  });
+
+  test("I107-fix: DATABASE_URL presente → passthrough identico come datasourceUrl (comportamento invariato)", () => {
+    impostaEnv({ DATABASE_URL: "file:/percorso/archivio.db" });
+    creaPrismaClient();
+    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe("file:/percorso/archivio.db");
+  });
+
+  test("I107-fix: DATABASE_URL con spazi → trim (coerente con la regola TURSO_*)", () => {
+    impostaEnv({ DATABASE_URL: "  file:/percorso/archivio.db  " });
+    creaPrismaClient();
+    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe("file:/percorso/archivio.db");
+  });
+
+  test("I107-fix: urlPersistenzaLocale() segue la stessa regola della factory (unità pura nel modulo proprio)", () => {
+    impostaEnv({ DATABASE_URL: undefined });
+    expect(mod.urlPersistenzaLocale()).toBe(`file:${process.cwd()}/db/custom.db`);
+    impostaEnv({ DATABASE_URL: "file:./x.db" });
+    expect(mod.urlPersistenzaLocale()).toBe("file:./x.db");
   });
 
   test("TURSO_DATABASE_URL + TURSO_AUTH_TOKEN → adapter libsql con url e token passati al client", () => {

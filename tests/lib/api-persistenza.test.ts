@@ -58,6 +58,12 @@ mock.module("@/lib/db", () => ({
    quindi "@/lib/db" NON deve crescere di esportazioni richieste dalle route. */
 mock.module("@/lib/modalita-persistenza", () => ({
   modalitaPersistenza: () => (process.env.TURSO_DATABASE_URL?.trim() ? "turso" : "locale"),
+  // I107-fix: mirror dell'helper reale (URL EFFETTIVO del ramo SQLite nativo,
+  // unica fonte di verità per factory e host diagnostico). Default ASSOLUTO:
+  // Prisma risolve i file: relativi rispetto a prisma/schema.prisma e NON al
+  // CWD (probe empirica I107-fix).
+  urlPersistenzaLocale: () =>
+    process.env.DATABASE_URL?.trim() || `file:${process.cwd()}/db/custom.db`,
 }));
 
 const getPersistenza = (await import("@/app/api/persistenza/route")).GET as unknown as () => Promise<Response>;
@@ -103,7 +109,11 @@ describe("I107 — GET /api/persistenza (diagnostica, solo lettura)", () => {
     const body = (await res.json()) as Record<string, unknown>;
     expect(body["ok"]).toBe(true);
     expect(body["modalita"]).toBe("locale");
-    expect(body["host"]).toBe("db/custom.db"); // DATABASE_URL assente → default
+    // I107-fix: DATABASE_URL assente → default ASSOLUTO risolto dal CWD
+    // (prima del fix il display mostrava «db/custom.db» ma il motore nativo,
+    // senza datasourceUrl esplicito, esigeva env("DATABASE_URL") ed esplodeva
+    // «Environment variable not found» in ambienti senza file .env).
+    expect(body["host"]).toBe(`file:${process.cwd()}/db/custom.db`);
     expect((body["test"] as Record<string, unknown>)["ok"]).toBe(true);
     expect(typeof (body["test"] as Record<string, unknown>)["latenzaMs"]).toBe("number");
     const tabelle = body["tabelle"] as Array<{ tabella: string; etichetta: string; righe: number }>;

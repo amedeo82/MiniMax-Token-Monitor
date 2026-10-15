@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { modalitaPersistenza } from "@/lib/modalita-persistenza";
+import { modalitaPersistenza, urlPersistenzaLocale } from "@/lib/modalita-persistenza";
 
 export const dynamic = "force-dynamic";
 
@@ -72,8 +72,11 @@ async function contaRighe(t: Tabella): Promise<number> {
  * - ramo turso/libsql: solo hostname di TURSO_DATABASE_URL (schema, userinfo,
  *   porta, percorso e query scartati — la query è dove un token si nasconde);
  * - URL `file:` (libsql locale): il percorso è diagnostica, non segreto;
- * - ramo locale (SQLite nativo): il percorso del file da DATABASE_URL
- *   (default `db/custom.db`).
+ * - ramo locale (SQLite nativo): l'URL EFFETTIVO del client, stessa funzione
+ *   usata dalla factory (I107-fix: unica fonte di verità — DATABASE_URL se
+ *   presente, altrimenti il default documentato db/custom.db come percorso
+ *   assoluto risolto dal CWD; prima del fix il display e il motore potevano
+ *   divergere).
  */
 function hostDiagnostico(): string {
   const url = process.env.TURSO_DATABASE_URL?.trim();
@@ -85,7 +88,7 @@ function hostDiagnostico(): string {
     const host = conPorta.replace(/:\d+$/, "");
     return host || "URL non riconosciuto (host nascosto)";
   }
-  return process.env.DATABASE_URL?.trim() || "db/custom.db";
+  return urlPersistenzaLocale();
 }
 
 /** Test di connessione reale sul motore attivo, con latenza misurata (ms). */

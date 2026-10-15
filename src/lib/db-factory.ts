@@ -25,13 +25,19 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 
+import { urlPersistenzaLocale } from "./modalita-persistenza";
+
 /* I107 — la regola ambiente→modalità vive nel MODULO PROPRIO
    src/lib/modalita-persistenza.ts (pattern «unità pura separata»): le route
    la importano da lì senza aggiungere import nominati a "@/lib/db" (i mock
    di processo I99/I95 del modulo shim espongono solo `{ db }` — bun applica
    il PRIMO mock registrato per specificatore). La ri-esportazione mantiene
    stabile la superficie pubblica per lo shim db.ts e i test I106. */
-export { modalitaPersistenza, type ModalitaPersistenza } from "./modalita-persistenza";
+export {
+  modalitaPersistenza,
+  urlPersistenzaLocale,
+  type ModalitaPersistenza,
+} from "./modalita-persistenza";
 
 /**
  * Factory dell'istanza PrismaClient secondo l'ambiente. Esportata per i test
@@ -47,8 +53,16 @@ export function creaPrismaClient(): PrismaClient {
     const adapter = new PrismaLibSQL({ url, authToken });
     return new PrismaClient({ adapter, log: ["query"] });
   }
-  // Ramo locale (default): identico al pre-I106.
-  return new PrismaClient({ log: ["query"] });
+  // Ramo locale (default): URL SEMPRE esplicito via urlPersistenzaLocale()
+  // (DATABASE_URL se presente, altrimenti il default documentato db/custom.db
+  // come percorso assoluto — vedi la nota in modalita-persistenza.ts).
+  // BUG I107-fix: senza override il client esigeva env("DATABASE_URL") dallo
+  // schema e il primo $queryRaw esplodeva «Environment variable not found:
+  // DATABASE_URL» in ogni ambiente senza file .env (riprodotto: pannello
+  // «Persistenza» su deployment senza variabili configurate). Con
+  // `datasourceUrl` il comportamento con DATABASE_URL impostata è IDENTICO
+  // (stesso valore che env() avrebbe risolto); senza, vale il default.
+  return new PrismaClient({ datasourceUrl: urlPersistenzaLocale(), log: ["query"] });
 }
 
 /** Singleton alla convenzione Next (hot-reload dev: una sola istanza). */

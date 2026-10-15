@@ -1188,3 +1188,23 @@ Stage Summary:
 - Due lezioni persistite nei docs: (1) semantica mock bun = primo-vincitore per specificatore → i moduli nuovi vanno in file propri (pattern I106 esteso); (2) Radix Tabs = mousedown
 - Restano in backlog decisi: I108 porta pronta Postgres (D3=c), osservatorio Turso Sync/MCP (D4=a)
 - FIX CI (run 38724421999, 1 fail su 459): il test del pannello cercava il literal «1.234» ma `toLocaleString("it-IT")` sul runner GitHub dipende dai dati ICU del runtime (formattazione con spazio invece del punto) — asserzione resa AUTO-CONSISTENTE: il test chiama lo stesso `(1234).toLocaleString("it-IT")` della UI (verifica il collegamento, non i dati ICU della macchina); lezione registrata in docs/04 §3/§8; suite locale 459/459 e CI da riverificare
+
+---
+Task ID: 51
+Agent: main (Super Z)
+Task: Fix bug reportato dall'utente — pannello «Persistenza server» mostra «Verifica non disponibile: Invalid prisma.$queryRaw() invocation: Environment variable not found: DATABASE_URL» (schema.prisma:22)
+
+Work Log:
+- Riproduzione empirica con probe su 3 scenari (script effimero, eseguito e rimosso): (N1) PrismaClient nativo senza DATABASE_URL né .env su disco → ERRORE RIPRODOTTO identico al report utente; (N2) ramo adapter libsql senza env → OK (il driver gestisce la connessione: ramo Turso MAI esposto); (N3) datasourceUrl assoluto → OK (fix validato)
+- ROOT CAUSE: il ramo nativo di creaPrismaClient() istanziava new PrismaClient() SENZA override → il client esige env("DATABASE_URL") dallo schema al primo $queryRaw; in locale/CI il guasto era mascherato perché Prisma rilegge .env dal disco in autonomia e il .env locale usa un percorso assoluto — in ogni ambiente SENZA file .env (deployment senza variabili configurate) il pannello esplodeva
+- SCOPERTA CRITICA (probe T2b): Prisma risolve i percorsi file: RELATIVI rispetto a prisma/schema.prisma e NON al CWD del processo (file:./db/custom.db dal costruttore atterrava su prisma/db/) → il default documentato «db/custom.db» va qualificato ASSOLUTO dal CWD
+- FIX: urlPersistenzaLocale() in src/lib/modalita-persistenza.ts (pattern I106 unità pura in modulo proprio) — DATABASE_URL se presente (passthrough identico al pre-fix), altrimenti file:${cwd}/db/custom.db; ramo nativo con datasourceUrl SEMPRE esplicito; hostDiagnostico() nella route usa l'URL EFFETTIVO (prima display e motore potevano divergere); db-factory ri-esporta il helper (superficie pubblica stabile); shim db.ts invariato
+- Test +4 in tests/lib/db.test.ts (default assoluto senza env, passthrough, trim, unità pura del helper; CHIAVI igiene env += DATABASE_URL) e mock @/lib/modalita-persistenza esteso al helper in tests/lib/api-persistenza.test.ts (asserzione default → percorso assoluto); test componente invariato (mock a livello fetch)
+- Audit: check I107 ri-esportazione aggiornato alla forma multi-riga + 2 NUOVI check I107-fix (datasourceUrl: urlPersistenzaLocale() in db-factory, urlPersistenzaLocale in modalita-persistenza) → 504→506; contatori I105 allineati (README badge audit-506_PASS, §Qualità 506 verifiche, literal 463/1465)
+- Docs: README (badge 459/504→463/506, §Persistenza nota «default incorporato nel codice»), docs/04 (§3 riga I107 con fix + §8 nuova riga changelog I107-fix), audit-latest.md rigenerato (506/506); version.ts INVARIATO (stesso item I107, stessa data)
+- Protocollo: tsc 0, lint 0, suite 463/463 (1465 asserzioni), audit 506/506 PASS 0 scoperte; commit percorsi espliciti (MAI git add -A: il M sul working tree è rumore di permessi mode 644→755 con 0 modifiche, verificato); push + verifica CI via API GitHub
+
+Stage Summary:
+- Il pannello «Persistenza» ora funziona in OGNI ambiente: con .env (passthrough identico), senza .env (default incorporato db/custom.db assoluto), su Turso (ramo adapter, mai esposto dal bug)
+- Lezione persistita (docs/04 §3 + note nel codice): Prisma risolve i file: relativi rispetto allo schema e il ramo nativo senza datasourceUrl esplicito esige env("DATABASE_URL") — l'assenza di .env è uno stato legittimo (default incorporato), non un errore
+- Il codice ora mantiene la promessa già scritta nel README («Locale/CI: nessuna env extra») che prima era vera solo di documento

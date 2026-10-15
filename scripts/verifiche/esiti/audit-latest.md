@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-15T11:00:59.326Z
+# Audit implementazioni — 2026-10-15T13:59:32.079Z
 
-- Verifiche totali: **504** · PASS: **504** · FAIL: **0**
+- Verifiche totali: **506** · PASS: **506** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -502,7 +502,9 @@
 | I107 | test di connessione reale sul motore attivo con latenza misurata (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
 | I107 | modalità dal MODULO PROPRIO (il shim @/lib/db resta { db } per i mock di processo I99/I95 — bun applica il primo mock per specificatore) (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
 | I107 | regola ambiente→modalità in unità pura separata (solo TURSO_DATABASE_URL decide, token da solo non basta) | file | PASS | — |
-| I107 | ri-esportazione dalla factory: superficie pubblica stabile per lo shim db.ts e i test I106 (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I107 | ri-esportazione dalla factory: superficie pubblica stabile per lo shim db.ts e i test I106 (I107-fix: multi-riga con urlPersistenzaLocale) (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I107 | I107-fix: ramo nativo con URL SEMPRE esplicito (senza, Prisma esige env("DATABASE_URL") dallo schema e il primo $queryRaw esplode in ambienti senza .env) (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I107 | I107-fix: URL effettivo del ramo nativo (DATABASE_URL o default assoluto db/custom.db dal CWD — i file: relativi Prisma li risolve contro prisma/schema.prisma) (src/lib/modalita-persistenza.ts) | simbolo | PASS | — |
 | I107 | pannello nel tab Dati: modalità attiva, host, test connessione, conteggi (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I107 | il pannello consuma l'endpoint di diagnostica (fetch all'apertura + bottone Aggiorna) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I107 | badge modalità attiva distinto per ramo turso/locale (src/components/settings-dialog.tsx) | simbolo | PASS | — |
@@ -510,4 +512,4 @@
 | I107 | test componente pannello: stati dati/errore, it-IT, ricarica manuale | file | PASS | — |
 | I107 | README documenta l'endpoint e il pannello Impostazioni→Dati → Persistenza server (README.md) | simbolo | PASS | — |
 
-Verdetto: **PASS** (504 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (506 pass, 0 fail, 0 scoperte)
