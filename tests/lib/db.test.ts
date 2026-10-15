@@ -65,7 +65,11 @@ const origine = new Map<string, string | undefined>(
 function impostaEnv(valori: Partial<Record<(typeof CHIAVI)[number], string>>) {
   for (const k of CHIAVI) {
     const v = valori[k];
-    if (v === undefined) process.env[k] = undefined; // il test lo ripristina con delete sotto
+    // MAI `process.env[k] = undefined`: su CI (bun latest) viene coercizzato
+    // nella STRINGA "undefined" (truthy) — lezione Task 45, ricaduta reale:
+    // l'adapter riceveva authToken="undefined" e l'URL "undefined" dava
+    // modalità "turso". Le chiavi assenti si CANCELLANO, sempre.
+    if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
 }
