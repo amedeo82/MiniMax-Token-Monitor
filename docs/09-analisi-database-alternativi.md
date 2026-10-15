@@ -293,7 +293,13 @@ Concretamente, in ordine di priorità:
    cartelle) → con `VERCEL=1` il default va in `/tmp/db/custom.db`, la factory
    prepara la directory padre e il pannello dichiara l'EFFIMERO del file locale
    su serverless: la persistenza duratura su Vercel resta la via Turso (env
-   `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`, README §Persistenza).
+   `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`, README §Persistenza); (c) il file
+   `/tmp` appena creato era VUOTO («The table `main.DownsampledPoint` does not
+   exist») → **schema incorporato nel codice** (I107-fix3): DDL idempotente
+   delle 4 tabelle applicato all'avvio su ENTRAMBE le branche con gate
+   `preparaSchema` — la D1 «zero migrazione» ora vale ANCHE per un Turso
+   appena creato (il db-push esplicito resta documentato ma non è più
+   indispensabile); il file resta comunque effimero su serverless.
 3. **I108 — Provider Postgres opzionale Neon/Supabase (proposta, media):** doppio schema
    Prisma selezionato a build (`PRISMA_SCHEMA`/script), ramo PG in `db-factory` con
    `@prisma/adapter-pg` o `@prisma/adapter-neon`, variante `db-push` per PG, verifica

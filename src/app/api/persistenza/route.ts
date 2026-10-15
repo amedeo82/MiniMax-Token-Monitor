@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { modalitaPersistenza, urlPersistenzaLocale } from "@/lib/modalita-persistenza";
+import { preparaSchema } from "@/lib/schema-persistenza";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,12 @@ export const dynamic = "force-dynamic";
  *   tabelle: [{ tabella, etichetta, righe }],
  *   totale, generatoIl
  * }
+ *
+ * I107-fix3: prima dei conteggi attende `preparaSchema(db)` — il gate del
+ * bootstrap DDL (schema incorporato, zero migrazione): su un DB fresco (file
+ * in /tmp su Vercel, Turso appena creato) i conteggi non possono correre con
+ * il DDL ancora in volo. I fallimenti DDL non sono mascherati: emergono dai
+ * conteggi col messaggio preciso del motore.
  *
  * La scelta read-only (niente POST/DELETE) mantiene l'endpoint fuori dalla
  * guardia ADMIN_TOKEN di I95: non altera nulla e non espone nulla che non
@@ -100,6 +107,9 @@ async function testConnessione(): Promise<{ ok: boolean; latenzaMs: number }> {
 
 export async function GET() {
   try {
+    // I107-fix3 — gate del bootstrap: su DB fresco le tabelle vengono create
+    // qui (una volta per client) prima di qualsiasi conteggio.
+    await preparaSchema(db);
     const test = await testConnessione();
     const tabelle = await Promise.all(
       TABELLE.map(async (t) => ({

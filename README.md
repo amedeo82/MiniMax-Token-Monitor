@@ -14,8 +14,8 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
-[![Test 469 pass](https://img.shields.io/badge/test-469_pass-31C48D)](tests)
-[![Audit 509 PASS](https://img.shields.io/badge/audit-509_PASS-31C48D)](scripts/verifiche)
+[![Test 473 pass](https://img.shields.io/badge/test-473_pass-31C48D)](tests)
+[![Audit 515 PASS](https://img.shields.io/badge/audit-515_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -123,8 +123,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 469 test / 1481 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 509 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 473 test / 1494 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 515 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
@@ -190,7 +190,7 @@ Lo schema Prisma è unico; il motore si sceglie con l'**ambiente** (`src/lib/db-
 |---|---|---|
 | Locale / CI (default) | **SQLite** nativo (`db/custom.db`) | nessuna env extra: `bun run db:push` e via |
 | Vercel / serverless | **Turso** (libsql) via driver adapter | `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` (env) |
-| Vercel **senza** env Turso | SQLite nativo in `/tmp` (I107-fix2) | funziona, ma **effimero**: ogni istanza parte vuota |
+| Vercel **senza** env Turso | SQLite nativo in `/tmp` (I107-fix2) | funziona, ma **effimero**: i dati non sopravvivono all'istanza (schema auto-ricreato) |
 
 La modalità attiva è **visibile dall'app** (I107): **Impostazioni → Dati → Persistenza server**
 mostra modalità, host sanificato (mai token né credenziali — restano nell'ambiente del
@@ -205,12 +205,21 @@ rispetto a `prisma/schema.prisma`, non al CWD: il default documentato è qualifi
 modo assoluto proprio per questo). La factory prepara inoltre la **directory padre** del
 file (I107-fix2): SQLite non crea le cartelle e un clone fresco è senza `db/` (gitignored).
 
-**Serverless senza env Turso** (I107-fix2): su Vercel il filesystem del deployment è
+**Serverless senza env Turso** (I107-fix2/fix3): su Vercel il filesystem del deployment è
 read-only e il default dal CWD moriva al primo `$queryRaw` con «Error code 14: Unable to
 open the database file» (SQLITE_CANTOPEN). Con `VERCEL=1` il default va quindi in
 `/tmp/db/custom.db` (scrivibile) e il pannello «Persistenza» funziona — ma il file è
-**effimero** (ogni istanza serverless parte vuota, lo dichiara il pannello stesso): per
-la persistenza duratura su Vercel servono `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN`.
+**effimero** (lo dichiara il pannello stesso): per la persistenza duratura su Vercel
+servono `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN`.
+
+**Schema incorporato** (I107-fix3): il DDL delle 4 tabelle vive nel codice
+(`src/lib/schema-persistenza.ts`, esatto per costruzione — generato con `prisma migrate
+diff` e reso idempotente con `IF NOT EXISTS`, con test anti-drift contro lo schema) e
+viene applicato **all'avvio su entrambe le branche** (SQLite nativo e adapter libsql/Turso,
+che parlano lo stesso dialetto). Un database fresco — file `/tmp` su Vercel o Turso appena
+creato — funziona quindi al primo colpo, senza `bun run db:push` né `db-push-turso.mjs`
+(che restano i passi espliciti documentati); la route di diagnostica attende il gate del
+bootstrap prima dei conteggi.
 
 L'installazione del deployment persistente è in due passi (token **mai** commesso né stampato):
 
@@ -295,11 +304,12 @@ src/
     ├── persist-json.ts / http-validate.ts / stats.ts                   # I98 quota storage · I91 validazione input · statistiche
     ├── db.ts / db-factory.ts        # Shim canonico + I106 factory persistenza portabile (Turso via adapter, fallback SQLite)
     ├── modalita-persistenza.ts      # I107 regola ambiente→modalità in modulo proprio (pattern unità pura I106)
+    ├── schema-persistenza.ts        # I107-fix3 schema incorporato: DDL idempotente + bootstrap all'avvio (zero migrazione)
     └── export.ts / demo.ts / utils.ts                                   # Export CSV/JSON, demo
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (42 file) + components/ (9 componenti) = 469 test / 1481 asserzioni
+tests/                               # Suite bun: lib/ (43 file) + components/ (9 componenti) = 473 test / 1494 asserzioni
 docs/          # Questa documentazione (01–09)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)

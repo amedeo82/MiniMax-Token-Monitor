@@ -668,13 +668,15 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                         <span className="font-mono text-zinc-300">{t.righe.toLocaleString("it-IT")}</span>
                       </div>
                     ))}
-                    {/* I107-fix2 — nota onesta del ramo locale: su serverless il file è
-                    effimero (ogni istanza parte vuota), la durata richiede Turso. */}
+                    {/* I107-fix2/fix3 — nota onesta del ramo locale: su serverless il file è
+                    effimero (schema ricreato a ogni avvio, dati non sopravvivono), la durata
+                    richiede Turso. */}
                     {statoPersistenza.modalita === "locale" && (
                       <p className="text-[10px] leading-relaxed text-zinc-600">
                         Il file SQLite vive sul filesystem del server: in ambienti serverless (es. Vercel,
-                        dove solo /tmp è scrivibile) è effimero e ogni istanza parte vuota — per la
-                        persistenza duratura imposta TURSO_DATABASE_URL (README §Persistenza).
+                        dove solo /tmp è scrivibile) è effimero — lo schema viene ricreato a ogni avvio,
+                        ma i dati non sopravvivono all&apos;istanza. Per la persistenza duratura imposta
+                        TURSO_DATABASE_URL (README §Persistenza).
                       </p>
                     )}
                     <p className="pt-1 text-[10px] leading-relaxed text-zinc-600">

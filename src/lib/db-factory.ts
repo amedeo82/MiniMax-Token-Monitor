@@ -28,6 +28,7 @@ import { dirname } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 
+import { preparaSchema } from "./schema-persistenza";
 import { urlPersistenzaLocale } from "./modalita-persistenza";
 
 /* I107 — la regola ambiente→modalità vive nel MODULO PROPRIO
@@ -49,26 +50,37 @@ export {
  */
 export function creaPrismaClient(): PrismaClient {
   const url = process.env.TURSO_DATABASE_URL?.trim();
+  let client: PrismaClient;
   if (url) {
     // I106 — ramo portabile: adapter libsql. Il token è opzionale (database
     // Turso pubblici e URL `file:` non lo richiedono); mai stampato.
     const authToken = process.env.TURSO_AUTH_TOKEN?.trim() || undefined;
     const adapter = new PrismaLibSQL({ url, authToken });
-    return new PrismaClient({ adapter, log: ["query"] });
+    client = new PrismaClient({ adapter, log: ["query"] });
+  } else {
+    // Ramo locale (default): URL SEMPRE esplicito via urlPersistenzaLocale()
+    // (DATABASE_URL se presente, altrimenti il default documentato db/custom.db
+    // come percorso assoluto — vedi la nota in modalita-persistenza.ts; su Vercel
+    // senza env il default vive nel tmpdir scrivibile, I107-fix2).
+    // BUG I107-fix: senza override il client esigeva env("DATABASE_URL") dallo
+    // schema e il primo $queryRaw esplodeva «Environment variable not found:
+    // DATABASE_URL» in ogni ambiente senza file .env (riprodotto: pannello
+    // «Persistenza» su deployment senza variabili configurate). Con
+    // `datasourceUrl` il comportamento con DATABASE_URL impostata è IDENTICO
+    // (stesso valore che env() avrebbe risolto); senza, vale il default.
+    const urlLocale = urlPersistenzaLocale();
+    preparaDirectoryFile(urlLocale);
+    client = new PrismaClient({ datasourceUrl: urlLocale, log: ["query"] });
   }
-  // Ramo locale (default): URL SEMPRE esplicito via urlPersistenzaLocale()
-  // (DATABASE_URL se presente, altrimenti il default documentato db/custom.db
-  // come percorso assoluto — vedi la nota in modalita-persistenza.ts; su Vercel
-  // senza env il default vive nel tmpdir scrivibile, I107-fix2).
-  // BUG I107-fix: senza override il client esigeva env("DATABASE_URL") dallo
-  // schema e il primo $queryRaw esplodeva «Environment variable not found:
-  // DATABASE_URL» in ogni ambiente senza file .env (riprodotto: pannello
-  // «Persistenza» su deployment senza variabili configurate). Con
-  // `datasourceUrl` il comportamento con DATABASE_URL impostata è IDENTICO
-  // (stesso valore che env() avrebbe risolto); senza, vale il default.
-  const urlLocale = urlPersistenzaLocale();
-  preparaDirectoryFile(urlLocale);
-  return new PrismaClient({ datasourceUrl: urlLocale, log: ["query"] });
+  // I107-fix3 — schema GARANTITO all'avvio (D1 «zero migrazione»): DDL
+  // idempotente incorporato in src/lib/schema-persistenza.ts, su ENTRAMBE le
+  // branche (stesso dialetto SQLite/libSQL). Fire-and-forget: la route di
+  // diagnostica attende il gate (preparaSchema) prima dei conteggi; un DB
+  // fresco (/tmp su Vercel, Turso appena creato) funziona senza db:push né
+  // db-push-turso.mjs. I guasti DDL non sono mascherati (stderr) e riemergono
+  // dalle query reali.
+  void preparaSchema(client);
+  return client;
 }
 
 /**

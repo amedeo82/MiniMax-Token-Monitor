@@ -36,11 +36,19 @@ let conteggi: Record<string, number> = {
 };
 let queryRawOk = true;
 let countOk = true;
+/* I107-fix3 — registra gli statement DDL del gate `preparaSchema(db)`: il primo
+   GET della suite li esegue (cache WeakMap per client — i GET successivi non
+   li ripetono), i test verificano che il bootstrap preceda i conteggi. */
+const ddlEseguiti: string[] = [];
 
 const mockDb = {
   async $queryRaw() {
     if (!queryRawOk) throw new Error("database bloccato");
     return [[1]];
+  },
+  async $executeRawUnsafe(sql: string) {
+    ddlEseguiti.push(sql);
+    return 0;
   },
   get usagePoint() {
     return { count: async () => (countOk ? conteggi.usagePoint : Promise.reject(new Error("count fallito"))) };
@@ -121,6 +129,10 @@ describe("I107 — GET /api/persistenza (diagnostica, solo lettura)", () => {
     const body = (await res.json()) as Record<string, unknown>;
     expect(body["ok"]).toBe(true);
     expect(body["modalita"]).toBe("locale");
+    // I107-fix3 — il gate del bootstrap è arrivato PRIMA dei conteggi: le 4
+    // CREATE TABLE idempotenti sono state richieste al client (cache WeakMap:
+    // i GET successivi in questa suite non le ripetono).
+    expect(ddlEseguiti.filter((s) => s.startsWith("CREATE TABLE IF NOT EXISTS"))).toHaveLength(4);
     // I107-fix: DATABASE_URL assente → default ASSOLUTO risolto dal CWD
     // (prima del fix il display mostrava «db/custom.db» ma il motore nativo,
     // senza datasourceUrl esplicito, esigeva env("DATABASE_URL") ed esplodeva

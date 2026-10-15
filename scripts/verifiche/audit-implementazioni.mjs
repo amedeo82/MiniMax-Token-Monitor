@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "469 test / 1481 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "473 test / 1494 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–09", "indice documentazione README completo (docs/09 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -757,6 +757,13 @@ const CHECKS = [
   check.simbolo("I107", "src/lib/modalita-persistenza.ts", 'VERCEL === "1"', "I107-fix2: con VERCEL=1 il default NON va nel CWD read-only ma in tmpdir()/db/custom.db (report utente: «Error code 14: Unable to open the database file» — SQLITE_CANTOPEN su Vercel, filesystem read-only)"),
   check.simbolo("I107", "src/lib/db-factory.ts", "preparaDirectoryFile", "I107-fix2: la factory prepara la directory padre degli URL file: ASSOLUTI (SQLite NON crea le cartelle: clone fresco senza db/ e Vercel senza env esplodevano al primo $queryRaw; i percorsi relativi restano a Prisma)"),
   check.simbolo("I107", "src/components/settings-dialog.tsx", "effimero", "I107-fix2: nel ramo locale il pannello dichiara l'effimero del file su serverless (ogni istanza parte vuota — la durata richiede TURSO_DATABASE_URL)"),
+  /* I107-fix3 — schema incorporato: bootstrap DDL idempotente (zero migrazione) */
+  check.file("I107", "src/lib/schema-persistenza.ts", "schema INCORPORATO nel codice: DDL idempotente delle 4 tabelle + preparaSchema (gate con cache WeakMap)"),
+  check.simbolo("I107", "src/lib/schema-persistenza.ts", "IF NOT EXISTS", "DDL idempotente: riavvii, hot-reload e istanze concorrenti non si disturbano (no-op su tabelle esistenti)"),
+  check.simbolo("I107", "src/lib/schema-persistenza.ts", "UsagePoint[\\s\\S]*DownsampledPoint[\\s\\S]*UsageEventRecord[\\s\\S]*ModelUsagePoint", "il DDL incorporato copre le 4 tabelle dello schema Prisma (l'esattezza è presidiata dal test anti-drift su prisma migrate diff)"),
+  check.simbolo("I107", "src/lib/db-factory.ts", "preparaSchema", "I107-fix3: ENTRAMBE le branche (nativa e adapter) garantiscono lo schema all'avvio — un DB fresco (file /tmp su Vercel, Turso appena creato) funziona senza db:push né db-push-turso.mjs"),
+  check.simbolo("I107", "src/app/api/persistenza/route.ts", "preparaSchema", "I107-fix3: la route attende il gate del bootstrap prima dei conteggi (determinismo al primo colpo su DB fresco)"),
+  check.file("I107", "tests/lib/database-schema.test.ts", "e2e motore reale su file vuoto + anti-drift DDL vs prisma migrate diff + semantica gate (il file gira PRIMA di db.test.ts in ordine alfabetico: client reale, non mockato)"),
 ];
 
 /* ------------------------------------------------------------------ */

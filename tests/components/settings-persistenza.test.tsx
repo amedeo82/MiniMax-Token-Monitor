@@ -121,7 +121,8 @@ describe("I107 componenti: pannello Persistenza (tab Dati)", () => {
     await apriTabDati();
     await waitFor(() => expect(screen.getByText("SQLite locale")).toBeDefined());
     expect(screen.getByText("/tmp/db/custom.db")).toBeDefined();
-    expect(screen.getByText(/effimero e ogni istanza parte vuota/)).toBeDefined();
+    expect(screen.getByText(/effimero/)).toBeDefined();
+    expect(screen.getByText(/i dati non sopravvivono/)).toBeDefined();
     expect(screen.getByText(/TURSO_DATABASE_URL/)).toBeDefined();
   });
 

@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-15T15:51:24.763Z
+# Audit implementazioni — 2026-10-15T16:19:32.971Z
 
-- Verifiche totali: **509** · PASS: **509** · FAIL: **0**
+- Verifiche totali: **515** · PASS: **515** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -514,5 +514,11 @@
 | I107 | I107-fix2: con VERCEL=1 il default NON va nel CWD read-only ma in tmpdir()/db/custom.db (report utente: «Error code 14: Unable to open the database file» — SQLITE_CANTOPEN su Vercel, filesystem read-only) (src/lib/modalita-persistenza.ts) | simbolo | PASS | — |
 | I107 | I107-fix2: la factory prepara la directory padre degli URL file: ASSOLUTI (SQLite NON crea le cartelle: clone fresco senza db/ e Vercel senza env esplodevano al primo $queryRaw; i percorsi relativi restano a Prisma) (src/lib/db-factory.ts) | simbolo | PASS | — |
 | I107 | I107-fix2: nel ramo locale il pannello dichiara l'effimero del file su serverless (ogni istanza parte vuota — la durata richiede TURSO_DATABASE_URL) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I107 | schema INCORPORATO nel codice: DDL idempotente delle 4 tabelle + preparaSchema (gate con cache WeakMap) | file | PASS | — |
+| I107 | DDL idempotente: riavvii, hot-reload e istanze concorrenti non si disturbano (no-op su tabelle esistenti) (src/lib/schema-persistenza.ts) | simbolo | PASS | — |
+| I107 | il DDL incorporato copre le 4 tabelle dello schema Prisma (l'esattezza è presidiata dal test anti-drift su prisma migrate diff) (src/lib/schema-persistenza.ts) | simbolo | PASS | — |
+| I107 | I107-fix3: ENTRAMBE le branche (nativa e adapter) garantiscono lo schema all'avvio — un DB fresco (file /tmp su Vercel, Turso appena creato) funziona senza db:push né db-push-turso.mjs (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I107 | I107-fix3: la route attende il gate del bootstrap prima dei conteggi (determinismo al primo colpo su DB fresco) (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
+| I107 | e2e motore reale su file vuoto + anti-drift DDL vs prisma migrate diff + semantica gate (il file gira PRIMA di db.test.ts in ordine alfabetico: client reale, non mockato) | file | PASS | — |
 
-Verdetto: **PASS** (509 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (515 pass, 0 fail, 0 scoperte)
