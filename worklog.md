@@ -1152,3 +1152,19 @@ Work Log:
 Stage Summary:
 - Asset README torna COERENTE col codice: 5 PNG retina freschi in modalità demo (zero dati reali, API bloccate durante la cattura), GIF del tour rigenerata, contatori e indice documentazione allineati; audit a 490 check con presidio docs/09 nell'indice
 - Lezione: gli screenshot sono CODICE DOCUMENTALE — ogni item che cambia l'aspetto (I96 orologio, I100 badge, I106 footer) li rende stanti: dopo ogni ondata con cambi visivi va rivalutata la rigenerazione (la verifica «data catture vs ultima UI change» resta manuale, non è presidiable con check statico)
+
+---
+Task ID: 49
+Agent: main (Super Z)
+Task: Registrazione decisioni D1-D4 (docs/09 §8) fornite dall'utente: D1 (a), D2 (a), D3 (c), D4 (a) — poi partenza Ondata 4 da I107
+
+Work Log:
+- docs/09 §8: registro aggiornato da «PENDENTE» a decisioni RACCOLTE 15/10/2026 — D1 (a) CONFERMATA strada primaria SQLite/libSQL zero migrazione; D2 (a) CONFERMATA I107 primo item Ondata 4; D3 (c) BACKLOG I108 resta porta pronta documentata (§7.3); D4 (a) BACKLOG OSSERVATORIO confermato (§7.4); intestazione docs/09 aggiornata allo stato «4 decisioni raccolte»
+- docs/04 §8: riga in cima al blocco 15/10 con protocollo docs-only
+- Igiene repo (coerente I97): ritirato dal tracking l'intero download/ (README.md, db-research/*.json 9 file, verifiche-v1-v6/) — rumore di sessione commesso per errore dai commit automatici UUID (7f41675, 29590ce, fe930ef); file RESTANO su disco per l'utente, .gitignore += /download/; recuperabili dalla storia git
+- NESSUN tocco a src/tests/schema (docs-only); version.ts invariato (nessun item implementato in questo commit)
+- Protocollo: tsc 0, lint 0, suite 446/446, audit PASS; commit percorsi espliciti + push + verifica CI via API GitHub
+
+Stage Summary:
+- Registro decisioni D1-D4 CHIUSO: la roadmap persistenza è ora vincolante (SQLite/libSQL strada unica, I107 in esecuzione come Ondata 4, I108 porta pronta, osservatorio confermato)
+- Il commit apre l'Ondata 4: la registrazione della decisione PRECEDE l'implementazione I107 (convenzione docs/08 §7 rispettata)

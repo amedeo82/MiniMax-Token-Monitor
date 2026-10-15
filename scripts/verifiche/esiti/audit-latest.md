@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-15T03:50:33.301Z
+# Audit implementazioni — 2026-10-15T10:31:33.721Z
 
-- Verifiche totali: **489** · PASS: **489** · FAIL: **0**
+- Verifiche totali: **490** · PASS: **490** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -361,8 +361,9 @@
 | I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
 | I105 | contatore audit §Qualità allineato — contatore dinamico | simbolo | PASS | — |
 | I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
-| I105 | indice documentazione README completo (docs/08 incluso) (README.md) | simbolo | PASS | — |
+| I105 | indice documentazione README completo (docs/09 incluso) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
+| I105 | docs/09 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
 | I98 | helper centralizzato persistJson (unico punto di scrittura localStorage) (src/lib/persist-json.ts) | simbolo | PASS | — |
 | I98 | rilevamento esplicito dell'errore di quota (alias Firefox incluso) (src/lib/persist-json.ts) | simbolo | PASS | — |
@@ -495,4 +496,4 @@
 | I106 | README documenta le env del deployment persistente (Vercel + Turso) (README.md) | simbolo | PASS | — |
 | I106 | README dichiara la persistenza portabile (SQLite in locale, Turso su Vercel) (README.md) | simbolo | PASS | — |
 
-Verdetto: **PASS** (489 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (490 pass, 0 fail, 0 scoperte)

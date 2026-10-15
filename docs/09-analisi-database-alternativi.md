@@ -12,8 +12,10 @@
 > registro di `docs/04` §3 (ultimo item: I106) con la convenzione di `docs/07`/`docs/08`:
 > le proposte ricevono un numero prima dell'implementazione.
 >
-> Stato: **2 proposte numerate I107–I108, nessuna implementata** — la raccomandazione è
-> nel §7, la decisione finale spetta al registro delle decisioni (§8, pendente).
+> Stato: **2 proposte numerate I107–I108, 4 decisioni raccolte (§8, 15/10/2026)** —
+> la strada primaria SQLite/libSQL è CONFERMATA (D1), I107 è il primo item
+> dell'Ondata 4 (D2), I108 resta porta pronta in backlog (D3), l'osservatorio
+> Turso Sync/MCP è confermato (D4).
 
 ---
 
@@ -291,17 +293,18 @@ Concretamente, in ordine di priorità:
    NON raccomandato come persistenza primaria per latenza, transazioni, dipendenza da
    terzi e verificabilità CI).
 
-## 8. Registro decisioni (clarify — PENDENTE per l'utente)
+## 8. Registro decisioni (clarify — RACCOLTE il 15/10/2026)
 
 Come da convenzione `docs/08` §7: le proposte ricevono la decisione PRIMA
-dell'implementazione. Stato attuale: **tutte pendenti**.
+dell'implementazione. Decisioni espresse dall'utente il **15/10/2026**:
+**D1–D4 chiuse**, l'Ondata 4 parte da I107.
 
 | # | Domanda | Opzioni | Decisione |
 |---|---|---|---|
-| D1 | Confermi la strada primaria SQLite/libSQL (locale=SQLite nativo, cloud=Turso già implementato) senza migrazione? | (a) sì, confermata · (b) no, voglio la via Postgres come primaria | **PENDENTE** |
-| D2 | I107 pannello «Persistenza» in UI: si implementa come primo item dell'Ondata 4? | (a) sì, Ondata 4 · (b) sì, ma più avanti · (c) no | **PENDENTE** |
-| D3 | I108 provider Postgres (Neon o Supabase): si implementa ora o resta porta pronta documentata? | (a) ora, Neon · (b) ora, Supabase · (c) backlog | **PENDENTE** |
-| D4 | Turso Sync/embedded replicas e bridge MCP/Composio: entrano nel backlog osservatorio (§7.4) o si scartano? | (a) backlog · (b) scartati | **PENDENTE** |
+| D1 | Confermi la strada primaria SQLite/libSQL (locale=SQLite nativo, cloud=Turso già implementato) senza migrazione? | (a) sì, confermata · (b) no, voglio la via Postgres come primaria | **(a) CONFERMATA** — zero migrazione, §7.1 in vigore |
+| D2 | I107 pannello «Persistenza» in UI: si implementa come primo item dell'Ondata 4? | (a) sì, Ondata 4 · (b) sì, ma più avanti · (c) no | **(a) CONFERMATA** — I107 è il primo item dell'Ondata 4 |
+| D3 | I108 provider Postgres (Neon o Supabase): si implementa ora o resta porta pronta documentata? | (a) ora, Neon · (b) ora, Supabase · (c) backlog | **(c) BACKLOG** — resta porta pronta documentata (§7.3) |
+| D4 | Turso Sync/embedded replicas e bridge MCP/Composio: entrano nel backlog osservatorio (§7.4) o si scartano? | (a) backlog · (b) scartati | **(a) BACKLOG OSSERVATORIO** — confermato (§7.4) |
 
 ## 9. Fonti della ricerca web (consultate il 15/10/2026)
 

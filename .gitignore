@@ -81,3 +81,6 @@ scripts/verifiche/esiti/*
 scripts/verifiche/esiti-backup/
 upload/
 db/*.db
+
+# output deliverable di sessione (rumore ambiente IM, mai del progetto — Task 49)
+/download/
