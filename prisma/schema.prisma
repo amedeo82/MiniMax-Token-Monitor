@@ -14,7 +14,11 @@
 // (la Subscription Key non viene MAI salvata sul server, resta nel browser).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // I106 — persistenza portabile: i driver adapter (libsql/Turso) richiedono
+  // questo flag preview in Prisma 6; il client generato accetta `adapter`
+  // nel costruttore e resta retrocompatibile (senza adapter = motore nativo).
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {

@@ -17,6 +17,8 @@
     "verifiche": "node scripts/verifiche/verifica.mjs"
   },
   "dependencies": {
+    "@libsql/client": "^0.8.0",
+    "@prisma/adapter-libsql": "^6.19.0",
     "@prisma/client": "^6.19.3",
     "@radix-ui/react-collapsible": "^1.2.0",
     "@radix-ui/react-dialog": "^1.3.0",

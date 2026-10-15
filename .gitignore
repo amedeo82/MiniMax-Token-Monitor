@@ -65,8 +65,8 @@ scripts/gif-frames/
 
 # I97 — igiene repo: artefatti di sessione NON piu tracciati (restano su disco;
 # evidenza storica recuperabile dalla storia git e dai changelog docs/04).
-# ECCEZIONI: audit-latest.md (evidenza pubblica corrente) + le 6 evidenze a nome
-# stabile richieste dai check I48/I54/I56 dell'audit — verdetti su artefatto
+# ECCEZIONI: audit-latest.md (evidenza pubblica corrente) + le evidenze a nome
+# stabile richieste dai check I48/I54/I56/I106 dell'audit — verdetti su artefatto
 # commessi (la CI su checkout fresco non vede i file solo su disco).
 scripts/**/*.png
 scripts/verifiche/esiti/*
@@ -77,6 +77,7 @@ scripts/verifiche/esiti/*
 !scripts/verifiche/esiti/v4-2026-10-12T12-56-18.json
 !scripts/verifiche/esiti/v5-2026-10-12T12-56-24.json
 !scripts/verifiche/esiti/v6-2026-10-12T13-19-29.json
+!scripts/verifiche/esiti/i106-persistenza-latest.md
 scripts/verifiche/esiti-backup/
 upload/
 db/*.db

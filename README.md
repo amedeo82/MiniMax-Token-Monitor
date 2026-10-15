@@ -14,8 +14,8 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
-[![Test 358 pass](https://img.shields.io/badge/test-358_pass-31C48D)](tests)
-[![Audit 475 PASS](https://img.shields.io/badge/audit-475_PASS-31C48D)](scripts/verifiche)
+[![Test 446 pass](https://img.shields.io/badge/test-446_pass-31C48D)](tests)
+[![Audit 489 PASS](https://img.shields.io/badge/audit-489_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -122,8 +122,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 438 test / 1377 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 475 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 446 test / 1400 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 489 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
@@ -154,7 +154,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Next.js 16** (App Router) + **React 19** + **TypeScript 5**
 - **Tailwind CSS 4** + **shadcn/ui** (Radix UI) + **lucide-react**
 - **Recharts** per il grafico storico
-- **Prisma + SQLite** (`db/custom.db`) per la persistenza server-side (storico + archivio eventi)
+- **Prisma 6 + SQLite** (`db/custom.db`) in locale, **persistenza portabile** (I106): su deployment serverless (Vercel) lo stesso schema gira su **Turso** via driver adapter libsql, selezionato dall'ambiente (fallback automatico a SQLite in assenza di env) — storico + archivio eventi
 - **sonner** per i toast di avviso
 - **localStorage** per impostazioni e mirror client (fonte primaria per la UI, sync offline-first con il server)
 - Proxy server-side (`/api/minimax/usage`) per evitare CORS e proteggere la chiave
@@ -179,6 +179,31 @@ Alla prima apertura la dashboard parte in **modalità demo**. Per usare i dati r
 
 In alternativa, senza chiave: **Impostazioni → "Incolla una risposta JSON"** per
 analizzare una risposta reale catturata altrove (curl, browser, CLI `mmx quota`).
+
+### Persistenza server: locale SQLite, deployment Turso (I106)
+
+Lo schema Prisma è unico; il motore si sceglie con l'**ambiente** (`src/lib/db-factory.ts`):
+
+| Ambiente | Motore | Configurazione |
+|---|---|---|
+| Locale / CI (default) | **SQLite** nativo (`db/custom.db`) | nessuna env extra: `bun run db:push` e via |
+| Vercel / serverless | **Turso** (libsql) via driver adapter | `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` (env) |
+
+L'installazione del deployment persistente è in due passi (token **mai** commesso né stampato):
+
+```bash
+# 1) crea le tabelle sul database Turso (idempotente)
+TURSO_DATABASE_URL=libsql://<db>-<org>.turso.io \
+TURSO_AUTH_TOKEN=<token> \
+node scripts/verifiche/db-push-turso.mjs
+
+# 2) imposta le stesse due env su Vercel (Project → Settings → Environment Variables)
+#    poi ridistribuisci: il server parte sull'archivio remoto.
+```
+
+Verifica del ramo adattato (scrivi → leggi → dedup → SQL raw, su db temporaneo):
+`bun scripts/verifiche/verifica-i106.mjs` (esito in `scripts/verifiche/esiti/i106-persistenza-latest.md`;
+con le env Turso impostate esegue invece la lettura read-only del database remoto).
 
 ## Regole del piano — sintesi operativa
 
@@ -245,11 +270,12 @@ src/
     ├── downsample.ts / a11y.ts      # I68 bucket orari · I79 descrizioni sr-only
     ├── ring-color.ts / tab-identity.ts                                  # I65/I67
     ├── persist-json.ts / http-validate.ts / stats.ts                   # I98 quota storage · I91 validazione input · statistiche
-    └── export.ts / demo.ts / db.ts / utils.ts                           # Export CSV/JSON, demo, Prisma
+    ├── db.ts / db-factory.ts        # Shim canonico + I106 factory persistenza portabile (Turso via adapter, fallback SQLite)
+    └── export.ts / demo.ts / utils.ts                                   # Export CSV/JSON, demo
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (40 file) + components/ (8 componenti) = 438 test / 1378 asserzioni
+tests/                               # Suite bun: lib/ (41 file) + components/ (9 componenti) = 446 test / 1400 asserzioni
 docs/          # Questa documentazione (01–08)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)

@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-14T20:16:50.962Z
+# Audit implementazioni — 2026-10-15T03:50:33.301Z
 
-- Verifiche totali: **475** · PASS: **475** · FAIL: **0**
+- Verifiche totali: **489** · PASS: **489** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -355,7 +355,7 @@
 | I97 | upload/ fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | db runtime fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | PNG di verifica di sessione fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
-| I97 | esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56) — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I97 | esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56/I106) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I105 | name npm coerente col progetto (era nextjs_tailwind_shadcn_ts) (package.json) | simbolo | PASS | — |
 | I105 | name generico scaffolding RIMOSSO — assenza richiesta (package.json) | assenza | PASS | — |
 | I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
@@ -480,5 +480,19 @@
 | I104 | commento stale framer-motion corretto (l'animazione è già CSS) (src/components/quota-ring.tsx) | simbolo | PASS | — |
 | I104 | zod CONSERVATO (in uso da I103) (package.json) | simbolo | PASS | — |
 | I104 | recharts conservato (grafici) (package.json) | simbolo | PASS | — |
+| I106 | schema: driver adapters abilitati (il client generato accetta `adapter`) (prisma/schema.prisma) | simbolo | PASS | — |
+| I106 | factory: ramo portabile selezionato dall'env (modulo proprio per testabilità senza collisioni con i mock @/lib/db) (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I106 | factory: token Turso opzionale (database pubblici e file: non lo richiedono) (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I106 | factory: driver adapter libsql costruito con {url, authToken} (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I106 | factory esportata per i test (il singleton è valutato una volta per processo) (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I106 | shim canonico @/lib/db: le route non cambiano import (contratto I106) (src/lib/db.ts) | simbolo | PASS | — |
+| I106 | dipendenza driver adapter (major allineata al client 6.x — adapter 7 richiede Prisma 7) (package.json) | simbolo | PASS | — |
+| I106 | dipendenza client libsql (range supportato dall'adapter 6.19: ^0.8) (package.json) | simbolo | PASS | — |
+| I106 | push schema su Turso: SDL via migrate diff + esecuzione via client libsql (idempotente, token mai stampato) | file | PASS | — |
+| I106 | ciclo accettazione adapter: scrivi→leggi→dedup→SQL raw su db temporaneo; read-only su Turso reale | file | PASS | — |
+| I106 | test factory env-driven (mock costruttori con cattura argomenti, igiene env con delete) | file | PASS | — |
+| I106 | esito verifica I106 tracciato con nome fisso (evidenza pubblica, eccezione .gitignore) | file | PASS | — |
+| I106 | README documenta le env del deployment persistente (Vercel + Turso) (README.md) | simbolo | PASS | — |
+| I106 | README dichiara la persistenza portabile (SQLite in locale, Turso su Vercel) (README.md) | simbolo | PASS | — |
 
-Verdetto: **PASS** (475 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (489 pass, 0 fail, 0 scoperte)

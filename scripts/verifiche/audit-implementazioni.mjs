@@ -573,14 +573,14 @@ const CHECKS = [
   check.nonTracciato("I97", "upload/.*", "upload/ fuori dall'indice"),
   check.nonTracciato("I97", "db/.*\\.db", "db runtime fuori dall'indice"),
   check.nonTracciato("I97", "scripts/.*\\.png", "PNG di verifica di sessione fuori dall'indice"),
-  check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!(?:audit-latest\\.md|i48-demo-vs-api-latest\\.md|i54-live-vs-demo-latest\\.md|v8-fuso-reset-latest\\.md|v4-2026-10-12T12-56-18\\.json|v5-2026-10-12T12-56-24\\.json|v6-2026-10-12T13-19-29\\.json)$).+", "esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56)"),
+  check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!(?:audit-latest\\.md|i48-demo-vs-api-latest\\.md|i54-live-vs-demo-latest\\.md|v8-fuso-reset-latest\\.md|v4-2026-10-12T12-56-18\\.json|v5-2026-10-12T12-56-24\\.json|v6-2026-10-12T13-19-29\\.json|i106-persistenza-latest\\.md)$).+", "esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56/I106)"),
 
   /* --- I105 — coerenza di versione, README e metadati (contatori presidiati: aggiornare README a ogni cambio) --- */
   check.simbolo("I105", "package.json", "\"name\": \"minimax-usage-monitor\"", "name npm coerente col progetto (era nextjs_tailwind_shadcn_ts)"),
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "438 test / 1378 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "446 test / 1400 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -718,6 +718,22 @@ const CHECKS = [
   check.simbolo("I104", "src/components/quota-ring.tsx", "animato via CSS", "commento stale framer-motion corretto (l'animazione è già CSS)"),
   check.simbolo("I104", "package.json", '"zod"', "zod CONSERVATO (in uso da I103)"),
   check.simbolo("I104", "package.json", '"recharts"', "recharts conservato (grafici)"),
+
+  /* --- I106 — persistenza server portabile (Turso via driver adapter, fallback SQLite nativo) --- */
+  check.simbolo("I106", "prisma/schema.prisma", 'previewFeatures\\s*=\\s*\\["driverAdapters"\\]', "schema: driver adapters abilitati (il client generato accetta `adapter`)"),
+  check.simbolo("I106", "src/lib/db-factory.ts", "TURSO_DATABASE_URL", "factory: ramo portabile selezionato dall'env (modulo proprio per testabilità senza collisioni con i mock @/lib/db)"),
+  check.simbolo("I106", "src/lib/db-factory.ts", "TURSO_AUTH_TOKEN", "factory: token Turso opzionale (database pubblici e file: non lo richiedono)"),
+  check.simbolo("I106", "src/lib/db-factory.ts", "PrismaLibSQL", "factory: driver adapter libsql costruito con {url, authToken}"),
+  check.simbolo("I106", "src/lib/db-factory.ts", "export function creaPrismaClient", "factory esportata per i test (il singleton è valutato una volta per processo)"),
+  check.simbolo("I106", "src/lib/db.ts", 'from "./db-factory"', "shim canonico @/lib/db: le route non cambiano import (contratto I106)"),
+  check.simbolo("I106", "package.json", '"@prisma/adapter-libsql"', "dipendenza driver adapter (major allineata al client 6.x — adapter 7 richiede Prisma 7)"),
+  check.simbolo("I106", "package.json", '"@libsql/client"', "dipendenza client libsql (range supportato dall'adapter 6.19: ^0.8)"),
+  check.file("I106", "scripts/verifiche/db-push-turso.mjs", "push schema su Turso: SDL via migrate diff + esecuzione via client libsql (idempotente, token mai stampato)"),
+  check.file("I106", "scripts/verifiche/verifica-i106.mjs", "ciclo accettazione adapter: scrivi→leggi→dedup→SQL raw su db temporaneo; read-only su Turso reale"),
+  check.file("I106", "tests/lib/db.test.ts", "test factory env-driven (mock costruttori con cattura argomenti, igiene env con delete)"),
+  check.file("I106", "scripts/verifiche/esiti/i106-persistenza-latest.md", "esito verifica I106 tracciato con nome fisso (evidenza pubblica, eccezione .gitignore)"),
+  check.simbolo("I106", "README.md", "TURSO_DATABASE_URL", "README documenta le env del deployment persistente (Vercel + Turso)"),
+  check.simbolo("I106", "README.md", "persistenza portabile", "README dichiara la persistenza portabile (SQLite in locale, Turso su Vercel)"),
 ];
 
 /* ------------------------------------------------------------------ */
