@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://developers.cloudflare.com/d1/tutorials/d1-and-prisma-orm",
+    "name": "Query D1 using Prisma ORM",
+    "snippet": "Aug 10, 2026 — This tutorial shows you how to set up and deploy a Cloudflare Worker that is accessing a D1 database from scratch. D1 is supported in Prisma ...",
+    "host_name": "developers.cloudflare.com",
+    "rank": 0,
+    "date": "Aug 10, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://blog.cloudflare.com/prisma-orm-and-d1",
+    "name": "Improving Cloudflare Workers and D1 developer",
+    "snippet": "Apr 3, 2024 — Prisma Object Relational Mapper (ORM) now natively supports Cloudflare Workers and D1 in Preview. Prisma ORM versions 5.12.0 and up support ...",
+    "host_name": "blog.cloudflare.com",
+    "rank": 1,
+    "date": "Apr 3, 2024",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/prisma/issues/13310",
+    "name": "Support for Cloudflare's new SQLite database D1 #13310",
+    "snippet": "May 11, 2022 — Cloudflare have just announced their first relational DB D1 which is based on SQLite . ... Would be awesome if Prisma could support it one day.. Read more",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "May 11, 2022",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.prisma.io/docs/orm/v6/overview/databases/cloudflare-d1",
+    "name": "Cloudflare D1 (Prisma ORM v6)",
+    "snippet": "When using Prisma ORM with D1 , you need to use the sqlite database provider and the @ prisma /adapter- d1 driver adapter. If you want to deploy a Cloudflare Worker ... Read more",
+    "host_name": "www.prisma.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.cloudflare.com/products/d1",
+    "name": "Cloudflare D1 - Serverless SQL Database",
+    "snippet": "The easiest way to add SQL to your application. Serverless SQLite database with global read replication, native Worker integration, and time travel backups .",
+    "host_name": "www.cloudflare.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dev.to/imkven/cloudflare-d1-and-prisma-not-a-good-combination-for-now-4511",
+    "name": "Cloudflare D1 and Prisma: Not a Good Combination (For",
+    "snippet": "Dec 6, 2024 — Cloudflare D1, as a SQLite-like database , doesn't support the ENUM data type. Cloudflare D1 does not support interactive transactions. Prisma ...",
+    "host_name": "dev.to",
+    "rank": 5,
+    "date": "Dec 6, 2024",
+    "favicon": ""
+  }
+]

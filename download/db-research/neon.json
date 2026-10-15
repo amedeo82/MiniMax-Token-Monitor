@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://neon.com/pricing",
+    "name": "Neon pricing",
+    "snippet": "The Free plan includes 5 GB of Object Storage per project. Functions are billed for active compute, waiting compute, and invocations at the rates in the plan ... Read more",
+    "host_name": "neon.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://encore.dev/articles/neon-serverless-postgres",
+    "name": "Neon Serverless Postgres Guide for TypeScript Backends in",
+    "snippet": "Mar 19, 2026 — Neon's free tier is generous enough for development and small production workloads: 0.5 GB storage 1 project with 10 branches 100 compute hours ...",
+    "host_name": "encore.dev",
+    "rank": 1,
+    "date": "Mar 19, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://dev.to/0012303/neon-has-a-free-tier-serverless-postgres-with-branching-512-mb-storage-and-no-credit-card-i3e",
+    "name": "Serverless Postgres With Branching, 512 MB Storage, and",
+    "snippet": "Mar 26, 2026 — Neon gives you serverless Postgres that scales to zero. Free tier: 512 MB storage, 0.25 vCPU , database branching (like git for your database), ... Read more",
+    "host_name": "dev.to",
+    "rank": 2,
+    "date": "Mar 26, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/PostgreSQL/comments/1x4p90d/is_neon_postgresql_free_tier_reliable_enough_for",
+    "name": "Is Neon PostgreSQL Free Tier reliable enough for a",
+    "snippet": "plain postgres will handle 30 concurrent users just fine - zero cold starts, zero compute limits , and no random database pauses.",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://medium.com/@philmcc/neon-postgres-review-serverless-postgresql-that-actually-scales-to-zero-ee14d4e109ba",
+    "name": "Neon Postgres Review: Serverless PostgreSQL That",
+    "snippet": "Neon also provides a serverless driver . DESC LIMIT 10`; –27,000 queries per second. PlanetScale removed its free tier in 2024 and has generally ...",
+    "host_name": "medium.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.srvrlss.io/provider/neon",
+    "name": "Neon Review 2026 - Features, Pricing & Alternatives",
+    "snippet": "Jun 18, 2026 — There is a permanent free tier (0.5 GB storage and 100 compute-hours per project per month), and the Launch and Scale plans have no monthly ... Read more",
+    "host_name": "www.srvrlss.io",
+    "rank": 5,
+    "date": "Jun 18, 2026",
+    "favicon": ""
+  }
+]

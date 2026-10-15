@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://github.com/electric-sql/pglite",
+    "name": "electric-sql/pglite: Embeddable Postgres with real-time,",
+    "snippet": "PGlite is a WASM Postgres build packaged into a TypeScript client library that enables you to run Postgres in the browser, Node.js, Bun and Deno,",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://pglite.dev",
+    "name": "PGlite",
+    "snippet": "Run a full Postgres database locally in WASM with reactivity and live sync. This is a full PGlite Postgres running in your browser .",
+    "host_name": "pglite.dev",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://electric.ax/blog/2026/06/25/pglite-reaches-10-million-weekly-downloads",
+    "name": "PGlite reaches 10 million weekly downloads",
+    "snippet": "Jun 25, 2026 — PGlite has reached 10 million weekly npm downloads . This post looks back at how Postgres in WASM became a widely adopted embedded Postgres ...",
+    "host_name": "electric.ax",
+    "rank": 2,
+    "date": "Jun 25, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://sourceforge.net/projects/pglite.mirror",
+    "name": "PGlite download",
+    "snippet": "Aug 26, 2026 — PGlite is a lightweight, WebAssembly (WASM) build of Postgres designed to run directly in JavaScript environments such as browsers, Node.js, ... Read more",
+    "host_name": "sourceforge.net",
+    "rank": 3,
+    "date": "Aug 26, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/PostgreSQL/comments/1azw8um/pglite_postgres_in_wasm",
+    "name": "PGlite – Postgres in WASM : r/PostgreSQL",
+    "snippet": "Embeddable Postgres with real-time, reactive bindings . You can freely upload a 50-100 GB database to your browser's. Lightweight Postgres ...",
+    "host_name": "www.reddit.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://news.ycombinator.com/item?id=41224689",
+    "name": "PGlite – in-browser WASM Postgres with pgvector and live",
+    "snippet": "Aug 12, 2024 — PGlite is a WASM Postgres build packaged into a TypeScript/JavaScript client library, that enables you to run Postgres in the browser, Node. Read more",
+    "host_name": "news.ycombinator.com",
+    "rank": 5,
+    "date": "Aug 12, 2024",
+    "favicon": ""
+  }
+]

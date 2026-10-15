@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://docs.turso.tech/features/embedded-replicas/introduction",
+    "name": "Embedded Replicas",
+    "snippet": "Embedded Replicas keep a local read replica of a Turso Cloud database: reads run locally from the file in microseconds , and writes are sent to the cloud primary",
+    "host_name": "docs.turso.tech",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://turso.tech/blog/sync-benchmark",
+    "name": "Turso Sync: a much, much, much better way to sync",
+    "snippet": "Apr 24, 2026 — If you are using libSQL sync () , also known as Embedded Replicas, we strongly recommend you switch to Turso. We are now at the point in which ... Read more",
+    "host_name": "turso.tech",
+    "rank": 1,
+    "date": "Apr 24, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/tursodatabase/embedded-replica-examples",
+    "name": "Examples of using Turso/libSQL embedded replica sync",
+    "snippet": "This source tree contains examples of using Turso / libSQL embedded replicas . Remote database synchronization (TypeScript + Bun); Offline database synchronization ... Read more",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.turso.tech/sdk/rust/reference",
+    "name": "Reference",
+    "snippet": "Embedded Replicas . You can work with Embedded Replicas that sync from a Turso Cloud database to a local SQLite file. Reads run locally; writes are sent to ... Read more",
+    "host_name": "docs.turso.tech",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://forum.atuin.sh/t/libsql-turso-as-the-backend-db/989",
+    "name": "LibSQL / Turso as the backend db - General",
+    "snippet": "May 11, 2025 — LibSQL is network-aware . So easy to sync. Remote replication is built in. query latency with libSQL local replicas The fastest access to your ...",
+    "host_name": "forum.atuin.sh",
+    "rank": 4,
+    "date": "May 11, 2025",
+    "favicon": ""
+  }
+]
