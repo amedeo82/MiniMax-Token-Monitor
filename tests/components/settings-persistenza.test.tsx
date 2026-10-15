@@ -92,7 +92,11 @@ describe("I107 componenti: pannello Persistenza (tab Dati)", () => {
     expect(screen.getByText("monitor-org.turso.io")).toBeDefined();
     expect(screen.getByText("ok · 12 ms")).toBeDefined();
     expect(screen.getByText("Punti storici")).toBeDefined();
-    expect(screen.getByText("1.234")).toBeDefined(); // toLocaleString("it-IT")
+    /* Il separatore delle migliaia dipende dai dati ICU del runtime (locale
+       «1.234»; su runner con ICU parziale può usare lo spazio): l'asserzione
+       usa lo STESSO formatter della UI per verificare il collegamento, non i
+       dati ICU della macchina. */
+    expect(screen.getByText((1234).toLocaleString("it-IT"))).toBeDefined();
     expect(screen.getByText("Bucket orari")).toBeDefined();
     expect(screen.getByText("Punti per modello")).toBeDefined();
     expect(screen.getByText("89")).toBeDefined();
