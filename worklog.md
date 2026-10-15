@@ -1133,3 +1133,22 @@ Stage Summary:
 - RACCOMANDAZIONE (docs/09 §7): strada primaria CONFERMATA famiglia SQLite/libSQL — locale=SQLite nativo (default), cloud=Turso (I106) — ZERO migrazione; I107 (pannello «Persistenza» in UI: modalità, test connessione, conteggi, mai credenziali in localStorage) e I108 (provider Postgres Neon/Supabase via doppio schema + adapter-pg/neon) proposte numerate NON implementate; MCP/Composio scartato come via dati primaria (latenza, transazioni, terze parti, CI non verificabile), candidato bridge export; 4 decisioni clarify pendenti per l'utente (docs/09 §8)
 - Nota strategica: Turso entra in Supabase (21/1/2025) → le due strade (SQLite-family e Postgres-family) convergono nello stesso gruppo, rischio di scelta «contro» un ecosistema ridotto
 - Lezione: le affermazioni di mercato vanno DATATE nel testo (free Turso 2025 rimosse feature, PlanetScale free rimosso 4/2024, Supabase pausa 7 giorni: i tier cambiano — senza data il documento invecchia male)
+
+---
+Task ID: 48
+Agent: main (Super Z)
+Task: Aggiornamento documentazione progetto + README + screenshot («possiamo aggiornare la documentazione del progetto, il file readme, gli screenshot eventuali, poi commit e push»)
+
+Work Log:
+- Staleness check README contro la realtà del codice: tab impostazioni 4 ✓, sezioni nav 8 ✓, test lib 41 ✓, badge 446/1400 ✓; STALI: `components/` dichiarati 9 (reali 8 — `ls tests/components/*.test.tsx | wc -l`), indice docs «01–08» (diventa 01–09 con docs/09), screenshot del 14/10 ore 07:06 (precedenti a I96 orologio header/footer, I100 badge diagnostica, I106 footer versione)
+- Screenshot rigenerati riusando `scripts/github-assets.py` (contesto browser FRESH = demo, API bloccate ADR-8, retina dsf=2 viewport 1440×900): 5 PNG 2880×1800 in docs/assets (hero-dashboard, sezione-grafico, sezione-analisi, sezione-diagnostica, modalita-compatta) + 20 frame dsf=1 in scripts/gif-frames; dev server avviato per la cattura e fermato dopo
+- `demo.gif` riassemblata dallo script NUOVO `scripts/verifiche/assemblea-demo-gif.py` (PIL: resize 800×500 LANCZOS, 20 frame × 320 ms, loop, optimize): 960 KB, stessa geometria dell'originale
+- Catture verificate VISIVAMENTE (Read tool): hero con orologio header I96 (11:36:28 Europe/Rome), data «giovedì 15 ottobre 2026», badge «Modalità demo — dati simulati»; diagnostica con scrollspy «Diagnostica» attivo e badge salute/anomalie — freschezza confermata, nessun dato reale
+- README aggiornato: badge audit 489→490, §Qualità «490 verifiche dichiarative», §Struttura `components/ (9→8 componenti)`, `docs/ # Questa documentazione (01–08)`→`(01–09)`
+- Audit I105 allineato (convenzione README↔audit auto-coerenti): literal «01–08»→«01–09» con descrizione aggiornata + NUOVO check `docs/09 presente nella tabella indice` (489→490 check totali; i due check.contatore I105 richiedono automaticamente i nuovi numeri nel README — allineamento fatto prima del run)
+- docs/04 §8: riga in cima al blocco 15/10; NESSUN tocco a src/tests/schema (docs+asset only); version.ts invariato
+- Protocollo: tsc 0, lint 0, suite 446/446 (1400 asserzioni), audit **490/490** PASS 0 scoperte; commit percorsi espliciti (5 PNG + demo.gif + assemblea-demo-gif.py + README + audit + docs/04 + worklog + audit-latest) e push; CI remota verificata via API
+
+Stage Summary:
+- Asset README torna COERENTE col codice: 5 PNG retina freschi in modalità demo (zero dati reali, API bloccate durante la cattura), GIF del tour rigenerata, contatori e indice documentazione allineati; audit a 490 check con presidio docs/09 nell'indice
+- Lezione: gli screenshot sono CODICE DOCUMENTALE — ogni item che cambia l'aspetto (I96 orologio, I100 badge, I106 footer) li rende stanti: dopo ogni ondata con cambi visivi va rivalutata la rigenerazione (la verifica «data catture vs ultima UI change» resta manuale, non è presidiable con check statico)

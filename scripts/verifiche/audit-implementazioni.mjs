@@ -581,8 +581,9 @@ const CHECKS = [
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
   check.simbolo("I105", "README.md", "446 test / 1400 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
-  check.simbolo("I105", "README.md", "01–08", "indice documentazione README completo (docs/08 incluso)"),
+  check.simbolo("I105", "README.md", "01–09", "indice documentazione README completo (docs/09 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
+  check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
 
   /* --- I98 — gestione esplicita della quota localStorage (persistJson unico punto di scrittura) --- */
