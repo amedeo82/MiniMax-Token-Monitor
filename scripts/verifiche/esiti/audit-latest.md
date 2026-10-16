@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T20:25:36.303Z
+# Audit implementazioni — 2026-10-16T20:47:38.199Z
 
-- Verifiche totali: **543** · PASS: **543** · FAIL: **0**
+- Verifiche totali: **550** · PASS: **550** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -547,6 +547,13 @@
 | I112 | procedura P7: le stesse procedure sul file SQLite locale — cosa è identico (PRAGMA, statistiche, quick_check, ritenuta+cap, quota), differenze oneste (VACUUM nativo funziona e recupera byte; soglie quota adattabili) e commutazione via .env (docs/10-manutenzione-database.md) | simbolo | PASS | — |
 | I112 | soglie di quota adattabili al disco locale: il tetto del free tier Turso diventa un limite scelto dall'utente sul file locale (clamp §6) (docs/10-manutenzione-database.md) | simbolo | PASS | — |
 | I112 | README §Persistenza dichiara la copertura locale delle procedure di manutenzione (modalita locale, VACUUM nativo, commutazione) (README.md) | simbolo | PASS | — |
+| I113 | tabella «Regole del piano» senza più l'ipotesi rolling (smentita V8: blocchi fissi UTC) — assenza richiesta (README.md) | assenza | PASS | — |
+| I113 | regole README allineate al verdetto V8 (inizio = confine di griglia, non primo utilizzo) (README.md) | simbolo | PASS | — |
+| I113 | nota correttiva in §7: le regole ufficiali rolling restano CITAZIONE con smentita empirica e rimando al verdetto (docs/02 §5, esiti v8) (docs/01-api-minimax-ricerca.md) | simbolo | PASS | — |
+| I113 | casi limite §7 allineati: lo start del blocco successivo è prevedibile (confine di griglia, V8) — assenza richiesta (docs/02-analisi-json-quota.md) | assenza | PASS | — |
+| I113 | caso limite §9 «subito dopo il reset senza uso» chiuso con V3/V8 — assenza richiesta (docs/02-analisi-json-quota.md) | assenza | PASS | — |
+| I113 | R11 chiusa dall'evidenza V8: nessun rimando a V3 come aperta — assenza richiesta (docs/04-stato-avanzamento.md) | assenza | PASS | — |
+| I113 | apertura §7 «primo utilizzo previsto» risolta per obsolescenza (blocchi fissi UTC) — assenza richiesta (docs/04-stato-avanzamento.md) | assenza | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (543 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (550 pass, 0 fail, 0 scoperte)

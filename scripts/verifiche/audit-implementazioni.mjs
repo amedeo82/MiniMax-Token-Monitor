@@ -797,6 +797,14 @@ const CHECKS = [
   check.simbolo("I112", "docs/10-manutenzione-database.md", "P7 — Database locale", "procedura P7: le stesse procedure sul file SQLite locale — cosa è identico (PRAGMA, statistiche, quick_check, ritenuta+cap, quota), differenze oneste (VACUUM nativo funziona e recupera byte; soglie quota adattabili) e commutazione via .env"),
   check.simbolo("I112", "docs/10-manutenzione-database.md", "MANUTENZIONE_QUOTA_STORAGE_BYTES", "soglie di quota adattabili al disco locale: il tetto del free tier Turso diventa un limite scelto dall'utente sul file locale (clamp §6)"),
   check.simbolo("I112", "README.md", "anche per il database locale", "README §Persistenza dichiara la copertura locale delle procedure di manutenzione (modalita locale, VACUUM nativo, commutazione)"),
+  /* --- I113 — allineamento documentale al verdetto V8: nessuna affermazione «rolling» superstite --- */
+  check.assenza("I113", "README.md", "Al primo utilizzo \\(rolling\\)", "tabella «Regole del piano» senza più l'ipotesi rolling (smentita V8: blocchi fissi UTC)"),
+  check.simbolo("I113", "README.md", "griglia 00/05/10/15/20 del giorno \\(V8\\)", "regole README allineate al verdetto V8 (inizio = confine di griglia, non primo utilizzo)"),
+  check.simbolo("I113", "docs/01-api-minimax-ricerca.md", "empiricamente SMENTITE", "nota correttiva in §7: le regole ufficiali rolling restano CITAZIONE con smentita empirica e rimando al verdetto (docs/02 §5, esiti v8)"),
+  check.assenza("I113", "docs/02-analisi-json-quota.md", "lo start non è prevedibile", "casi limite §7 allineati: lo start del blocco successivo è prevedibile (confine di griglia, V8)"),
+  check.assenza("I113", "docs/02-analisi-json-quota.md", "= end_time precedente o invariato\\? Da osservare", "caso limite §9 «subito dopo il reset senza uso» chiuso con V3/V8"),
+  check.assenza("I113", "docs/04-stato-avanzamento.md", "Aperto → verifica V3", "R11 chiusa dall'evidenza V8: nessun rimando a V3 come aperta"),
+  check.assenza("I113", "docs/04-stato-avanzamento.md", "❓ Come mostrare", "apertura §7 «primo utilizzo previsto» risolta per obsolescenza (blocchi fissi UTC)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

@@ -1362,3 +1362,22 @@ Stage Summary:
 - docs/10 §5 P7 + runbook §7: le procedure di manutenzione sono documentate per ENTRAMBI i motori (locale SQLite + Turso) — copertura duale, differenze oneste (VACUUM, soglie quota, effimero /tmp) e runbook di commutazione
 - Audit +3 check I112 → 543/543 PASS 0 scoperte; versione footer «MiniMax Token Monitor · v 2026-10-17 · I112»
 - Rimanente all'UTENTE (fuori dal repo): impostare CRON_SECRET su Vercel e ridistribuire per attivare il cron notturno; poi verificare l'invocazione (Vercel → Functions) e il rapporto `GET /api/manutenzione`; ricordata la rotazione del token Turso (transitato nella storia git con dd03d16)
+
+---
+Task ID: 59
+Agent: main (Super Z)
+Task: Richiesta utente «procediamo con il prossimo step previsto dalla documentazione» — consegna I113 (allineamento documentale al verdetto V8 «blocchi fissi UTC»: il prossimo step autonomo residuo) + verifica CI di I112
+
+Work Log:
+- CONTESTO: I112 già consegnato e pushato (fa5b29e) — CI verificata SUCCESS via API GitHub (script nuovo scripts/verifiche/ci-status.sh, token MAI stampato, lezione I109). All I restano chiusi (tutti ✅/🚫), roadmap docs/03 §11 completa, docs/07 15/15: il prossimo step AUTONOMO residuo dalla documentazione è l'allineamento dei punti ancora ancorati all'ipotesi ROLLING smentita dal verdetto V8 commesso (12/10, 205 campioni, offset 0 ms, start pre-armati al confine di griglia UTC) — item aperti trovati: R11 stantia (❓→verifica V3 già ✅), apertura §7 «primo utilizzo previsto» (rescritta obsoleta da V8), README tabella regole («Al primo utilizzo (rolling)»), docs/01 §7 senza nota correttiva, docs/02 §7/§9 casi limite con rolling/V3 aperta
+- docs/04: R8 + nota empirica (docs ufficiali citate ma smentite per questo piano); R11 ❓→✅ RISOLTA dall'evidenza V8 (start del NUOVO blocco di griglia, pre-armato anche senza uso — video con start 00:00:00.000Z esatto); apertura §7 ✅ risolta per obsolescenza (il display «reset disponibile da HH:MM» è esattamente corretto per blocchi fissi: nessun cambiamento UI); §3 riga I113; §8 changelog in cima
+- README: tabella «Regole del piano» («Intervallo» → Blocchi fissi UTC: griglia 00/05/10/15/20 del giorno (V8); «Settimanale» → Lunedì 00:00 UTC (V8)) + bullet empirico con fonte (docs/02 §5)
+- docs/01 §7: nota correttiva dopo la tabella — le regole ufficiali restano CITAZIONE, empiricamente SMENTITE per questo piano, con rimando a docs/02 §5 ed esiti v8-fuso-reset-latest.md
+- docs/02: §7 riga «Apertura nuova finestra 5h» (lo start è prevedibile: blocco pre-armato al confine); §9 caso «Subito dopo il reset senza nuovo uso» ❓ (V3) → ✅ osservato (V3/V8)
+- AUDIT: +7 check I113 (assenza «Al primo utilizzo (rolling)» nel README, simbolo «griglia 00/05/10/15/20 del giorno (V8)», simbolo «empiricamente SMENTITE» in docs/01, assenze «lo start non è prevedibile» e «= end_time precedente o invariato? Da osservare» in docs/02, assenze «Aperto → verifica V3» e «❓ Come mostrare» in docs/04) → **550/550 PASS 0 scoperte** al primo giro; contatori allineati: README badge 543→550, §Qualità 550 verifiche dichiarative; audit-latest.md rigenerato (copiato dal report timestampato)
+- versione «2026-10-17 · I113» (check audit «versione» PASS)
+- Protocollo: tsc 0, lint 0, suite **513/513 (1699 asserzioni)** invariata (docs-only), audit **550/550 PASS 0 scoperte**, commit percorsi espliciti (MAI git add -A), push + poll CI fino a success
+
+Stage Summary:
+- I113: tutta la documentazione è allineata al verdetto V8 «blocchi fissi UTC» — zero affermazioni rolling superstite, R11 e apertura §7 chiuse, presidio audit +7 check
+- Restano aperti SOLO item dipendenti dall'utente: V1/R10 (verifica stato «2» = esaurita: serve consumo REALE della finestra 5h fino a esaurimento con chiave valida — consuma deliberatamente quota) e le azioni Vercel lato utente (CRON_SECRET + ridistribuzione per il cron di manutenzione, già spiegate a fine I112; I110: env TURSO_* su Vercel + rotazione token)

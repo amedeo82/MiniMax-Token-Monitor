@@ -180,6 +180,13 @@ Strategie, in ordine di utilità:
 | Piani | M Plan: **Go / Explore / Build**. Token Plan (legacy): **Plus 20$ / Max 50$ / Ultra 120$** (+ tier retired Starter/Plus-hs/Max-hs/Ultra-hs). |
 | A chi serve | Uso individuale interattivo; per produzione è consigliato pay-as-you-go. |
 
+> **⚠️ Nota empirica (V8, 12/10)**: le regole «rolling al primo utilizzo» qui sopra sono la
+> CITAZIONE delle docs ufficiali, ma per questo piano sono empiricamente SMENTITE: le finestre
+> sono **blocchi fissi UTC** — start sempre sui confini di griglia (5h: 00/05/10/15/20 UTC del
+> giorno, ancorate alla mezzanotte UTC; 24h video a mezzanotte; settimanale lunedì 00:00 UTC),
+> pre-armati e NON riancorati dall'uso (205 campioni, offset 0 ms). Verdetto formale in
+> `docs/02` §5, esiti `scripts/verifiche/esiti/v8-fuso-reset-latest.md`.
+
 ---
 
 ## 8. Codici di stato osservati

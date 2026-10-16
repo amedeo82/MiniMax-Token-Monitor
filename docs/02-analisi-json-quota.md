@@ -245,7 +245,7 @@ NO) e V3 (start dopo reset senza uso = start del nuovo blocco di griglia, pre-ar
 | Avanzamento finestra | `(now − start_time) / (end_time − start_time)` · 100 | `windowProgress()` |
 | Prossimo reset breve | `end_time` corrente | mostrato con `formatDateTimeRome()` |
 | Prossimo reset settimanale | `weekly_end_time` | idem |
-| Apertura nuova finestra 5h | dopo il reset, al **primo utilizzo** (rolling): lo start non è prevedibile | il dashboard mostra "reset disponibile da HH:MM" |
+| Apertura nuova finestra 5h | il nuovo start è **prevedibile**: blocco fisso pre-armato al confine di griglia UTC (verdetto V8 §5 — non rolling al primo utilizzo) | il dashboard mostra il countdown al reset; lo start del blocco successivo è il confine di griglia |
 
 ---
 
@@ -265,6 +265,6 @@ NO) e V3 (start dopo reset senza uso = start del nuovo blocco di griglia, pre-ar
 | Finestra mai usata | `status: 3`, percent 100, finestra "virtuale" (video: 24h allineata UTC) | ✅ osservato |
 | Finestra attiva | `status: 1`, percent < 100 se consumato | ✅ osservato |
 | Quota esaurita | Presumibilmente `status: 2` e percent → 0 | ❓ da verificare (V1 in `docs/04`) |
-| Subito dopo il reset senza nuovo uso | ❓ start_time della nuova finestra: = end_time precedente o invariato? Da osservare | ❓ (V3) |
+| Subito dopo il reset senza nuovo uso | lo start della nuova finestra è il confine di griglia del NUOVO blocco, pre-armato anche senza alcun uso (video mai usato: start `00:00:00.000Z` esatto) | ✅ osservato (V3/V8, 12/10) |
 | Risposta annidata sotto `data` / epoch in secondi / status testuali | Varianti di formato osservate nei progetti open-source | ✅ gestite dal parser |
 | Chiave errata | `base_resp.status_code: 1004` | ✅ gestito (messaggio dedicato) |
