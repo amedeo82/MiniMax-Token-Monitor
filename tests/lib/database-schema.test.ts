@@ -1,13 +1,15 @@
 /**
  * I107-fix3 — Test dello schema INCORPORATO (src/lib/schema-persistenza.ts).
  *
- * ATTENZIONE AL CLIENT REALE (fix CI run #22 — aggiorna la lezione dell'ordine
- * qui sotto): l'ordine dei file in bun NON è garantito né alfabetico né stabile
- * tra ambienti (Task 55; in CI db.test.ts ha caricato PRIMA di un file
- * «database-…» che in locale girava prima). Il PrismaClient REALE si importa
- * via PERCORSO ASSOLUTO di node_modules: il mock process-wide di db.test.ts è
- * chiave sullo specificatore "@prisma/client" e NON copre il percorso del
- * pacchetto — deterministico in ogni ordine, senza rinomine fragili.
+ * MOTORE REALE IN PROCESSO FIGLIO (fix CI run #22/#23 — aggiorna la vecchia
+ * lezione «ordine alfabetico», già fragile): l'ordine dei file in bun NON è
+ * garantito né alfabetico né stabile tra ambienti (Task 55), e bun «latest» in
+ * CI chiave i mock DIVERSAMENTE dal 1.3.14 locale — anche l'import via percorso
+ * assoluto in CI ha preso il mock process-wide di db.test.ts. Soluzione
+ * deterministica: l'e2e gira in `scripts/verifiche/verifica-i107fix3-motore-reale.ts`
+ * (processo figlio SENZA mock — precedente del repo: check anti-drift); il
+ * padre asserisce exit 0 + verdetto marcato e riporta l'output in caso di
+ * fallimento: dice SEMPRE perché.
  *
  * Tre livelli di verifica:
  * 1. END-TO-END con motore reale: preparaSchema su un file SQLite vuoto → le
@@ -30,62 +32,28 @@
  *    si risolve comunque: il guasto non è mascherato, riemerge dalle query
  *    reali col messaggio preciso del motore.
  */
-import { describe, test, expect, afterAll } from "bun:test";
-import { mkdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import type { PrismaClient } from "@prisma/client";
-
-/* PrismaClient REALE via percorso assoluto — vedi la nota in testa: immune dal
-   mock process-wide di "@prisma/client" (chiave sullo specificatore). */
-const PrismaClientReale = (
-  (await import(join(process.cwd(), "node_modules/@prisma/client/default.js"))) as {
-    PrismaClient: typeof PrismaClient;
-  }
-).PrismaClient;
+import { describe, test, expect } from "bun:test";
 
 import { preparaSchema, SCHEMA_PERSISTENZA } from "@/lib/schema-persistenza";
 
-const DIR_PROVA = join(tmpdir(), "i107-fix3-schema-e2e");
-
-afterAll(() => {
-  rmSync(DIR_PROVA, { recursive: true, force: true });
-});
-
 describe("I107-fix3 — schema incorporato (bootstrap DDL)", () => {
-  test("end-to-end motore reale: file vuoto → 4 tabelle create, scritture ok, seconda passata no-op", async () => {
-    rmSync(DIR_PROVA, { recursive: true, force: true });
-    // Nel percorso di produzione la directory padre la crea la factory
-    // (preparaDirectoryFile, I107-fix2): qui il test bypassa la factory e la
-    // crea esplicitamente — SENZA, il motore esplode con error 14 (CANTOPEN):
-    // la stessa lezione del report utente, riprodotta in miniatura.
-    mkdirSync(DIR_PROVA, { recursive: true });
-    const client = new PrismaClientReale({ datasourceUrl: `file:${join(DIR_PROVA, "prova.db")}` });
-    // Guardia onesta: accessori di modello presenti = client REALE (mai un
-    // «pass» silenzioso se qui arrivasse il mock di db.test.ts).
-    expect(typeof (client as unknown as { usagePoint?: unknown }).usagePoint).toBe("object");
-    try {
-      await preparaSchema(client);
-
-      // La tabella del report utente e una qualunque: create + count.
-      await client.downsampledPoint.create({
-        data: { hourStart: new Date(1_700_000_000_000), lastT: new Date(1_700_000_000_000), count: 1 },
-      });
-      await client.usagePoint.create({
-        data: { t: new Date(1_700_000_000_000), interval: 12.5, weekly: 40 },
-      });
-      expect(await client.downsampledPoint.count()).toBe(1);
-      expect(await client.usagePoint.count()).toBe(1);
-
-      // Idempotenza: la seconda passata non aggiunge né rompe nulla.
-      await preparaSchema(client);
-      expect(await client.downsampledPoint.count()).toBe(1);
-      expect(await client.usagePoint.count()).toBe(1);
-    } finally {
-      await client.$disconnect();
+  test("end-to-end motore reale (processo figlio, immune dai mock): file vuoto → 4 tabelle create, scritture ok, seconda passata no-op", () => {
+    // Lezione CI run #22/#23: il PrismaClient reale non può essere costruito
+    // in-process senza correre il rischio (dipendente da versione/ordine) di
+    // ricevere il mock process-wide di db.test.ts — la verifica gira nel
+    // processo figlio `verifica-i107fix3-motore-reale.ts` (nessun mock lì) e
+    // il padre asserisce exit 0 + verdetto marcato; in fallimento riporta
+    // l'output del figlio: dice SEMPRE perché.
+    const proc = Bun.spawnSync(
+      [process.execPath, "scripts/verifiche/verifica-i107fix3-motore-reale.ts"],
+      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
+    );
+    const out = `${proc.stdout.toString()}\n${proc.stderr.toString()}`.trim();
+    if (proc.exitCode !== 0) {
+      throw new Error(`verifica-i107fix3-motore-reale.ts fallita (exit ${proc.exitCode}):\n${out}`);
     }
-  }, 30_000);
+    expect(out).toContain("I107FIX3-MOTORE-REALE: PASS");
+  }, 120_000);
 
   test("esattezza anti-drift: il DDL incorporato coincide con `prisma migrate diff` dello schema", () => {
     const diff = Bun.spawnSync(

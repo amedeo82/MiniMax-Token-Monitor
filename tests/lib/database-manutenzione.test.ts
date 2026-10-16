@@ -16,30 +16,18 @@
  *    davvero le righe vecchie e rispetta il cap FIFO, statistiche coerenti,
  *    ciclo completo end-to-end.
  *
- * CLIENT REALE IMMUNE DAI MOCK (fix CI run #22): db.test.ts mocka "@prisma/client"
- * a livello di processo e l'ordine dei file in bun NON è garantito (lezione
- * Task 55: «rinominare i file per l'ordine è inutile» — in CI db.test.ts ha
- * caricato PRIMA di questo file che in locale girava prima: e2e caduto su un
- * client senza accessori di modello). Il PrismaClient REALE si importa via
- * PERCORSO ASSOLUTO: il mock è chiave sullo specificatore "@prisma/client" e
- * non copre il percorso del pacchetto — deterministico in ogni ordine. L'import
- * del TIPO resta statico (erasure: non tocca il mock a runtime).
+ * 4. MOTORE REALE IN PROCESSO FIGLIO (fix CI run #22/#23): db.test.ts mocka
+ *    "@prisma/client" a livello di processo e l'ordine dei file in bun NON è
+ *    garantito tra ambienti; bun «latest» in CI (non pinnata) chiave i mock
+ *    DIVERSAMENTE dal 1.3.14 locale — anche l'import via percorso assoluto
+ *    (che in 1.3.14 scampava il mock, verificato con probe dedicata) in CI l'ha
+ *    preso lo stesso. Soluzione deterministica: l'e2e gira in
+ *    `scripts/verifiche/verifica-i111-motore-reale.ts` (processo figlio SENZA
+ *    mock — precedente del repo: check anti-drift «in un processo figlio»);
+ *    il padre asserisce exit 0 + verdetto marcato e, in caso di fallimento,
+ *    riporta l'output del figlio: dice SEMPRE perché.
  */
-import { describe, test, expect, afterAll } from "bun:test";
-import { mkdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import type { PrismaClient } from "@prisma/client";
-
-/* PrismaClient REALE via percorso assoluto — vedi la nota in testa: immune dal
-   mock process-wide di "@prisma/client" (chiave sullo specificatore) in OGNI
-   ordine di caricamento dei file. */
-const clienteRealePacchetto = (await import(
-  join(process.cwd(), "node_modules/@prisma/client/default.js")
-)) as { PrismaClient: typeof PrismaClient };
-const PrismaClientReale = clienteRealePacchetto.PrismaClient;
-
+import { describe, test, expect } from "bun:test";
 import {
   eseguiManutenzioneDb,
   eseguiPuliziaRitenuta,
@@ -56,7 +44,6 @@ import {
   valutazioneQuotaStorage,
   verificaIntegritaDb,
 } from "@/lib/manutenzione-db";
-import { preparaSchema } from "@/lib/schema-persistenza";
 
 /* ------------------------------------------------------------------ */
 /* Client finto: registra gli SQL, risponde ai PRAGMA/COUNT            */
@@ -291,112 +278,27 @@ describe("I111 — semantica su client finto (dryRun, statement, vacuum)", () =>
 /* 3. Motore reale su file temporaneo (e2e)                            */
 /* ------------------------------------------------------------------ */
 
-const DIR_PROVA = join(tmpdir(), "i111-manutenzione-e2e");
-let clientReale: PrismaClient | undefined;
-
-afterAll(async () => {
-  await clientReale?.$disconnect();
-  rmSync(DIR_PROVA, { recursive: true, force: true });
-});
-
-describe("I111 — motore reale: pulizia, PRAGMA, quick_check, ciclo completo", () => {
-  test("end-to-end: ritenuta che elimina davvero, cap FIFO, statistiche, quota, vacuum", async () => {
-    rmSync(DIR_PROVA, { recursive: true, force: true });
-    mkdirSync(DIR_PROVA, { recursive: true });
-    const client = new PrismaClientReale({ datasourceUrl: `file:${join(DIR_PROVA, "prova.db")}` });
-    // Guardia onesta: il client DEVE avere gli accessori di modello (se qui
-    // arriva il mock di db.test.ts, il test fallisce DICENDO perché — mai
-    // un «pass» silenzioso su un client finto).
-    expect(typeof (client as unknown as { usagePoint?: unknown }).usagePoint).toBe("object");
-    clientReale = client;
-    await preparaSchema(client);
-
-    const ora = Date.now();
-    const giorni = (n: number) => new Date(ora - n * 24 * 3600_000);
-
-    // UsagePoint: 2 vecchie (oltre 90 giorni) + 3 recenti via client tipizzato
-    // (codifica INTEGER del motore) + 2 via SQL raw con ISO esplicito (codifica
-    // TEXT come la lib I42): la ritenuta DEVE contare le vecchie di ENTRAMBE le
-    // codifiche e risparmiare le recenti (probe-i111-datetime.ts).
-    for (const [i, t] of [200, 150, 1, 2, 3].entries()) {
-      await client.usagePoint.create({ data: { t: giorni(t), interval: i, weekly: i * 2 } });
-    }
-    const iso = (n: number) => new Date(ora - n * 24 * 3600_000).toISOString();
-    await client.$executeRaw`INSERT INTO "UsagePoint" ("t", "interval", "weekly", "source", "region", "createdAt") VALUES (${iso(100)}, 1, 2, 'import', 'eu', ${iso(100)})`;
-    await client.$executeRaw`INSERT INTO "UsagePoint" ("t", "interval", "weekly", "source", "region", "createdAt") VALUES (${iso(2)}, 3, 6, 'import', 'eu', ${iso(2)})`;
-    // DownsampledPoint vecchio + recente.
-    await client.downsampledPoint.create({ data: { hourStart: giorni(120), lastT: giorni(120), count: 1 } });
-    await client.downsampledPoint.create({ data: { hourStart: giorni(1), lastT: giorni(1), count: 2 } });
-    // ModelUsagePoint: 5 righe per il cap FIFO a 3.
-    for (const i of [0, 1, 2, 3, 4]) {
-      await client.modelUsagePoint.create({ data: { model: "general", win: "interval", t: giorni(i), percent: i } });
-    }
-    // Evento recente e evento vecchio.
-    await client.usageEventRecord.create({ data: { id: "i111-recente", t: giorni(1), kind: "info", message: "recente" } });
-    await client.usageEventRecord.create({ data: { id: "i111-vecchio", t: giorni(200), kind: "info", message: "vecchio" } });
-
-    /* DryRun prima: conta ma NON elimina (il database resta com'era). */
-    const stima = await eseguiPuliziaRitenuta(client, RETENZIONE_DEFAULT, { dryRun: true });
-    expect(stima.dryRun).toBe(true);
-    expect(stima.eliminati.punti).toBe(3); // 2 INTEGER (200/150 gg) + 1 TEXT (100 gg)
-    expect(stima.eliminati.bucket).toBe(1); // il bucket a 120 giorni
-    expect(stima.eliminati.eventi).toBe(1); // l'evento a 200 giorni
-    expect(stima.eliminati.modelli).toBe(0); // tutte a ≤ 4 giorni, cap 10.000
-    expect(await client.usagePoint.count()).toBe(7); // intatte (5 tipizzate + 2 raw)
-
-    /* Pulizia reale + cap FIFO modelli a 3. */
-    const esito = await eseguiPuliziaRitenuta(
-      client,
-      { ...RETENZIONE_DEFAULT, maxModelli: 3 },
-      { ora },
+describe("I111 — motore reale (processo figlio, immune dai mock): pulizia, PRAGMA, quick_check, ciclo completo", () => {
+  test("end-to-end: ritenuta che elimina davvero (ENTRAMBE le codifiche), cap FIFO, statistiche, quota, vacuum", () => {
+    /* IL MOTORE REALE GIRA IN UN PROCESSO FIGLIO — lezione CI run #22/#23:
+       db.test.ts mocka "@prisma/client" a livello di processo e l'ordine dei
+       file in bun NON è garantito tra ambienti; bun «latest» in CI chiave i
+       mock DIVERSAMENTE dal 1.3.14 locale (il percorso assoluto, che in 1.3.14
+       scampava il mock, in CI l'ha preso lo stesso). Il processo figlio non
+       ha mock: "@prisma/client" è sempre il reale (precedente del repo: il
+       check anti-drift «in un processo figlio, immune dai mock»). Il padre
+       asserisce exit code 0 e il verdetto marcato; in caso di fallimento
+       RIPORTA l'output del figlio: il test dice SEMPRE perché. */
+    const proc = Bun.spawnSync(
+      [process.execPath, "scripts/verifiche/verifica-i111-motore-reale.ts"],
+      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
     );
-    expect(esito.eseguita).toBe(true);
-    expect(esito.eliminati.punti).toBe(3); // 2 vecchie INTEGER + 1 vecchia TEXT
-    expect(esito.eliminati.bucket).toBe(1);
-    expect(esito.eliminati.eventi).toBe(1);
-    expect(esito.eliminati.modelli).toBe(2); // 5 righe → cap 3
-    expect(await client.usagePoint.count()).toBe(4); // 3 recenti INTEGER + 1 recente TEXT
-    expect(await client.downsampledPoint.count()).toBe(1);
-    expect(await client.usageEventRecord.count()).toBe(1);
-    const modelliRestanti = await client.modelUsagePoint.findMany({ orderBy: { t: "desc" } });
-    expect(modelliRestanti).toHaveLength(3);
-    expect(modelliRestanti.map((r) => r.t.getTime())).toEqual(
-      [giorni(0), giorni(1), giorni(2)].map((d) => d.getTime()),
-    ); // le PIÙ RECENTI
-
-    /* Misure reali: PRAGMA, statistiche, integrità, quota. */
-    const misura = await misuraDimensioneDb(client);
-    expect(misura.bytes).toBeGreaterThan(0);
-    expect(misura.dimPagina).toBeGreaterThan(0);
-    expect(misura.pagine).toBeGreaterThan(0);
-
-    const statistiche = await statisticaTabelle(client);
-    const perNome = new Map(statistiche.tabelle.map((t) => [t.tabella, t.righe]));
-    expect(perNome.get("UsagePoint")).toBe(4);
-    expect(perNome.get("DownsampledPoint")).toBe(1);
-    expect(perNome.get("UsageEventRecord")).toBe(1);
-    expect(perNome.get("ModelUsagePoint")).toBe(3);
-    expect(statistiche.totaleRighe).toBe(9);
-
-    const integrita = await verificaIntegritaDb(client, misura.bytes);
-    expect(integrita.eseguito).toBe(true);
-    expect(integrita.ok).toBe(true);
-    expect(integrita.esito).toBe("ok");
-
-    const ciclo = await eseguiManutenzioneDb(client, { pulizia: true, vacuum: "auto" });
-    expect(ciclo.quota.limite).toBe(LIMITI_TURSO_FREE.storageBytes);
-    expect(ciclo.quota.livello).toBe("ok"); // un file di prova è microscopico
-    expect(ciclo.integrita.ok).toBe(true);
-    expect(ciclo.statistiche.totaleRighe).toBe(9);
-    expect(ciclo.proiezione.stimateMese).toBeGreaterThanOrEqual(0);
-    expect(ciclo.vacuum).toBeNull(); // la seconda pulizia non ha eliminato nulla
-
-    /* Seconda pulizia: idempotente — zero righe oltre ritenuta e cap. */
-    const ritorno = await eseguiPuliziaRitenuta(client, { ...RETENZIONE_DEFAULT, maxModelli: 3 });
-    expect(ritorno.totale).toBe(0);
-
-    /* VACUUM sul motore nativo: eseguito e il file resta usabile. */
-    expect((await eseguiVacuum(client)).eseguito).toBe(true);
-    expect(await client.usagePoint.count()).toBe(4);
-  }, 30_000);
+    const out = `${proc.stdout.toString()}\n${proc.stderr.toString()}`.trim();
+    if (proc.exitCode !== 0) {
+      throw new Error(
+        `verifica-i111-motore-reale.ts fallita (exit ${proc.exitCode}):\n${out}`,
+      );
+    }
+    expect(out).toContain("I111-MOTORE-REALE: PASS");
+  }, 120_000);
 });
