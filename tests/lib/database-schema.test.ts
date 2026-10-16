@@ -1,12 +1,13 @@
 /**
  * I107-fix3 — Test dello schema INCORPORATO (src/lib/schema-persistenza.ts).
  *
- * ATTENZIONE AL NOME DEL FILE (lezione mock bun, già I107/fix2): bun applica
- * il PRIMO mock registrato per specificatore e db.test.ts mocka "@prisma/client"
- * a livello di processo — questo file si chiama database-schema.test.ts
- * (database… < db…) così in ordine alfabetico gira PRIMA: qui il PrismaClient
- * importato è quello REALE e il motore nativo gira davvero sul file di prova.
- * NON rinominare dopo "db.test.ts" in ordine lessicografico.
+ * ATTENZIONE AL CLIENT REALE (fix CI run #22 — aggiorna la lezione dell'ordine
+ * qui sotto): l'ordine dei file in bun NON è garantito né alfabetico né stabile
+ * tra ambienti (Task 55; in CI db.test.ts ha caricato PRIMA di un file
+ * «database-…» che in locale girava prima). Il PrismaClient REALE si importa
+ * via PERCORSO ASSOLUTO di node_modules: il mock process-wide di db.test.ts è
+ * chiave sullo specificatore "@prisma/client" e NON copre il percorso del
+ * pacchetto — deterministico in ogni ordine, senza rinomine fragili.
  *
  * Tre livelli di verifica:
  * 1. END-TO-END con motore reale: preparaSchema su un file SQLite vuoto → le
@@ -34,7 +35,15 @@ import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
+
+/* PrismaClient REALE via percorso assoluto — vedi la nota in testa: immune dal
+   mock process-wide di "@prisma/client" (chiave sullo specificatore). */
+const PrismaClientReale = (
+  (await import(join(process.cwd(), "node_modules/@prisma/client/default.js"))) as {
+    PrismaClient: typeof PrismaClient;
+  }
+).PrismaClient;
 
 import { preparaSchema, SCHEMA_PERSISTENZA } from "@/lib/schema-persistenza";
 
@@ -52,7 +61,10 @@ describe("I107-fix3 — schema incorporato (bootstrap DDL)", () => {
     // crea esplicitamente — SENZA, il motore esplode con error 14 (CANTOPEN):
     // la stessa lezione del report utente, riprodotta in miniatura.
     mkdirSync(DIR_PROVA, { recursive: true });
-    const client = new PrismaClient({ datasourceUrl: `file:${join(DIR_PROVA, "prova.db")}` });
+    const client = new PrismaClientReale({ datasourceUrl: `file:${join(DIR_PROVA, "prova.db")}` });
+    // Guardia onesta: accessori di modello presenti = client REALE (mai un
+    // «pass» silenzioso se qui arrivasse il mock di db.test.ts).
+    expect(typeof (client as unknown as { usagePoint?: unknown }).usagePoint).toBe("object");
     try {
       await preparaSchema(client);
 

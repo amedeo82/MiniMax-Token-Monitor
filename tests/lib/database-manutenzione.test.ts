@@ -12,17 +12,33 @@
  *    politica, VACUUM riuscito/rifiutato (errore ONESTO nel rapporto, mai
  *    mascherato), orchestratore con vacuum "auto" solo dopo cancellazioni;
  * 3. MOTORE REALE su file temporaneo (pattern I107-fix3: client nativo +
- *    preparaSchema — PRIMA di db.test.ts che mocka @prisma/client, NON
- *    rinominare dopo «db.» in ordine lessicografico): PRAGMA misurabili,
- *    quick_check ok, pulizia che elimina davvero le righe vecchie e rispetta
- *    il cap FIFO, statistiche coerenti, ciclo completo end-to-end.
+ *    preparaSchema): PRAGMA misurabili, quick_check ok, pulizia che elimina
+ *    davvero le righe vecchie e rispetta il cap FIFO, statistiche coerenti,
+ *    ciclo completo end-to-end.
+ *
+ * CLIENT REALE IMMUNE DAI MOCK (fix CI run #22): db.test.ts mocka "@prisma/client"
+ * a livello di processo e l'ordine dei file in bun NON è garantito (lezione
+ * Task 55: «rinominare i file per l'ordine è inutile» — in CI db.test.ts ha
+ * caricato PRIMA di questo file che in locale girava prima: e2e caduto su un
+ * client senza accessori di modello). Il PrismaClient REALE si importa via
+ * PERCORSO ASSOLUTO: il mock è chiave sullo specificatore "@prisma/client" e
+ * non copre il percorso del pacchetto — deterministico in ogni ordine. L'import
+ * del TIPO resta statico (erasure: non tocca il mock a runtime).
  */
 import { describe, test, expect, afterAll } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
+
+/* PrismaClient REALE via percorso assoluto — vedi la nota in testa: immune dal
+   mock process-wide di "@prisma/client" (chiave sullo specificatore) in OGNI
+   ordine di caricamento dei file. */
+const clienteRealePacchetto = (await import(
+  join(process.cwd(), "node_modules/@prisma/client/default.js")
+)) as { PrismaClient: typeof PrismaClient };
+const PrismaClientReale = clienteRealePacchetto.PrismaClient;
 
 import {
   eseguiManutenzioneDb,
@@ -287,7 +303,11 @@ describe("I111 — motore reale: pulizia, PRAGMA, quick_check, ciclo completo", 
   test("end-to-end: ritenuta che elimina davvero, cap FIFO, statistiche, quota, vacuum", async () => {
     rmSync(DIR_PROVA, { recursive: true, force: true });
     mkdirSync(DIR_PROVA, { recursive: true });
-    const client = new PrismaClient({ datasourceUrl: `file:${join(DIR_PROVA, "prova.db")}` });
+    const client = new PrismaClientReale({ datasourceUrl: `file:${join(DIR_PROVA, "prova.db")}` });
+    // Guardia onesta: il client DEVE avere gli accessori di modello (se qui
+    // arriva il mock di db.test.ts, il test fallisce DICENDO perché — mai
+    // un «pass» silenzioso su un client finto).
+    expect(typeof (client as unknown as { usagePoint?: unknown }).usagePoint).toBe("object");
     clientReale = client;
     await preparaSchema(client);
 
