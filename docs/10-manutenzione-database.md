@@ -24,6 +24,10 @@ La manutenzione è una **rete di sicurezza che gira anche quando il traffico ces
 on-write delle route (I16/I27/I68/I82) puliscono solo quando arrivano nuove scritture; il cron
 notturno (P1) pulisce e verifica comunque, ogni notte.
 
+Il bersaglio NON è solo Turso: le procedure sono agnostiche dal motore per costruzione e girano
+IDENTICHE anche sul database locale (file SQLite) — stessa lib, stesse route, stesse query;
+§5 P7 documenta cosa è identico, cosa differisce e come commutare.
+
 ## 2. Limiti del piano gratuito Turso (fonti datate 16/10/2026)
 
 Fonti: `turso.tech/pricing`, blog «Turso Cloud Debuts the New Developer Plan» (19/3/2025),
@@ -145,6 +149,41 @@ upsert già evita i duplicati). Escalation: attenzione → verificare il campion
 ritenuta; critica → pulizia immediata (POST «manutenzione») e lettura dei contatori reali nel
 dashboard Turso prima di ogni altra azione.
 
+### P7 — Database locale (le stesse procedure sul file SQLite)
+
+Il bersaglio della manutenzione è il client costruito dalla factory DALL'AMBIENTE (§3): adapter
+libsql verso Turso con `TURSO_DATABASE_URL` presente, PrismaClient NATIVO sul file SQLite
+(`db/custom.db`; su Vercel `/tmp/db/custom.db`, I107-fix2) quando assente. La lib è unità pura
+che riceve il client come parametro: le stesse route (`GET/POST /api/manutenzione`, cron) e le
+stesse funzioni operano su ENTRAMBI i motori, e il rapporto GET dichiara sempre il bersaglio col
+campo `modalita` (`"locale"` | `"turso"`).
+
+Identico sui due motori: misura dello storage via PRAGMA, statistiche per tabella, integrità
+`quick_check`, pulizia di ritenuta + cap FIFO (i confronti duali di §4 valgono su entrambi —
+stesso dialetto SQLite) e valutazione della quota. Differenze oneste:
+
+1. **VACUUM** — sul motore nativo FUNZIONA ed è verificato dalla suite e2e su file reale (§8):
+   il POST «vacuum» misura prima/dopo e restituisce DAVVERO i byte al filesystem; su Turso è
+   dichiarato disabilitato dalla piattaforma (§2) — lì la crescita si governa con la ritenuta,
+   che riusa le pagine liberate.
+2. **Soglie di quota** — i default sono quelli del free tier Turso: sul locale restano un tetto
+   con senso se lo imposti tu con `MANUTENZIONE_QUOTA_STORAGE_BYTES` (§6, clamp 1 MiB–1 TiB —
+   es. 500 MB per proteggere il disco). La proiezione read/write mensile (P6) è un concetto di
+   piattaforma Turso: sul locale è puramente informativa.
+3. **Vercel senza Turso** — il file locale vive in `/tmp` ed è EFFIMERO per istanza
+   (I107-fix2): si auto-limita al cold start, quindi lì la manutenzione conta meno; sul locale
+   persistente (macchina di sviluppo, self-host) conta pienamente ed è il caso anti-corruzione.
+
+Come girare la manutenzione SUL FILE LOCALE: dal I110 il `.env` del progetto contiene le
+`TURSO_*`, quindi `bun dev` opera già su Turso — per bersagliare il file locale commentare le
+due righe `TURSO_*` in `.env`, riavviare `bun dev`, verificare che il rapporto riporti
+`"modalita": "locale"` e ripristinare le righe a fine operazione (passi nel runbook §7).
+Alternativa senza toccare `.env`: gli script e2e a motore reale
+(`scripts/verifiche/verifica-i111-motore-reale.ts`) eseguono il ciclo completo di manutenzione
+su un file temporaneo locale. Backup del locale: il file È l'unità di backup — copia di
+`db/custom.db` a server fermo (nessun processo in scrittura); per il cloud restano il
+point-in-time restore e l'export documentati in §7.
+
 ## 6. Configurazione (env, default e clamp)
 
 Tutte le politiche si leggono dall'ambiente con default sicuri e clamp: un valore insensato non
@@ -188,6 +227,15 @@ curl -s -X POST https://<deployment>/api/manutenzione \
   -d '{"azione":"vacuum"}'
 ```
 
+Rapporto sul database LOCALE (file SQLite) invece che Turso — strada P7 (§5):
+
+```bash
+# 1) in .env commenta le due righe TURSO_DATABASE_URL/TURSO_AUTH_TOKEN e riavvia `bun dev`
+# 2) il rapporto mostra "modalita": "locale" e opera sul file locale (db/custom.db):
+curl -s http://localhost:3000/api/manutenzione | python3 -m json.tool
+# 3) a fine operazione ripristina le righe TURSO_* in .env e riavvia
+```
+
 Checklist:
 
 - **Ogni giorno (automatico)**: il cron P1 gira alle 02:30 UTC; in Vercel → Deployments →
@@ -195,6 +243,9 @@ Checklist:
   ruotato solo da una parte).
 - **Ogni settimana**: leggere il rapporto GET — `quota.livello` deve stare «ok»,
   `integrita.esito` = `ok`, `proiezione.stimateMese` sotto il 10% del limite mensile.
+- **Su database locale (P7)**: `quota.livello` si valuta col limite impostato
+  (`MANUTENZIONE_QUOTA_STORAGE_BYTES`, §6); il VACUUM sul motore nativo recupera davvero i byte
+  (P4) — dopo cancellazioni consistenti vale fare il POST «vacuum» sul locale.
 - **Se livello = attenzione**: verificare il campionamento (P6), valutare di stringere la
   ritenuta (§6), post «pulizia».
 - **Se livello = critica**: POST «manutenzione» immediato; leggere i contatori REALI nel

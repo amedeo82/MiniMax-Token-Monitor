@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
 [![Test 513 pass](https://img.shields.io/badge/test-513_pass-31C48D)](tests)
-[![Audit 539 PASS](https://img.shields.io/badge/audit-540_PASS-31C48D)](scripts/verifiche)
+[![Audit 543 PASS](https://img.shields.io/badge/audit-543_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -125,7 +125,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 **Qualità** (I50/I55)
 - **Suite test automatica**: 513 test / 1699 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **manutenzione database con e2e su entrambe le codifiche DateTime (I111)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 540 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 543 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
@@ -271,7 +271,13 @@ cancellazioni); rapporto on-demand via `GET /api/manutenzione` (read-only, senza
 azioni manuali via `POST` protetto I95 (`pulizia` / `vacuum` / `manutenzione`); disattivare
 solo la cancellazione con `MANUTENZIONE_AUTO_PULIZIA="0"`. Con i cap in vigore l'archivio resta
 ~25.000 righe (pochi MB, molto sotto i 5 GB del free tier) e il cron lo verifica ogni notte
-anche a traffico zero.
+anche a traffico zero. Le stesse procedure valgono **anche per il database locale**
+([`docs/10`](docs/10-manutenzione-database.md) §5 P7): la lib riceve il client dalla factory,
+quindi senza `TURSO_DATABASE_URL` le stesse route operano sul file SQLite (`db/custom.db`) e il
+rapporto dichiara `modalita: "locale"`; sul motore nativo il VACUUM funziona e recupera i byte,
+e le soglie di quota sono adattabili al disco locale con `MANUTENZIONE_QUOTA_STORAGE_BYTES`
+(commutazione: commenta le `TURSO_*` in `.env`, riavvia `bun dev`, verifica il rapporto,
+ripristina).
 
 Verifica del ramo adattato (scrivi → leggi → dedup → SQL raw, su db temporaneo):
 `bun scripts/verifiche/verifica-i106.mjs` (esito in `scripts/verifiche/esiti/i106-persistenza-latest.md`;

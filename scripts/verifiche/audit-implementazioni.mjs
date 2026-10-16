@@ -793,6 +793,10 @@ const CHECKS = [
   check.simbolo("I111", "tests/lib/database-manutenzione.test.ts", "motore reale", "suite lib: funzioni pure + client finto (dryRun zero DELETE, VACUUM onesto, orchestratore) + e2e su file con ENTRAMBE le codifiche DateTime, cap FIFO e idempotenza"),
   check.file("I111", "tests/lib/api-manutenzione.test.ts", "contratti route: GET read-only dimostrato (zero $executeRaw), zod 400, guard 401, tre azioni, cron 403/401/200 con kill-switch"),
   check.file("I111", "scripts/verifiche/probe-i111-datetime.ts", "probe empirica delle due codifiche DateTime nel database (motore Prisma INTEGER vs SQL raw TEXT) e del confronto duale corretto"),
+  /* --- I112 — manutenzione del database locale documentata (docs-only): la copertura duale entra nel presidio --- */
+  check.simbolo("I112", "docs/10-manutenzione-database.md", "P7 — Database locale", "procedura P7: le stesse procedure sul file SQLite locale — cosa è identico (PRAGMA, statistiche, quick_check, ritenuta+cap, quota), differenze oneste (VACUUM nativo funziona e recupera byte; soglie quota adattabili) e commutazione via .env"),
+  check.simbolo("I112", "docs/10-manutenzione-database.md", "MANUTENZIONE_QUOTA_STORAGE_BYTES", "soglie di quota adattabili al disco locale: il tetto del free tier Turso diventa un limite scelto dall'utente sul file locale (clamp §6)"),
+  check.simbolo("I112", "README.md", "anche per il database locale", "README §Persistenza dichiara la copertura locale delle procedure di manutenzione (modalita locale, VACUUM nativo, commutazione)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

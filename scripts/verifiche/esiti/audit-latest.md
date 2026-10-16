@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T19:59:38.965Z
+# Audit implementazioni — 2026-10-16T20:25:36.303Z
 
-- Verifiche totali: **540** · PASS: **540** · FAIL: **0**
+- Verifiche totali: **543** · PASS: **543** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -544,6 +544,9 @@
 | I111 | suite lib: funzioni pure + client finto (dryRun zero DELETE, VACUUM onesto, orchestratore) + e2e su file con ENTRAMBE le codifiche DateTime, cap FIFO e idempotenza (tests/lib/database-manutenzione.test.ts) | simbolo | PASS | — |
 | I111 | contratti route: GET read-only dimostrato (zero $executeRaw), zod 400, guard 401, tre azioni, cron 403/401/200 con kill-switch | file | PASS | — |
 | I111 | probe empirica delle due codifiche DateTime nel database (motore Prisma INTEGER vs SQL raw TEXT) e del confronto duale corretto | file | PASS | — |
+| I112 | procedura P7: le stesse procedure sul file SQLite locale — cosa è identico (PRAGMA, statistiche, quick_check, ritenuta+cap, quota), differenze oneste (VACUUM nativo funziona e recupera byte; soglie quota adattabili) e commutazione via .env (docs/10-manutenzione-database.md) | simbolo | PASS | — |
+| I112 | soglie di quota adattabili al disco locale: il tetto del free tier Turso diventa un limite scelto dall'utente sul file locale (clamp §6) (docs/10-manutenzione-database.md) | simbolo | PASS | — |
+| I112 | README §Persistenza dichiara la copertura locale delle procedure di manutenzione (modalita locale, VACUUM nativo, commutazione) (README.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (540 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (543 pass, 0 fail, 0 scoperte)
