@@ -1,4 +1,4 @@
-# Audit implementazioni — 2026-10-15T16:19:32.971Z
+# Audit implementazioni — 2026-10-16T07:21:00.854Z
 
 - Verifiche totali: **515** · PASS: **515** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno

@@ -14,7 +14,9 @@
 >
 > Stato: **strada primaria confermata (D1), I107 IMPLEMENTATO il 15/10/2026 come
 > primo item dell'Ondata 4 (D2)** — I108 resta porta pronta in backlog (D3),
-> l'osservatorio Turso Sync/MCP è confermato (D4). Registro completo in §8.
+> l'osservatorio Turso Sync/MCP è confermato (D4). **16/10/2026: Turso Sync/embedded
+> replicas promosso a PROPOSTA DEDICATA I109 con verifica empirica locale (§10,
+> 7/7 PASS) — decisione D5 APERTA in §8.** Registro completo in §8.
 
 ---
 
@@ -305,17 +307,20 @@ Concretamente, in ordine di priorità:
    `@prisma/adapter-pg` o `@prisma/adapter-neon`, variante `db-push` per PG, verifica
    dedicata + check audit. DA NON IMPLEMENTARE finché non arriva il bisogno concreto
    dell'ecosistema PG: il suo valore è la PORTA PRONTA, non l'apertura immediata.
-4. **Backlog osservatorio:** Turso Sync/embedded replicas (ibrido, §6.3), PGlite
-   (se l'adapter Prisma diventasse ufficiale), bridge MCP/Composio per export verso
-   sistemi esterni (fuori dal percorso dati, valutato nella conversazione del 15/10 e
-   NON raccomandato come persistenza primaria per latenza, transazioni, dipendenza da
-   terzi e verificabilità CI).
+4. **Backlog osservatorio:** Turso Sync/embedded replicas (ibrido, §6.3 — **promosso
+   il 16/10/2026 a proposta dedicata I109 con verifica empirica locale: §10, decisione
+   D5 in §8**), PGlite (se l'adapter Prisma diventasse ufficiale), bridge MCP/Composio
+   per export verso sistemi esterni (fuori dal percorso dati, valutato nella
+   conversazione del 15/10 e NON raccomandato come persistenza primaria per latenza,
+   transazioni, dipendenza da terzi e verificabilità CI).
 
 ## 8. Registro decisioni (clarify — RACCOLTE il 15/10/2026)
 
 Come da convenzione `docs/08` §7: le proposte ricevono la decisione PRIMA
 dell'implementazione. Decisioni espresse dall'utente il **15/10/2026**:
-**D1–D4 chiuse**, l'Ondata 4 parte da I107.
+**D1–D4 chiuse**, l'Ondata 4 parte da I107. **16/10/2026: D5 APERTA** —
+Turso Sync/embedded replicas promosso a proposta dedicata I109 (§10), in attesa
+di decisione utente.
 
 | # | Domanda | Opzioni | Decisione |
 |---|---|---|---|
@@ -323,6 +328,7 @@ dell'implementazione. Decisioni espresse dall'utente il **15/10/2026**:
 | D2 | I107 pannello «Persistenza» in UI: si implementa come primo item dell'Ondata 4? | (a) sì, Ondata 4 · (b) sì, ma più avanti · (c) no | **(a) CONFERMATA** — I107 è il primo item dell'Ondata 4 (**implementato il 15/10/2026**, docs/04 §3) |
 | D3 | I108 provider Postgres (Neon o Supabase): si implementa ora o resta porta pronta documentata? | (a) ora, Neon · (b) ora, Supabase · (c) backlog | **(c) BACKLOG** — resta porta pronta documentata (§7.3) |
 | D4 | Turso Sync/embedded replicas e bridge MCP/Composio: entrano nel backlog osservatorio (§7.4) o si scartano? | (a) backlog · (b) scartati | **(a) BACKLOG OSSERVATORIO** — confermato (§7.4) |
+| D5 | **I109** — Turso Sync/embedded replicas (ibrido locale↔cloud, verifica empirica §10): si implementa ora o resta in backlog? | (a) implementa ora (design §10.4) · (b) resta in backlog osservatorio · (c) scartare | **⏳ APERTA (16/10/2026)** — in attesa di decisione utente |
 
 ## 9. Fonti della ricerca web (consultate il 15/10/2026)
 
@@ -364,6 +370,189 @@ dell'implementazione. Decisioni espresse dall'utente il **15/10/2026**:
   <https://planetscale.com/pricing> — <https://www.srvrlss.io/planetscale-review>
   (18/6/2026) — <https://www.dbpro.app/blog> (20/2/2026)
 
+**Fonti aggiunte per la proposta I109 (consultate il 16/10/2026):**
+
+- «Turso Sync: a much, much, much better way to sync» — benchmark CDC, 312× sync
+  più veloci, 18× meno traffico, raccomandazione di migrare da libSQL `sync()` (24/4/2026):
+  <https://turso.tech/blog/sync-benchmark>
+- «Introducing Databases Anywhere with Turso Sync» (8/10/2025):
+  <https://turso.tech/blog/introducing-databases-anywhere-with-turso-sync> —
+  guida d'uso Turso Sync: <https://docs.turso.tech/sync/usage>
+- `@tursodatabase/sync-browser` (npm, ALPHA «only use for development», 4/9/2025):
+  <https://www.npmjs.com/package/@tursodatabase/sync-browser>
+- React Native Bindings for Turso — sync cloud via URL+token (29/1/2026):
+  <https://turso.tech/blog/react-native-bindings-for-turso>
+- «Turso Cloud Debuts the New Developer Plan» — modifiche free tier dal 31/3/2025,
+  embedded replicas banda sync 3 GB→10 GB/mese (19/3/2025):
+  <https://turso.tech/blog/turso-cloud-debuts-the-new-developer-plan>
+- `libsql` npm (client nativo: «Embedded, in-app replica that syncs with a remote
+  libSQL database», Bun/Deno/Node; 25/3/2026): <https://www.npmjs.com/package/libsql>
+- Embedded Replicas (docs ufficiali: letture locali, scritture al primario, `sync()`):
+  <https://docs.turso.tech/features/embedded-replicas/introduction> —
+  riferimento TS `@libsql/client`: <https://docs.turso.tech/sdk/ts/reference> —
+  client repo: <https://github.com/tursodatabase/libsql-client-ts>
+- Prisma × Turso (adapter e embedded replicas, ORM v6):
+  <https://www.prisma.io/docs/orm/v6/overview/databases/turso> —
+  <https://docs.turso.tech/sdk/ts/orm/prisma>
+
+## 10. Proposta I109 — Turso Sync / embedded replicas: l'ibrido locale↔cloud (16/10/2026)
+
+Il §6.3 rinviava Turso Sync a «una proposta dedicata con verifica empirica, quando
+il bisogno reale si presenterà». Questa è la proposta: ricerca web datata (§9, fonti
+16/10/2026) + **verifica empirica locale senza credenziali** sullo stack già installato.
+Numerata **I109** per convenzione (I108 è preso); la decisione è la **D5** (§8) e
+l'implementazione parte SOLO dopo il via dell'utente.
+
+### 10.1 Cosa risolverebbe per il progetto
+
+Il requisito utente originario («se il progetto verrà utilizzato in locale avremo un
+database locale, se nel cloud un database cloud») è già soddisfatto D1/I106 nei due
+scenari separati. L'embedded replica risponde allo scenario RESTANTE: **entrambi
+contemporaneamente** — un file SQLite locale che legge in microsecondi e si sincronizza
+col primario Turso. Per il monitor: sviluppo locale SUI DATI REALI del cloud (non più
+sul solo storico locale), e self-host sempre acceso (VPS/desktop) con latenza di
+lettura da file e durabilità del cloud. Profilo dati compatibile per costruzione
+(§2: ~1–2 MB, ~200k scritture/mese ≈ 2% del free tier).
+
+### 10.2 Stato dell'arte al 16/10/2026: DUE API in campo, una sola attuabile
+
+1. **Embedded Replicas (libSQL `sync()`)** — la via matura: letture locali dal file,
+   scritture inoltrate al primario cloud (write-through, docs.turso.tech). Il client
+   TS `@libsql/client` (GIÀ nel progetto via I106) la supporta per costruzione, e il
+   client nativo `libsql` 0.3.19 (dipendenza transitiva di @libsql/client 0.8.1,
+   verificata in node_modules) porta l'implementazione reale. **Prisma è compatibile
+   senza modifiche**: l'adapter ufficiale `@prisma/adapter-libsql` 6.19.3 ha
+   `constructor(config: Config)` con `Config` = il Config COMPLETO di `@libsql/client`
+   (typings verificati in node_modules — `syncUrl`/`syncInterval` passano dritti).
+2. **Turso Sync (nuova API CDC)** — tecnica superiore (blog 24/4/2026: sincronizza
+   cambi logici e non pagine fisiche, fino a 312× più veloce e 18× meno traffico) e
+   Turso RACCOMANDA la migrazione da libSQL `sync()`. MA: i client JS della nuova
+   generazione sono giovani (`@tursodatabase/sync-browser`, 4/9/2025, ALPHA «only use
+   for development») e **Prisma non ha adapter per il runtime Turso Database**
+   (riscrittura Rust di SQLite): usarla oggi significherebbe uscire dallo stack Prisma,
+   violando il criterio C3 (§2) che ha guidato tutta l'analisi. **Verdetto di questa
+   scheda: embedded replicas via `@libsql/client` è l'unica via attuabile ORA; Turso
+   Sync (CDC) resta il riferimento futuro da rivalutare quando Prisma offrirà un
+   adapter per il runtime Turso.**
+
+Nota di tier: edge replication è stata RIMOSSA dal free tier (gen 2025, §4.3) ma gli
+embedded replicas NO — il Developer Plan (19/3/2025) ne ha anzi alzato la banda sync
+da 3 a 10 GB/mese. La feature è viva e supportata; resta storicamente «in movimento»
+(R2 in §10.5).
+
+### 10.3 Verifica empirica locale (16/10/2026, zero credenziali) — 7/7 PASS
+
+Script: `scripts/verifiche/verifica-i109-turso-sync.mjs` (run: `node
+scripts/verifiche/verifica-i109-turso-sync.mjs`), stack misurato: `@libsql/client`
+0.8.1, `@libsql/core` 0.8.1, nativo `libsql` 0.3.19, `@prisma/adapter-libsql` 6.19.3,
+Prisma 6.19.3. Risultati:
+
+| # | Prova | Esito |
+|---|---|---|
+| 1 | Ramo `file:` locale intatto (baseline I106): `SELECT 1` su file temporaneo | PASS |
+| 2 | `client.sync` esposto dal client creato | PASS (funzione) |
+| 3 | Typings `@libsql/core`: `syncUrl?: string`, `syncInterval?: number`, `sync(): Promise<void>` | PASS |
+| 4 | `sync()` su file aperto SENZA `syncUrl` | errore DETERMINISTICO: «Sync is not supported in databases opened in File mode» |
+| 5 | `createClient` CON `syncUrl` verso primario irraggiungibile (dominio fittizio, token finto) | creazione RIUSCITA: il primario è contattato PIGRAMENTE, l'errore rinvia |
+| 6 | `sync()` verso primario irraggiungibile (delimitato a 20 s) | fallimento NON uniforme (vedi sotto) |
+| 7 | Query su replica MAI sincronizzata | fallimento: la prima sync è OBBLIGATORIA prima di qualunque lettura |
+
+Le tre lezioni di design (la sostanza della verifica):
+
+- **L4.1 — la replica si configura SOLO ALLA CREAZIONE.** L'esito 4 (guard
+  deterministico «Sync is not supported in databases opened in File mode») dice che
+  non si può «aggiungere» la sync a un client già aperto: il ramo I109 nasce come
+  configurazione DISTINTA della factory (createClient con `url: file:<replica>` +
+  `syncUrl: <primario>`), non come re-config del ramo Turso diretto I106.
+- **L4.2 — i fallimenti verso il primario non sono deterministici.** Due run della
+  STESSA probe: nel primo `sync()` è rimasta APPESA oltre 90 s (retry lunghi del
+  driver, il timeout del tool di sessione ha ucciso il processo); nel secondo è
+  fallita in fretta con errori JS interni confusi («Cannot read properties of
+  undefined (reading 'sync')»). Conseguenze obbligatorie per la factory: (a) la
+  prima sync va delimitata da un TIMEOUT esplicito, (b) nessun errore nudo del driver
+  in UI (mapping alla maniera I107-fix2), (c) degrado onesto a «nessuna» con causa
+  dichiarata. Un attimo di attenzione onesto: il serverless Vercel ha un budget
+  temporale per invocazione — un hang di rete non delimitato è esattamente il tipo di
+  guasto che la fabbrica non può permettersi.
+- **L4.3 — prima sync = parte del percorso dati.** L'esito 7 dice che la replica
+  appena creata NON risponde alle query finché la prima sync non è riuscita: il gate
+  «prima sync con timeout» non è un ottimizzo, è prerequisito funzionale (stessa
+  filosofia del gate `preparaSchema` di I107-fix3).
+
+### 10.4 Design dell'integrazione (da attuare SOLO dopo D5-a)
+
+Criterio §1: si insedia nella factory esistente come ramo guidato dall'ambiente.
+
+- **Env**: `TURSO_SYNC_URL` (primario `libsql://…` — nome DISTINTO da
+  `TURSO_DATABASE_URL` per non sovrapporre le due semantiche) + `TURSO_AUTH_TOKEN`
+  (riusato così com'è) + `TURSO_REPLICA_PATH` opzionale (default: `db/replica.db` in
+  locale, `tmpdir()/db/replica.db` su serverless come da regola VERCEL di I107-fix2).
+- **Factory** (`db-factory.ts`): terzo ramo «`TURSO_SYNC_URL` presente» →
+  `new PrismaLibSQL({ url: file:<replica>, authToken, syncUrl: TURSO_SYNC_URL })`
+  (passthrough Config verificato in §10.2) → `new PrismaClient({ adapter })`;
+  `preparaDirectoryFile` copre già il file della replica; `preparaSchema` si applica
+  IDENTICO (stesso dialetto, DDL idempotente I107-fix3 — anche una replica appena
+  creata ha le tabelle al primo avvio); gate di prima sync con timeout (L4.2/L4.3),
+  guasti su stderr e degrado a modalità «nessuna» con causa, MAI mascherati.
+- **Modalità** (`modalita-persistenza.ts`): quarta modalità «replica» (regola
+  ambiente→modalità come unità pura: priorità `TURSO_SYNC_URL` > `TURSO_DATABASE_URL`
+  > locale, documentata); `hostDiagnostico()` mostra primario SANIFICATO (solo
+  hostname, come I107) + percorso del file replica.
+- **Pannello I107**: badge aggiuntivo «Replica locale (Turso)»; test di connessione
+  = `SELECT 1` + `sync()` con latenza misurata e timeout; nota onesta sull'effimero
+  su serverless (§10.5 R5).
+- **Test** previsti: unità pura della nuova regola di modalità; contract della factory
+  (ramo replica con client mock: config passthrough, gate prima-sync, timeout, degrado);
+  component (badge/nota); mock mirror già previsti dalla lezione I107/fix2. Stima:
+  +8/10 test, +6/8 check audit.
+
+### 10.5 Rischi e mitigazioni
+
+- **R1 — spinta di Turso verso Turso Sync (24/4/2026)**: gli embedded replicas restano
+  documentati e supportati dal client in uso; il ramo è ISOLATO in factory e
+  disattivabile rimuovendo l'env, senza tocchi al resto. Rivalutazione CDC quando
+  Prisma supporterà il runtime Turso (monitoraggio in osservatorio).
+- **R2 — feature storicamente soggetta a tier** (edge replication rimossa 2025):
+  banda sync 10 GB/mese vs profilo del monitor (~1–2 MB, §2) = margine enorme; il
+  degrado è comunque onesto (L4.2).
+- **R3 — fallimenti non deterministici verso il primario** (L4.2): timeout espliciti
+  + mapping errori + degrado a «nessuna» con causa; nessun hang non delimitato.
+- **R4 — offline puro**: la replica inoltra le scritture al primario (write-through):
+  offline le LETTURE funzionano dal file, le SCRITTURE falliscono — coerente col
+  pattern del progetto (replica eventi fire-and-forget con merge, I27/F8) e da
+  documentare nella nota del pannello.
+- **R5 — Vercel serverless**: la replica vive in `/tmp` = EFFIMERA per istanza
+  (sync a ogni cold start, nessun beneficio di stato locale tra invocazioni): su
+  Vercel il valore dell'embedded replica è ~NULLO rispetto al ramo Turso diretto
+  I106 (che resta la via cloud primaria). **Il valore reale di I109 è per lo
+  sviluppo locale sui dati reali e per il self-host sempre acceso** — va detto
+  nella UI per non vendere un benefit che su serverless non esiste.
+
+### 10.6 Runbook verifica e2e (richiede credenziali Turso reali)
+
+1. `turso db create i109-prova` + `turso db tokens create i109-prova`;
+2. env locali: `TURSO_SYNC_URL=libsql://i109-prova-<org>.turso.io`,
+   `TURSO_AUTH_TOKEN=<token>` (SENZA `TURSO_DATABASE_URL` — la priorità è §10.4);
+3. avvio app → pannello «Persistenza» mostra modalità «Replica locale (Turso)»,
+   host sanificato, test ok con sync iniziale entro il timeout;
+4. scrivere un punto DAL CLOUD (seconda istanza con `TURSO_DATABASE_URL` diretto o
+   dashboard) → `sync()` → lettura locale aggiornata (verifica la direzione
+   primario→replica);
+5. scrivere in LOCALE → dato visibile al primario (write-through, direzione
+   replica→primario);
+6. misurare latenze: letture da file vs remote (attesa: microsecondi vs decine di ms);
+7. test di resilienza: primario irraggiungibile (firewall) → letture da file ok,
+   scritture fallite con evento tecnico, pannello onesto sulla causa (L4.2).
+
+### 10.7 Costo stimato e domanda
+
+Costo (da design §10.4): ramo factory + modalità + pannello + runbook + test (+8/10)
++ audit (+6/8) — stessa forma dell'Ondata 4 fin qui, nessun tocco a schema/route
+esistenti oltre il pannello. La domanda è la **D5** (§8): **(a)** implementa ora ·
+**(b)** resta in backlog osservatorio (stato attuale, nessun lavoro) · **(c)** scartare.
+
 *Verifiche locali citate: `prisma/schema.prisma` (limiti 10k/5k), `src/lib/db-factory.ts`
 (I106), `src/lib/server-model-history.ts` (SQL raw `ON CONFLICT`), `src/components/settings-dialog.tsx`
-(refresh 60 s), `docs/08` §7 (convenzione registro decisioni).*
+(refresh 60 s), `docs/08` §7 (convenzione registro decisioni),
+`scripts/verifiche/verifica-i109-turso-sync.mjs` (probe I109, §10.3),
+`node_modules/@prisma/adapter-libsql/dist/index-node.d.ts` (contratto `constructor(config: Config)`).*
