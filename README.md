@@ -19,7 +19,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
-### 🚀 [Live Demo — mini-max-token-monitor.vercel.app](https://mini-max-token-monitor.vercel.app/)
+### 🚀 [Live Demo — minimax-token-monitor.vercel.app](https://minimax-token-monitor.vercel.app/)
 
 *Apri la dashboard senza clonare nulla: parte in **modalità demo** con dati simulati; per i dati
 reali incolla la tua Subscription Key nelle Impostazioni. La puoi provare anche in un click su
