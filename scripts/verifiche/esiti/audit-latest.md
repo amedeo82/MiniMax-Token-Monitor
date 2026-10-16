@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T21:41:43.339Z
+# Audit implementazioni — 2026-10-16T22:12:29.194Z
 
-- Verifiche totali: **560** · PASS: **560** · FAIL: **0**
+- Verifiche totali: **563** · PASS: **563** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -564,6 +564,9 @@
 | I115 | config CLI con l'API prisma/config (defineConfig) (prisma.config.ts) | simbolo | PASS | — |
 | I115 | nessun ricorso all'opzione RIMOSSA dal client 7 (entrambi i rami passano dall'adapter PrismaLibSql — anche il file: locale, stesso dialetto SQLite) — assenza richiesta (src/lib/db-factory.ts) | assenza | PASS | — |
 | I115 | anti-drift sul flag CLI 7 (--to-schema: --to-schema-datamodel è stato rimosso) (tests/lib/database-schema.test.ts) | simbolo | PASS | — |
+| I116 | build rigenera SEMPRE il client prima di next build (prisma 7 ha rimosso l'auto-generate del postinstall della dipendenza: su Vercel il node_modules ripristinato dalla build cache portava un .prisma/client stantio dell'era prisma 6 — richiedeva @prisma/client/runtime/library.js, eliminato in v7 — e la raccolta configurazione delle route falliva; riprodotto localmente con lo STESSO errore «Failed to load external module @prisma/client-<hash>: Cannot find module …/runtime/library.js» e fix verificato dallo stesso stato avvelenato: exit 0) (package.json) | simbolo | PASS | — |
+| I116 | postinstall rigenera il client a ogni install (v7 non lo fa più in automatico: fresh clone e ambienti freddi hanno il client pronto per dev/test senza passi manuali) (package.json) | simbolo | PASS | — |
+| I116 | CI conserva lo step esplicito di generazione (difesa in profondità: il client è fresco prima di tsc/test anche se postinstall venisse saltato) (.github/workflows/ci.yml) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (560 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (563 pass, 0 fail, 0 scoperte)

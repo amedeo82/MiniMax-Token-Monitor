@@ -1425,3 +1425,21 @@ Stage Summary:
 - Ecosistema prisma su 7.10.1 + @libsql/client 0.18: UNA SOLA via di connessione (adapter libsql) per Turso E per il file locale — superficie più semplice di prima (zero rami nativi), comportamento invariato (stesse route, stessi file, stessa regola URL)
 - Sicurezza: vulnerabilità di produzione ZERO (deepmerge-ts chiusa; residua solo braces dev-only in attesa di fix upstream — nessuna azione possibile)
 - Rimanente: allineare bun locale a 1.4.x (bun-types già 1.4.3, CI usa latest); azioni Vercel lato utente invariate (CRON_SECRET + env TURSO_*); TS 7 rivalutabile quando typescript-eslint supporterà ≥7.1
+
+---
+Task ID: 62
+Agent: main (Super Z)
+Task: Fix deploy Vercel fallito su 76fb565 (I115 prisma 7): «Failed to load external module @prisma/client-2c3a283f134fdcb6: Cannot find module …/node_modules/@prisma/client/runtime/library.js» in «Collecting page data» — consegna I116
+
+Work Log:
+- RICOSTRUZIONE STATO: 76fb565 (I115) era già committato/pushato con CI SUCCESS; il deploy Vercel invece falliva alla raccolta configurazione delle route. Il log utente mostrava l'external module @prisma/client-2c3a283f134fdcb6 che richiede il VECCHIO runtime @prisma/client/runtime/library.js (eliminato in prisma 7)
+- FATTI RACCOLTI: @prisma/client@7.10.1 NON ha più postinstall (l'auto-generate è stato rimosso in v7) → l'install non genera mai il client; lo script build era «next build && cp …» SENZA generate; ci.yml invece HA lo step esplicito db:generate (per questo la CI restava verde); il client generato v7 è SELF-CONTAINED (runtime copiato in .prisma/client, zero riferimenti a runtime/library)
+- REPRODUZIONE EMPIRICA (prima di toccare anything): replica A = .prisma/client ASSENTE + build attuale → «Failed to collect configuration … Cannot find module '.prisma/client/default'» (stesso punto di rottura, stessa causa classe); replica B = .prisma/client STANTIO simulato prisma 6 (index.js che richiede @prisma/client/runtime/library.js) + build attuale → errore IDENTICO al log Vercel (stesso external, stesso library.js ENOENT) → causa radice CONFERMATA: Vercel ripristina build cache/node_modules, il .prisma/client dell'era prisma 6 sopravvive accanto al client 7 (bun sostituisce @prisma/client ma NON tocca .prisma generato) e nessuno step rigenera
+- FIX A DOPPIA CINTURA (package.json): script build = «prisma generate && next build && cp …» (rigenerazione deterministica in QUALSIASI ambiente — cache calda o fredda) + NUOVO postinstall «prisma generate» (fresh clone e install fredde hanno il client pronto per dev/test; su Vercel il postinstall radice gira sempre con bun install)
+- VERIFICA FIX (replica C): dallo STESSO stato avvelenato della replica B, il nuovo build è EXIT 0; smoke standalone (DB temporaneo, PORT 3210): GET / 200, GET /api/persistenza con gate DDL + 4 tabelle + test 2 ms — identico al protocollo I115
+- AUDIT: +3 check I116 (build con prisma generate; postinstall; ci.yml conserva db:generate) → 563/563 PASS 0 scoperte; README badge 560→563 + contatore §Qualità 560→563 + clausola I116; docs/04 §3 riga I116 + §8 changelog in cima; versione «2026-10-17 · I116» (check «versione» PASS)
+
+Stage Summary:
+- Il build ora è ERMETICO rispetto al client generato: prisma generate precede SEMPRE next build, su Vercel come in locale — la classe di guasto «client stantio sopravvissuto alla cache» è chiusa strutturalmente, non solo in questo deploy
+- Lezione registrata: in v7 la generazione del client NON è più automatica — ogni pipeline (CI, Vercel, locale) deve generarla esplicitamente; la CI non ha smascherato il problema perché aveva lo step dedicato che il build script non aveva
+- Rimanente: allineare bun locale a 1.4.x (minore); azioni Vercel lato utente invariate (CRON_SECRET, env TURSO_*); braces in attesa di fix upstream 3.0.4

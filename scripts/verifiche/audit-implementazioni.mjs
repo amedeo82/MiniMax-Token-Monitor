@@ -817,6 +817,10 @@ const CHECKS = [
   check.simbolo("I115", "prisma.config.ts", "defineConfig", "config CLI con l'API prisma/config (defineConfig)"),
   check.assenza("I115", "src/lib/db-factory.ts", "datasourceUrl:", "nessun ricorso all'opzione RIMOSSA dal client 7 (entrambi i rami passano dall'adapter PrismaLibSql — anche il file: locale, stesso dialetto SQLite)"),
   check.simbolo("I115", "tests/lib/database-schema.test.ts", '"--to-schema"', "anti-drift sul flag CLI 7 (--to-schema: --to-schema-datamodel è stato rimosso)"),
+  /* --- I116 — fix deploy Vercel: il client generato deve essere SEMPRE fresco (postinstall + build) --- */
+  check.simbolo("I116", "package.json", '"build": "prisma generate && next build', "build rigenera SEMPRE il client prima di next build (prisma 7 ha rimosso l'auto-generate del postinstall della dipendenza: su Vercel il node_modules ripristinato dalla build cache portava un .prisma/client stantio dell'era prisma 6 — richiedeva @prisma/client/runtime/library.js, eliminato in v7 — e la raccolta configurazione delle route falliva; riprodotto localmente con lo STESSO errore «Failed to load external module @prisma/client-<hash>: Cannot find module …/runtime/library.js» e fix verificato dallo stesso stato avvelenato: exit 0)"),
+  check.simbolo("I116", "package.json", '"postinstall": "prisma generate"', "postinstall rigenera il client a ogni install (v7 non lo fa più in automatico: fresh clone e ambienti freddi hanno il client pronto per dev/test senza passi manuali)"),
+  check.simbolo("I116", ".github/workflows/ci.yml", "db:generate", "CI conserva lo step esplicito di generazione (difesa in profondità: il client è fresco prima di tsc/test anche se postinstall venisse saltato)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",
