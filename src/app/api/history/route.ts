@@ -4,6 +4,7 @@ import { emptyHourBucket, hourStartOf, mergeHourBucket, type HourStats } from "@
 import { toEpoch } from "@/lib/http-validate";
 import { schemaCorpoPunti, schemaPuntoStorico } from "@/lib/api-schemi";
 import { bloccoScrittura } from "@/lib/api-protezione";
+import { preparaSchema } from "@/lib/schema-persistenza";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,15 @@ export const dynamic = "force-dynamic";
  * e export vogliono la contemporaneità, e il pruning FIFO conserva proprio
  * i più recenti). Fix: `orderBy t desc` + `take limit` + inversione, così
  * l'output resta cronologico (contratto invariato) ma la fetta è la giusta.
+ *
+ * I107-fix4 — ogni handler attende il gate `preparaSchema(db)` PRIMA di
+ * toccare il DB (stessa ragione di /api/events: bootstrap DDL fire-and-forget
+ * della factory + istanze serverless fredde = 500 «table does not exist»;
+ * probe verifica-i107-fix4-gate.mjs 0/8 senza gate, 8/8 col gate). Nella GET
+ * il gate sta PRIMA della diramazione granularity: copre sia i punti grezzi
+ * sia i bucket orari. Il gate non rifiuta mai (contratto di
+ * schema-persistenza: guasti su stderr, non mascherati — riemergono dalle
+ * query reali); dopo il primo avvio è un no-op a costo di microtask.
  */
 
 /** Numero massimo di punti conservati sul server (pruning FIFO dopo ogni POST). */
@@ -157,6 +167,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // I107-fix4 — gate del bootstrap: nessuna scrittura parte a schema
+    // incompleto (l'attesa è condivisa: dopo il primo avvio è immediata).
+    await preparaSchema(db);
     let stored = 0;
     for (const p of points) {
       /* I103 — riga normalizzata dallo schema: t null → scartata (come prima). */
@@ -197,6 +210,11 @@ export async function GET(req: NextRequest) {
   const limit = isFinite(limitRaw) ? Math.max(1, Math.min(GET_LIMIT_MAX, Math.floor(limitRaw))) : 2000;
   const sinceRaw = url.searchParams.get("since");
   const since = sinceRaw !== null ? toEpoch(sinceRaw) : null;
+
+  // I107-fix4 — gate del bootstrap PRIMA della diramazione granularity: sia
+  // UsagePoint sia DownsampledPoint devono esistere prima di qualunque
+  // lettura (non rifiuta mai: fuori dal try per contratto del gate).
+  await preparaSchema(db);
 
   // I68 — grana oraria derivata: bucket già aggregati (min/max/media/ultimo
   // per ora UTC e sorgente), per export leggeri e consumi esterni.
@@ -278,6 +296,8 @@ export async function DELETE(req: NextRequest) {
   if (blocco) return blocco;
 
   try {
+    // I107-fix4 — gate del bootstrap anche per la cancellazione d'archivio.
+    await preparaSchema(db);
     const deleted = await db.usagePoint.deleteMany({});
     return NextResponse.json({ ok: true, deleted: deleted.count });
   } catch (e) {

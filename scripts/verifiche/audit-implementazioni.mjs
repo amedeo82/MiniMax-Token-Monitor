@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "473 test / 1494 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "487 test / 1546 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–09", "indice documentazione README completo (docs/09 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -764,6 +764,13 @@ const CHECKS = [
   check.simbolo("I107", "src/lib/db-factory.ts", "preparaSchema", "I107-fix3: ENTRAMBE le branche (nativa e adapter) garantiscono lo schema all'avvio — un DB fresco (file /tmp su Vercel, Turso appena creato) funziona senza db:push né db-push-turso.mjs"),
   check.simbolo("I107", "src/app/api/persistenza/route.ts", "preparaSchema", "I107-fix3: la route attende il gate del bootstrap prima dei conteggi (determinismo al primo colpo su DB fresco)"),
   check.file("I107", "tests/lib/database-schema.test.ts", "e2e motore reale su file vuoto + anti-drift DDL vs prisma migrate diff + semantica gate (il file gira PRIMA di db.test.ts in ordine alfabetico: client reale, non mockato)"),
+  /* I107-fix4 — gate dello schema su TUTTE le rotte DB + riprove del bootstrap (motore freddo) */
+  check.simbolo("I107", "src/app/api/events/route.ts", "preparaSchema", "I107-fix4: le GET/POST/DELETE attendono il gate del bootstrap DDL prima di toccare il DB (report utente: 500 su /api/events, /api/history e /api/history/models su Vercel — la factory lancia il DDL fire-and-forget e solo /api/persistenza lo attendeva)"),
+  check.simbolo("I107", "src/app/api/history/route.ts", "preparaSchema", "I107-fix4: gate su POST + DELETE + GET prima della diramazione granularity (copre punti grezzi E bucket orari)"),
+  check.simbolo("I107", "src/app/api/history/models/route.ts", "preparaSchema", "I107-fix4: gate su GET/POST/DELETE — anche l'SQL raw della lib I42 parte solo a schema pronto (import db aggiunto: la rotta non lo importava, passava dalla lib)"),
+  check.simbolo("I107", "src/app/api/summary/route.ts", "preparaSchema", "I107-fix4: anche la sintesi KPI read-only attende il gate (stessa classe di guasto)"),
+  check.simbolo("I107", "src/lib/schema-persistenza.ts", "TENTATIVI_BOOTSTRAP", "I107-fix4: il bootstrap è RIPROVATO a passate intere — all'avvio freddo il motore rifiuta i primi DDL («Engine is not yet connected», «Response from the Engine was empty») e senza riprove lo schema restava parziale per l'intera vita dell'istanza (probe verifica-i107-fix4-gate.mjs: 0/8 senza gate, 8/8 col gate)"),
+  check.file("I107", "tests/lib/api-schema-gate.test.ts", "route-level: ogni handler delle 4 rotte tocca il DB solo dopo il gate (primo accesso dati a schema completo; per la rotta per-modello asserzione al livello gate — il binding del lib dipende dall'ordine dei file di bun, non alfabetico)"),
 ];
 
 /* ------------------------------------------------------------------ */

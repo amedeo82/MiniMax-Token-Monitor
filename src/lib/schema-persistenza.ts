@@ -19,17 +19,29 @@
  * documentato (README §Persistenza).
  *
  * Semantica di `preparaSchema`:
- * - IDEMPOTENTE: IF NOT EXISTS su ogni statement — riavvii, hot-reload dev e
- *   istanze concorrenti non si disturbano (un eventuale SQLITE_BUSY si
- *   risolve al ciclo successivo: il guasto non è mascherato, riemerge dalla
- *   prima query reale col messaggio preciso);
+ * - IDEMPOTENTE: IF NOT EXISTS su ogni statement — riavvii, hot-reload dev,
+ *   riprove e istanze concorrenti non si disturbano (CREATE IF NOT EXISTS su
+ *   tabelle esistenti è un no-op);
  * - UNA VOLTA PER CLIENT (cache WeakMap): il primo avvio restituisce la
- *   promise condivisa; chi vuole DETERMINISMO (route /api/persistenza prima
- *   dei conteggi) fa `await preparaSchema(db)`, gli altri non attendono;
- * - BEST-EFFORT: un client senza accesso SQL raw (mock dei test, client
- *   incoerente) non ha nulla da inizializzare — si esce subito; un DDL
- *   fallito viene segnalato su stderr e i seguenti provano comunque, così
- *   uno schema parziale si completa al prossimo avvio.
+ *   promise condivisa; chi vuole DETERMINISMO fa `await preparaSchema(db)`
+ *   prima di toccare il DB (I107-fix4: lo fanno TUTTE le rotte, non solo la
+ *   diagnostica), gli altri non attendono;
+ * - RIPROVATO (I107-fix4): il bootstrap è RIPETUTO finché una passata non
+ *   chiude senza errori, finché a esaurire i tentativi. Motivo misurato
+ *   (scripts/verifiche/verifica-i107-fix4-gate.mjs): all'avvio di un'istanza
+ *   fredda il motore può non essere ANCORA connesso quando partono i primi
+ *   statement («Engine is not yet connected», «Response from the Engine was
+ *   empty») — col solo fire-and-forget il guasto restava (cache senza
+ *   riprove) e lo schema restava parziale o vuoto PER TUTTA LA VITA
+ *   dell'istanza: su Vercel ogni rotta DB rispondeva 500 «table does not
+ *   exist» (report utente 16/10/2026). L'attesa fra le passate (breve) dà al
+ *   motore il tempo di connettersi; le passate successive completano ciò che
+ *   la prima non è riuscita a creare;
+ * - BEST-EFFORT E ONESTO: un client senza accesso SQL raw (mock dei test,
+ *   client incoerente) non ha nulla da inizializzare — si esce subito; un
+ *   DDL fallito viene segnalato su stderr e i seguenti provano comunque; se
+ *   dopo l'ultimo tentativo lo schema resta incompleto, il guasto non è
+ *   mascherato: riemerge dalla prima query reale col messaggio preciso.
  *
  * il DDL NON contiene dati né indici oltre a quelli dello schema: nessuna
  * migrazione, nessun dato toccato (CREATE IF NOT EXISTS su tabelle esistenti
@@ -97,10 +109,40 @@ export const SCHEMA_PERSISTENZA: readonly string[] = [
 /** Avvii di bootstrap già presi in carico, per client (una sola esecuzione). */
 const avvii = new WeakMap<object, Promise<void>>();
 
+/** Tentativi massimi del bootstrap completo (I107-fix4: motore freddo). */
+const TENTATIVI_BOOTSTRAP = 3;
+/** Attesa fra i tentativi (ms): dà al motore il tempo di connettersi. */
+const ATTESA_TRA_TENTATIVI_MS = 50;
+
+/**
+ * Una passata di DDL sul client: applica TUTTI gli statement in ordine e
+ * restituisce il numero di fallimenti (ognuno segnalato su stderr — mai
+ * mascherato). Idempotente: le passate successive ripartono da tutti gli
+ * statement e completano ciò che le precedenti non sono riuscite a creare.
+ */
+async function passataDDL(client: object): Promise<number> {
+  let falliti = 0;
+  for (const ddl of SCHEMA_PERSISTENZA) {
+    try {
+      await (client as { $executeRawUnsafe: (sql: string) => Promise<unknown> }).$executeRawUnsafe(ddl);
+    } catch (e) {
+      falliti += 1;
+      console.error("[schema-persistenza] DDL non applicato:", e instanceof Error ? e.message : e);
+    }
+  }
+  return falliti;
+}
+
 /**
  * Garantisce che lo schema esista sul database del client (idempotente).
- * Restituisce la promise del bootstrap: `await` per il determinismo (route
- * diagnostica), fire-and-forget all'avvio della factory.
+ * Restituisce la promise del bootstrap: `await` per il determinismo (TUTTE le
+ * rotte che toccano il DB, I107-fix4), fire-and-forget all'avvio della factory.
+ *
+ * I107-fix4 — il bootstrap è ripetuto (TENTATIVI_BOOTSTRAP) finché una passata
+ * non chiude senza errori: su istanza fredda il motore può rifiutare i primi
+ * statement («Engine is not yet connected») e senza riprove lo schema restava
+ * parziale per l'intera vita dell'istanza (probe verifica-i107-fix4-gate.mjs:
+ * 0/8 riuscite senza gate, 8/8 col gate).
  */
 export function preparaSchema(client: object): Promise<void> {
   const giàAvviato = avvii.get(client);
@@ -114,14 +156,13 @@ export function preparaSchema(client: object): Promise<void> {
   }
 
   const avvio = (async () => {
-    for (const ddl of SCHEMA_PERSISTENZA) {
-      try {
-        await (client as { $executeRawUnsafe: (sql: string) => Promise<unknown> }).$executeRawUnsafe(ddl);
-      } catch (e) {
-        // Best-effort: il guasto NON è mascherato (stderr) e i statement
-        // seguenti provano comunque; la prima query reale riporterà l'errore
-        // preciso se lo schema resta incompleto.
-        console.error("[schema-persistenza] DDL non applicato:", e instanceof Error ? e.message : e);
+    for (let tentativo = 1; tentativo <= TENTATIVI_BOOTSTRAP; tentativo++) {
+      const falliti = await passataDDL(client);
+      if (falliti === 0) return;
+      // Altri tentativi solo se qualcosa è fallito: l'attesa breve lascia
+      // connettere il motore, le passate successive completano lo schema.
+      if (tentativo < TENTATIVI_BOOTSTRAP) {
+        await new Promise((risolta) => setTimeout(risolta, ATTESA_TRA_TENTATIVI_MS));
       }
     }
   })();

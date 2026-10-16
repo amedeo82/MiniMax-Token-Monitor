@@ -19,8 +19,15 @@
  *    processo figlio, immune dai mock) — ogni cambio di schema.prisma che non
  *    aggiorni il DDL incorporato rompe questo test (anti-drift);
  * 3. SEMANTICA DEL GATE: cache WeakMap (stessa promise per client, statement
- *    eseguiti UNA volta) e client senza $executeRawUnsafe → promise risolta
- *    senza rovesciamenti (i mock dei test restano silenziosi).
+ *    eseguiti UNA volta per passata) e client senza $executeRawUnsafe →
+ *    promise risolta senza rovesciamenti (i mock dei test restano silenziosi);
+ * 4. RIPROVA I107-FIX4: un motore "freddo" che rifiuta i primi statement
+ *    («Engine is not yet connected») NON lascia lo schema parziale — le
+ *    passate successive completano ciò che la prima non è riuscita a creare
+ *    (probe verifica-i107-fix4-gate.mjs: senza gate 0/8, col gate 8/8); con
+ *    guasti PERMANENTI il bootstrap si esaurisce in tempi finiti e la promise
+ *    si risolve comunque: il guasto non è mascherato, riemerge dalle query
+ *    reali col messaggio preciso del motore.
  */
 import { describe, test, expect, afterAll } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
@@ -111,6 +118,55 @@ describe("I107-fix3 — schema incorporato (bootstrap DDL)", () => {
     await p1;
     expect(chiamate).toBe(SCHEMA_PERSISTENZA.length);
     expect(SCHEMA_PERSISTENZA.every((s) => s.includes("IF NOT EXISTS"))).toBe(true);
+  });
+
+  test("I107-fix4 — motore freddo simulato: i primi DDL rifiutati vengono RIPROVATI e lo schema si completa", async () => {
+    // Come la probe su motore reale: i primi 3 statement ricevono «Engine is
+    // not yet connected», poi il motore "si connette" e tutto riesce. Senza
+    // riprove lo schema resterebbe parziale PER TUTTA LA VITA dell'istanza.
+    const FALLISCONO = 3;
+    const tentativi = new Map<string, number>();
+    const freddo = {
+      $executeRawUnsafe: async (sql: string) => {
+        const n = tentativi.get(sql) ?? 0;
+        tentativi.set(sql, n + 1);
+        if (n === 0 && tentativi.size <= FALLISCONO) {
+          throw new Error("Engine is not yet connected.");
+        }
+        return 0;
+      },
+    };
+    await preparaSchema(freddo);
+    // Ogni statement è stato applicato: nessuno resta indietro.
+    expect(tentativi.size).toBe(SCHEMA_PERSISTENZA.length);
+    expect(SCHEMA_PERSISTENZA.every((s) => (tentativi.get(s) ?? 0) >= 1)).toBe(true);
+    // La riprova è a PASSATE INTERE (il DDL idempotente riparte da tutti gli
+    // statement): passata 1 con 3 rifiuti + passata 2 completa = 2 × 13.
+    const totale = [...tentativi.values()].reduce((a, b) => a + b, 0);
+    expect(totale).toBe(SCHEMA_PERSISTENZA.length * 2);
+  });
+
+  test("I107-fix4 — guasti PERMANENTI: tentativi finiti, promise risolta, guasto non mascherato", async () => {
+    // Un motore che rifiuta SEMPRE: il bootstrap si esaurisce (tempi finiti,
+    // TENTATIVI_BOOTSTRAP passate) e la promise si risolve comunque — la
+    // prima query reale riporterà l'errore preciso (nessuna mascheratura).
+    // Il stderr del gate è sospeso SOLO qui per non inquinare l'output della
+    // suite: il test asserva i tentativi, che è la controparte misurabile.
+    const originale = console.error;
+    console.error = () => {};
+    let chiamate = 0;
+    try {
+      const rotto = {
+        $executeRawUnsafe: async () => {
+          chiamate += 1;
+          throw new Error("disk I/O error");
+        },
+      };
+      await expect(preparaSchema(rotto)).resolves.toBeUndefined();
+    } finally {
+      console.error = originale;
+    }
+    expect(chiamate).toBe(SCHEMA_PERSISTENZA.length * 3);
   });
 
   test("client senza $executeRawUnsafe → promise risolta subito (mock di test silenziosi)", async () => {

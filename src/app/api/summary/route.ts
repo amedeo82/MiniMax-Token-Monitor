@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { preparaSchema } from "@/lib/schema-persistenza";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,11 @@ export const dynamic = "force-dynamic";
  *
  * ADR-8 (read-only) intoccato: tutte le query sono di lettura
  * (`count`/`findMany`/`groupBy`) — l'endpoint non scrive nulla.
+ *
+ * I107-fix4 — anche la sintesi attende il gate `preparaSchema(db)` prima dei
+ * conteggi: stessa classe di guasto delle altre rotte archivio (bootstrap
+ * DDL fire-and-forget + istanze serverless fredde = 500 «table does not
+ * exist»). Il gate è condiviso: dopo il primo avvio è un no-op.
  *
  * Struttura della risposta (tutti i timestamp sono epoch ms):
  * {
@@ -32,6 +38,9 @@ const SORGENTI = ["api", "demo"] as const;
 
 export async function GET() {
   try {
+    // I107-fix4 — gate del bootstrap: nessun conteggio parte a schema
+    // incompleto (l'attesa è condivisa: dopo il primo avvio è immediata).
+    await preparaSchema(db);
     // --- Archivio storico (UsagePoint) --------------------------------
     const totalePunti = await db.usagePoint.count();
     const perSource = await db.usagePoint.groupBy({

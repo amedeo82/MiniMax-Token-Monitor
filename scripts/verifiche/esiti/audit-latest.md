@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T07:21:00.854Z
+# Audit implementazioni — 2026-10-16T09:32:13.955Z
 
-- Verifiche totali: **515** · PASS: **515** · FAIL: **0**
+- Verifiche totali: **521** · PASS: **521** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -520,5 +520,11 @@
 | I107 | I107-fix3: ENTRAMBE le branche (nativa e adapter) garantiscono lo schema all'avvio — un DB fresco (file /tmp su Vercel, Turso appena creato) funziona senza db:push né db-push-turso.mjs (src/lib/db-factory.ts) | simbolo | PASS | — |
 | I107 | I107-fix3: la route attende il gate del bootstrap prima dei conteggi (determinismo al primo colpo su DB fresco) (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
 | I107 | e2e motore reale su file vuoto + anti-drift DDL vs prisma migrate diff + semantica gate (il file gira PRIMA di db.test.ts in ordine alfabetico: client reale, non mockato) | file | PASS | — |
+| I107 | I107-fix4: le GET/POST/DELETE attendono il gate del bootstrap DDL prima di toccare il DB (report utente: 500 su /api/events, /api/history e /api/history/models su Vercel — la factory lancia il DDL fire-and-forget e solo /api/persistenza lo attendeva) (src/app/api/events/route.ts) | simbolo | PASS | — |
+| I107 | I107-fix4: gate su POST + DELETE + GET prima della diramazione granularity (copre punti grezzi E bucket orari) (src/app/api/history/route.ts) | simbolo | PASS | — |
+| I107 | I107-fix4: gate su GET/POST/DELETE — anche l'SQL raw della lib I42 parte solo a schema pronto (import db aggiunto: la rotta non lo importava, passava dalla lib) (src/app/api/history/models/route.ts) | simbolo | PASS | — |
+| I107 | I107-fix4: anche la sintesi KPI read-only attende il gate (stessa classe di guasto) (src/app/api/summary/route.ts) | simbolo | PASS | — |
+| I107 | I107-fix4: il bootstrap è RIPROVATO a passate intere — all'avvio freddo il motore rifiuta i primi DDL («Engine is not yet connected», «Response from the Engine was empty») e senza riprove lo schema restava parziale per l'intera vita dell'istanza (probe verifica-i107-fix4-gate.mjs: 0/8 senza gate, 8/8 col gate) (src/lib/schema-persistenza.ts) | simbolo | PASS | — |
+| I107 | route-level: ogni handler delle 4 rotte tocca il DB solo dopo il gate (primo accesso dati a schema completo; per la rotta per-modello asserzione al livello gate — il binding del lib dipende dall'ordine dei file di bun, non alfabetico) | file | PASS | — |
 
-Verdetto: **PASS** (515 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (521 pass, 0 fail, 0 scoperte)

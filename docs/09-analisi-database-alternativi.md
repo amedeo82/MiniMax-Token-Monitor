@@ -301,7 +301,15 @@ Concretamente, in ordine di priorità:
    delle 4 tabelle applicato all'avvio su ENTRAMBE le branche con gate
    `preparaSchema` — la D1 «zero migrazione» ora vale ANCHE per un Turso
    appena creato (il db-push esplicito resta documentato ma non è più
-   indispensabile); il file resta comunque effimero su serverless.
+   indispensabile); il file resta comunque effimero su serverless. **Fix 4,
+   16/10 (report utente: 500 su /api/events, /api/history, /api/history/models)**:
+   il gate del bootstrap era atteso SOLO dalla diagnostica e il DDL
+   fire-and-forget perdeva la corsa (o veniva rifiutato da un motore freddo:
+   «Engine is not yet connected») SENZA riprove — schema parziale per l'intera
+   vita dell'istanza, ogni rotta DB a 500. Ora TUTTE le rotte DB attendono
+   `preparaSchema(db)` e il bootstrap è RIPROVATO a passate intere (probe
+   `verifica-i107-fix4-gate.mjs`: 0/8 senza gate, 8/8 col gate — dettagli in
+   docs/04 §3 Fix 4).
 3. **I108 — Provider Postgres opzionale Neon/Supabase (proposta, media):** doppio schema
    Prisma selezionato a build (`PRISMA_SCHEMA`/script), ramo PG in `db-factory` con
    `@prisma/adapter-pg` o `@prisma/adapter-neon`, variante `db-push` per PG, verifica

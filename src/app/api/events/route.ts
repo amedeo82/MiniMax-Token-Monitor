@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { toEpoch } from "@/lib/http-validate";
 import { schemaCorpoEventi, schemaEventoIngresso } from "@/lib/api-schemi";
 import { bloccoScrittura } from "@/lib/api-protezione";
+import { preparaSchema } from "@/lib/schema-persistenza";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,15 @@ export const dynamic = "force-dynamic";
  * archivio fino a 5.000) e l'export «Archivio server» perdevano la
  * contemporaneità. Fix: `orderBy t desc` + `take limit` + inversione,
  * output cronologico invariato, fetta corretta.
+ *
+ * I107-fix4 — ogni handler attende il gate `preparaSchema(db)` PRIMA di
+ * toccare il DB: la factory lancia il bootstrap DDL in fire-and-forget e su
+ * un'istanza serverless fredda (file /tmp nuovo, Turso con RTT) la prima
+ * query correva contro lo schema ancora in costruzione (o peggio: contro il
+ * motore non ancora connesso, che rifiutava i DDL — probe
+ * verifica-i107-fix4-gate.mjs: 0/8 senza gate, 8/8 col gate) → 500 «table
+ * does not exist» su OGNI richiesta di istanze fredde. Il gate è condiviso
+ * (cache WeakMap): dopo il primo avvio è un no-op a costo di microtask.
  */
 
 /** Numero massimo di eventi conservati sul server (pruning FIFO dopo ogni POST). */
@@ -85,6 +95,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // I107-fix4 — gate del bootstrap: nessuna scrittura parte a schema
+    // incompleto (l'attesa è condivisa: dopo il primo avvio è immediata).
+    await preparaSchema(db);
     let stored = 0;
     for (const ev of incoming) {
       /* I103 — riga normalizzata dallo schema: id/t/kind/message null → scartata. */
@@ -132,6 +145,8 @@ export async function GET(req: NextRequest) {
   const kind = kindRaw !== null && VALID_KINDS.has(kindRaw) ? kindRaw : null;
 
   try {
+    // I107-fix4 — gate del bootstrap: la lettura non corre col DDL in volo.
+    await preparaSchema(db);
     /* I93 — orderBy DESC + take = la fetta PIÙ RECENTE; il reverse in coda
        restaura l'ordine cronologico atteso dai client (merge/export). */
     const rows = await db.usageEventRecord.findMany({
@@ -172,6 +187,8 @@ export async function DELETE(req: NextRequest) {
   if (blocco) return blocco;
 
   try {
+    // I107-fix4 — gate del bootstrap anche per la cancellazione d'archivio.
+    await preparaSchema(db);
     const deleted = await db.usageEventRecord.deleteMany({});
     return NextResponse.json({ ok: true, deleted: deleted.count });
   } catch (e) {
