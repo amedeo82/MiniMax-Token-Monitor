@@ -805,6 +805,10 @@ const CHECKS = [
   check.assenza("I113", "docs/02-analisi-json-quota.md", "= end_time precedente o invariato\\? Da osservare", "caso limite §9 «subito dopo il reset senza uso» chiuso con V3/V8"),
   check.assenza("I113", "docs/04-stato-avanzamento.md", "Aperto → verifica V3", "R11 chiusa dall'evidenza V8: nessun rimando a V3 come aperta"),
   check.assenza("I113", "docs/04-stato-avanzamento.md", "❓ Come mostrare", "apertura §7 «primo utilizzo previsto» risolta per obsolescenza (blocchi fissi UTC)"),
+  /* --- I114 — audit delle dipendenze: aggiornamento entro range verificato + decisioni sui major --- */
+  check.simbolo("I114", "package.json", '"eslint": "\\^10\\.', "eslint 10 adottato (9→10.13.0 verificato empiricamente con lint exit 0 reale; peer eslint-config-next >=9 accetta 10)"),
+  check.simbolo("I114", "package.json", '"typescript": "\\^5\\.9\\.3"', "typescript resta su 5.9.x: TS 7.0 rifiutato da typescript-eslint (rompe il gate lint) — rivalutare quando supporterà TS >=7.1 (issue typescript-eslint #10940)"),
+  check.file("I114", "scripts/verifiche/audit-deps-inventario.mjs", "inventario dipendenze dichiarato↔installato dal bun.lock (strumento dell'audit dipendenze)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

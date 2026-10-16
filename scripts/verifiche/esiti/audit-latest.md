@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T20:47:38.199Z
+# Audit implementazioni — 2026-10-16T21:15:23.218Z
 
-- Verifiche totali: **550** · PASS: **550** · FAIL: **0**
+- Verifiche totali: **553** · PASS: **553** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -554,6 +554,9 @@
 | I113 | caso limite §9 «subito dopo il reset senza uso» chiuso con V3/V8 — assenza richiesta (docs/02-analisi-json-quota.md) | assenza | PASS | — |
 | I113 | R11 chiusa dall'evidenza V8: nessun rimando a V3 come aperta — assenza richiesta (docs/04-stato-avanzamento.md) | assenza | PASS | — |
 | I113 | apertura §7 «primo utilizzo previsto» risolta per obsolescenza (blocchi fissi UTC) — assenza richiesta (docs/04-stato-avanzamento.md) | assenza | PASS | — |
+| I114 | eslint 10 adottato (9→10.13.0 verificato empiricamente con lint exit 0 reale; peer eslint-config-next >=9 accetta 10) (package.json) | simbolo | PASS | — |
+| I114 | typescript resta su 5.9.x: TS 7.0 rifiutato da typescript-eslint (rompe il gate lint) — rivalutare quando supporterà TS >=7.1 (issue typescript-eslint #10940) (package.json) | simbolo | PASS | — |
+| I114 | inventario dipendenze dichiarato↔installato dal bun.lock (strumento dell'audit dipendenze) | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (550 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (553 pass, 0 fail, 0 scoperte)
