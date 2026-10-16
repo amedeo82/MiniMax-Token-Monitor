@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T09:32:13.955Z
+# Audit implementazioni — 2026-10-16T15:46:36.300Z
 
-- Verifiche totali: **521** · PASS: **521** · FAIL: **0**
+- Verifiche totali: **525** · PASS: **525** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -355,7 +355,7 @@
 | I97 | upload/ fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | db runtime fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I97 | PNG di verifica di sessione fuori dall'indice — nessun file tracciato deve corrispondere | assenza | PASS | — |
-| I97 | esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56/I106) — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I97 | esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56/I106/I110) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I105 | name npm coerente col progetto (era nextjs_tailwind_shadcn_ts) (package.json) | simbolo | PASS | — |
 | I105 | name generico scaffolding RIMOSSO — assenza richiesta (package.json) | assenza | PASS | — |
 | I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
@@ -526,5 +526,9 @@
 | I107 | I107-fix4: anche la sintesi KPI read-only attende il gate (stessa classe di guasto) (src/app/api/summary/route.ts) | simbolo | PASS | — |
 | I107 | I107-fix4: il bootstrap è RIPROVATO a passate intere — all'avvio freddo il motore rifiuta i primi DDL («Engine is not yet connected», «Response from the Engine was empty») e senza riprove lo schema restava parziale per l'intera vita dell'istanza (probe verifica-i107-fix4-gate.mjs: 0/8 senza gate, 8/8 col gate) (src/lib/schema-persistenza.ts) | simbolo | PASS | — |
 | I107 | route-level: ogni handler delle 4 rotte tocca il DB solo dopo il gate (primo accesso dati a schema completo; per la rotta per-modello asserzione al livello gate — il binding del lib dipende dall'ordine dei file di bun, non alfabetico) | file | PASS | — |
+| I110 | probe di attivazione via FACTORY REALE di produzione (creaPrismaClient + preparaSchema + round-trip Prisma) — non un client libsql parallelo: ciò che si verifica è la stessa via del runtime (scripts/verifiche/verifica-i110-turso-attivo.ts) | simbolo | PASS | — |
+| I110 | evidenza a nome fisso dell'attivazione (7 passi: selezione ambiente, client, DDL incorporato sul cloud, SELECT 1, conteggi, round-trip, idempotenza — host sanificato, token MAI stampato) | file | PASS | — |
+| I110 | segreti fuori dall'indice: .env è gitignored e le credenziali (TURSO_*, DATABASE_URL, chiavi) restano SOLO nell'ambiente (header db-factory.ts, README §Persistenza) — il commit dd03d16 dell'utente l'aveva aggiunto con git add -f e in CI rompeva anche la suite: bun auto-carica il .env e il test I106 «env assente» vedeva l'adapter Turso — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I110 | suite indipendente dall'ambiente: baseline DICHIARATO (chiavi cancellate all'avvio e a ogni beforeEach), lo stato ambientale (.env incluso) ripristinato solo nell'afterAll — mai assumere lo stato del processo (tests/lib/db.test.ts) | simbolo | PASS | — |
 
-Verdetto: **PASS** (521 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (525 pass, 0 fail, 0 scoperte)

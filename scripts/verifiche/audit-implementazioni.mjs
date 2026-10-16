@@ -573,7 +573,7 @@ const CHECKS = [
   check.nonTracciato("I97", "upload/.*", "upload/ fuori dall'indice"),
   check.nonTracciato("I97", "db/.*\\.db", "db runtime fuori dall'indice"),
   check.nonTracciato("I97", "scripts/.*\\.png", "PNG di verifica di sessione fuori dall'indice"),
-  check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!(?:audit-latest\\.md|i48-demo-vs-api-latest\\.md|i54-live-vs-demo-latest\\.md|v8-fuso-reset-latest\\.md|v4-2026-10-12T12-56-18\\.json|v5-2026-10-12T12-56-24\\.json|v6-2026-10-12T13-19-29\\.json|i106-persistenza-latest\\.md)$).+", "esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56/I106)"),
+  check.nonTracciato("I97", "scripts/verifiche/(esiti|esiti-backup)/(?!(?:audit-latest\\.md|i48-demo-vs-api-latest\\.md|i54-live-vs-demo-latest\\.md|v8-fuso-reset-latest\\.md|v4-2026-10-12T12-56-18\\.json|v5-2026-10-12T12-56-24\\.json|v6-2026-10-12T13-19-29\\.json|i106-persistenza-latest\\.md|i110-turso-attivazione-latest\\.md)$).+", "esiti storici fuori dall'indice (restano su disco e nella storia git; tracciati solo audit-latest + evidenze a nome stabile I48/I54/I56/I106/I110)"),
 
   /* --- I105 — coerenza di versione, README e metadati (contatori presidiati: aggiornare README a ogni cambio) --- */
   check.simbolo("I105", "package.json", "\"name\": \"minimax-usage-monitor\"", "name npm coerente col progetto (era nextjs_tailwind_shadcn_ts)"),
@@ -771,6 +771,12 @@ const CHECKS = [
   check.simbolo("I107", "src/app/api/summary/route.ts", "preparaSchema", "I107-fix4: anche la sintesi KPI read-only attende il gate (stessa classe di guasto)"),
   check.simbolo("I107", "src/lib/schema-persistenza.ts", "TENTATIVI_BOOTSTRAP", "I107-fix4: il bootstrap è RIPROVATO a passate intere — all'avvio freddo il motore rifiuta i primi DDL («Engine is not yet connected», «Response from the Engine was empty») e senza riprove lo schema restava parziale per l'intera vita dell'istanza (probe verifica-i107-fix4-gate.mjs: 0/8 senza gate, 8/8 col gate)"),
   check.file("I107", "tests/lib/api-schema-gate.test.ts", "route-level: ogni handler delle 4 rotte tocca il DB solo dopo il gate (primo accesso dati a schema completo; per la rotta per-modello asserzione al livello gate — il binding del lib dipende dall'ordine dei file di bun, non alfabetico)"),
+
+  /* --- I110 — attivazione Turso (16/10/2026, richiesta utente) + igiene segreti --- */
+  check.simbolo("I110", "scripts/verifiche/verifica-i110-turso-attivo.ts", "creaPrismaClient", "probe di attivazione via FACTORY REALE di produzione (creaPrismaClient + preparaSchema + round-trip Prisma) — non un client libsql parallelo: ciò che si verifica è la stessa via del runtime"),
+  check.file("I110", "scripts/verifiche/esiti/i110-turso-attivazione-latest.md", "evidenza a nome fisso dell'attivazione (7 passi: selezione ambiente, client, DDL incorporato sul cloud, SELECT 1, conteggi, round-trip, idempotenza — host sanificato, token MAI stampato)"),
+  check.nonTracciato("I110", "(.*/)?\\.env(\\..+)?", "segreti fuori dall'indice: .env è gitignored e le credenziali (TURSO_*, DATABASE_URL, chiavi) restano SOLO nell'ambiente (header db-factory.ts, README §Persistenza) — il commit dd03d16 dell'utente l'aveva aggiunto con git add -f e in CI rompeva anche la suite: bun auto-carica il .env e il test I106 «env assente» vedeva l'adapter Turso"),
+  check.simbolo("I110", "tests/lib/db.test.ts", "baselineAssente", "suite indipendente dall'ambiente: baseline DICHIARATO (chiavi cancellate all'avvio e a ogni beforeEach), lo stato ambientale (.env incluso) ripristinato solo nell'afterAll — mai assumere lo stato del processo"),
 ];
 
 /* ------------------------------------------------------------------ */

@@ -71,13 +71,29 @@ const mod = await import("@/lib/db-factory");
 const { creaPrismaClient, modalitaPersistenza } = mod;
 
 /* ------------------------------------------------------------------ */
-/* Igiene dell'ambiente: ripristino con DELETE (lezione Task 45)       */
+/* Igiene dell'ambiente: baseline ESPLICITO + ripristino con DELETE     */
+/* (lezione Task 45; baseline esplicito I110, 16/10/2026)               */
 /* ------------------------------------------------------------------ */
 
 const CHIAVI = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "DATABASE_URL", "VERCEL"] as const;
 const origine = new Map<string, string | undefined>(
   CHIAVI.map((k) => [k, process.env[k]]),
 );
+
+/* I110 — il file di test NON PUÒ assumere lo stato dell'ambiente ambienTE:
+   bun carica automaticamente il .env della radice nel process.env, e dal
+   commit dd03d16 (utente, 16/10) il repo contiene un .env con TURSO_* REALI
+   per l'attivazione Turso — in CI il checkout lo include e la suite girava
+   con l'env già impostata: il test «env TURSO_* assente» vedeva l'adapter
+   costruito e falliva (run CI #21 su dd03d16, UNICO fallimento — gli altri
+   file di test si governano già le chiavi esplicitamente, lezione I107).
+   Il baseline del file è quindi DICHARATO: chiavi cancellate all'avvio e a
+   ogni beforeEach; lo stato originale dell'ambiente (env di chi lancia i
+   test, .env incluso) viene ripristinato SOLO nell'afterAll finale. */
+function baselineAssente() {
+  for (const k of CHIAVI) delete process.env[k];
+}
+baselineAssente();
 
 function impostaEnv(valori: Partial<Record<(typeof CHIAVI)[number], string>>) {
   for (const k of CHIAVI) {
@@ -91,7 +107,7 @@ function impostaEnv(valori: Partial<Record<(typeof CHIAVI)[number], string>>) {
   }
 }
 
-function ripristinoEnv() {
+function ripristinoOriginale() {
   for (const k of CHIAVI) {
     const originale = origine.get(k);
     if (originale === undefined) delete process.env[k]; // MAI assegnare undefined: su CI coerza in "undefined" (stringa truthy)
@@ -100,7 +116,7 @@ function ripristinoEnv() {
 }
 
 afterAll(() => {
-  ripristinoEnv();
+  ripristinoOriginale(); // l'ambiente esterno (es. .env con TURSO_*) resta intatto fuori dal file
   // Il singleton globale creato dall'import resta: è un mock leggero, nessun
   // motore reale — gli altri file di test mockano comunque @/lib/db.
 });
@@ -113,7 +129,7 @@ describe("I106 — selezione del motore guidata dall'ambiente", () => {
   beforeEach(() => {
     costruttoriClient.length = 0;
     configsAdapter.length = 0;
-    ripristinoEnv();
+    baselineAssente(); // I110: baseline DICHIARATO, mai lo stato ambientale
   });
 
   test("env TURSO_* assente → PrismaClient nativo SENZA adapter (sviluppo locale invariato)", () => {
@@ -210,7 +226,7 @@ describe("I107-fix2 — default serverless (VERCEL) e preparazione della directo
   beforeEach(() => {
     costruttoriClient.length = 0;
     configsAdapter.length = 0;
-    ripristinoEnv();
+    baselineAssente(); // I110: baseline DICHIARATO, mai lo stato ambientale
     rmSync(DIR_PROVA, { recursive: true, force: true });
   });
 
@@ -250,7 +266,7 @@ describe("I107-fix2 — default serverless (VERCEL) e preparazione della directo
 
 describe("I106 — singleton e semantica della factory", () => {
   beforeEach(() => {
-    ripristinoEnv();
+    baselineAssente(); // I110: baseline DICHIARATO, mai lo stato ambientale
   });
 
   test("la factory crea NUOVE istanze a ogni chiamata; il modulo esporta il singleton memoizzato", () => {

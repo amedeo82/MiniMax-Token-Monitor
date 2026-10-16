@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
 [![Test 487 pass](https://img.shields.io/badge/test-487_pass-31C48D)](tests)
-[![Audit 521 PASS](https://img.shields.io/badge/audit-521_PASS-31C48D)](scripts/verifiche)
+[![Audit 525 PASS](https://img.shields.io/badge/audit-525_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -124,7 +124,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 **Qualità** (I50/I55)
 - **Suite test automatica**: 487 test / 1546 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 521 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 525 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
@@ -243,6 +243,21 @@ node scripts/verifiche/db-push-turso.mjs
 # 2) imposta le stesse due env su Vercel (Project → Settings → Environment Variables)
 #    poi ridistribuisci: il server parte sull'archivio remoto.
 ```
+
+**Attivazione verificata** (I110, 16/10/2026): le credenziali vivono nell'ambiente locale
+(`.env` con le due variabili — gitignored, **mai nell'indice git**: il check audit `nonTracciato`
+lo presidia; il token è rimasto nella storia git di un commit provvisorio → ruotalo da
+`turso db tokens create <db>` quando possibile). La probe
+`scripts/verifiche/verifica-i110-turso-attivo.ts` passa dalla **factory reale di produzione**
+(`creaPrismaClient` + `preparaSchema`) e verifica 7/7 sul database cloud: selezione ambiente →
+«turso», DDL incorporato applicato a Turso (zero migrazione anche nel cloud), `SELECT 1`
+(~200 ms RTT), conteggi delle 4 tabelle, round-trip scrivi→leggi→cancella via Prisma con
+pulizia finale, idempotenza del gate. Evidenza:
+`scripts/verifiche/esiti/i110-turso-attivazione-latest.md`. In locale `bun dev` usa GIÀ il
+database Turso (il pannello Impostazioni → Dati mostra «Turso (libsql)»); per il deployment
+resta il passo 2 qui sopra. La suite è inoltre **indipendente dall'ambiente**: il file di test
+della factory dichiara il proprio baseline (`baselineAssente`), quindi la presenza del `.env`
+non altera più i test (regressione CI del 16/10 risolta).
 
 Verifica del ramo adattato (scrivi → leggi → dedup → SQL raw, su db temporaneo):
 `bun scripts/verifiche/verifica-i106.mjs` (esito in `scripts/verifiche/esiti/i106-persistenza-latest.md`;

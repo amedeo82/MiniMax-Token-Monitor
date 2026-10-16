@@ -78,6 +78,7 @@ scripts/verifiche/esiti/*
 !scripts/verifiche/esiti/v5-2026-10-12T12-56-24.json
 !scripts/verifiche/esiti/v6-2026-10-12T13-19-29.json
 !scripts/verifiche/esiti/i106-persistenza-latest.md
+!scripts/verifiche/esiti/i110-turso-attivazione-latest.md
 scripts/verifiche/esiti-backup/
 upload/
 db/*.db
