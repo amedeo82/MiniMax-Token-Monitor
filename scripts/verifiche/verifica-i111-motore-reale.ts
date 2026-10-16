@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 import {
   eseguiManutenzioneDb,
@@ -43,7 +44,8 @@ function fallisci(e: unknown): never {
 try {
   rmSync(DIR, { recursive: true, force: true });
   mkdirSync(DIR, { recursive: true });
-  client = new PrismaClient({ datasourceUrl: `file:${join(DIR, "prova.db")}` });
+  // I115 — prisma 7: datasourceUrl rimosso, adapter obbligatorio (anche sul file:).
+  client = new PrismaClient({ adapter: new PrismaLibSql({ url: `file:${join(DIR, "prova.db")}` }) });
   // Guardia onesta: accessori di modello presenti = client REALE.
   if (typeof (client as unknown as { usagePoint?: unknown }).usagePoint !== "object") {
     throw new Error("client senza accessori di modello (non è il PrismaClient reale)");

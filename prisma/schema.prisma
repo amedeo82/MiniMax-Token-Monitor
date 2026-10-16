@@ -14,16 +14,16 @@
 // (la Subscription Key non viene MAI salvata sul server, resta nel browser).
 
 generator client {
-  provider        = "prisma-client-js"
-  // I106 — persistenza portabile: i driver adapter (libsql/Turso) richiedono
-  // questo flag preview in Prisma 6; il client generato accetta `adapter`
-  // nel costruttore e resta retrocompatibile (senza adapter = motore nativo).
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
+  // I115 — prisma 7: l'adapter è GA e OBBLIGATORIO (il client non ha più né
+  // motore nativo né `datasourceUrl`): il preview flag «driverAdapters» è
+  // deprecato e rimosso. L'URL non vive più nel datasource dello schema —
+  // per il CLI vale prisma.config.ts, per il client la config dell'adapter
+  // (src/lib/db-factory.ts).
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 /**

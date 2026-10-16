@@ -7,12 +7,13 @@ import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { preparaSchema } from "../../src/lib/schema-persistenza";
 
 const DIR = join(tmpdir(), "i111-probe-fifo");
 rmSync(DIR, { recursive: true, force: true });
 mkdirSync(DIR, { recursive: true });
-const client = new PrismaClient({ datasourceUrl: `file:${join(DIR, "probe.db")}` });
+const client = new PrismaClient({ adapter: new PrismaLibSql({ url: `file:${join(DIR, "probe.db")}` }) });
 await preparaSchema(client);
 
 const ora = Date.now();

@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T21:15:23.218Z
+# Audit implementazioni — 2026-10-16T21:41:43.339Z
 
-- Verifiche totali: **553** · PASS: **553** · FAIL: **0**
+- Verifiche totali: **560** · PASS: **560** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -481,14 +481,14 @@
 | I104 | commento stale framer-motion corretto (l'animazione è già CSS) (src/components/quota-ring.tsx) | simbolo | PASS | — |
 | I104 | zod CONSERVATO (in uso da I103) (package.json) | simbolo | PASS | — |
 | I104 | recharts conservato (grafici) (package.json) | simbolo | PASS | — |
-| I106 | schema: driver adapters abilitati (il client generato accetta `adapter`) (prisma/schema.prisma) | simbolo | PASS | — |
+| I106 | schema: NESSUN preview flag (dal I115 prisma 7 l'adapter è GA e obbligatorio — il flag preview è deprecato; il client accetta `adapter` nativamente) — assenza richiesta (prisma/schema.prisma) | assenza | PASS | — |
 | I106 | factory: ramo portabile selezionato dall'env (modulo proprio per testabilità senza collisioni con i mock @/lib/db) (src/lib/db-factory.ts) | simbolo | PASS | — |
 | I106 | factory: token Turso opzionale (database pubblici e file: non lo richiedono) (src/lib/db-factory.ts) | simbolo | PASS | — |
-| I106 | factory: driver adapter libsql costruito con {url, authToken} (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I106 | factory: driver adapter libsql costruito con {url, authToken} (dal I115 il costruttore si chiama PrismaLibSql — era PrismaLibSQL in v6) (src/lib/db-factory.ts) | simbolo | PASS | — |
 | I106 | factory esportata per i test (il singleton è valutato una volta per processo) (src/lib/db-factory.ts) | simbolo | PASS | — |
 | I106 | shim canonico @/lib/db: le route non cambiano import (contratto I106) (src/lib/db.ts) | simbolo | PASS | — |
-| I106 | dipendenza driver adapter (major allineata al client 6.x — adapter 7 richiede Prisma 7) (package.json) | simbolo | PASS | — |
-| I106 | dipendenza client libsql (range supportato dall'adapter 6.19: ^0.8) (package.json) | simbolo | PASS | — |
+| I106 | dipendenza driver adapter (dal I115 major 7 allineata a Prisma 7 — la v6 non è più compatibile col client generato) (package.json) | simbolo | PASS | — |
+| I106 | dipendenza client libsql (dal I115 range richiesto dall'adapter 7: ^0.17 → 0.18) (package.json) | simbolo | PASS | — |
 | I106 | push schema su Turso: SDL via migrate diff + esecuzione via client libsql (idempotente, token mai stampato) | file | PASS | — |
 | I106 | ciclo accettazione adapter: scrivi→leggi→dedup→SQL raw su db temporaneo; read-only su Turso reale | file | PASS | — |
 | I106 | test factory env-driven (mock costruttori con cattura argomenti, igiene env con delete) | file | PASS | — |
@@ -503,8 +503,8 @@
 | I107 | modalità dal MODULO PROPRIO (il shim @/lib/db resta { db } per i mock di processo I99/I95 — bun applica il primo mock per specificatore) (src/app/api/persistenza/route.ts) | simbolo | PASS | — |
 | I107 | regola ambiente→modalità in unità pura separata (solo TURSO_DATABASE_URL decide, token da solo non basta) | file | PASS | — |
 | I107 | ri-esportazione dalla factory: superficie pubblica stabile per lo shim db.ts e i test I106 (I107-fix: multi-riga con urlPersistenzaLocale) (src/lib/db-factory.ts) | simbolo | PASS | — |
-| I107 | I107-fix: ramo nativo con URL SEMPRE esplicito via urlPersistenzaLocale() (senza, Prisma esige env("DATABASE_URL") dallo schema e il primo $queryRaw esplode in ambienti senza .env) (src/lib/db-factory.ts) | simbolo | PASS | — |
-| I107 | I107-fix: URL effettivo del ramo nativo (DATABASE_URL o default assoluto db/custom.db dal CWD — i file: relativi Prisma li risolve contro prisma/schema.prisma) (src/lib/modalita-persistenza.ts) | simbolo | PASS | — |
+| I107 | I107-fix: URL SEMPRE esplicito via urlPersistenzaLocale() — fino a I114 viaggiava in datasourceUrl, dal I115 (prisma 7: opzione rimossa) nella config dell'adapter (senza URL esplicito il vecchio client nativo esigeva env("DATABASE_URL") dallo schema e il primo $queryRaw esplodeva in ambienti senza .env) (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I107 | I107-fix: URL effettivo del ramo locale (DATABASE_URL o default assoluto db/custom.db dal CWD — dal I115 l'URL file: è consumato dal driver libsql, che risolve i relativi contro il CWD; il default assoluto è corretto sotto entrambe le semantiche) (src/lib/modalita-persistenza.ts) | simbolo | PASS | — |
 | I107 | pannello nel tab Dati: modalità attiva, host, test connessione, conteggi (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I107 | il pannello consuma l'endpoint di diagnostica (fetch all'apertura + bottone Aggiorna) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I107 | badge modalità attiva distinto per ramo turso/locale (src/components/settings-dialog.tsx) | simbolo | PASS | — |
@@ -557,6 +557,13 @@
 | I114 | eslint 10 adottato (9→10.13.0 verificato empiricamente con lint exit 0 reale; peer eslint-config-next >=9 accetta 10) (package.json) | simbolo | PASS | — |
 | I114 | typescript resta su 5.9.x: TS 7.0 rifiutato da typescript-eslint (rompe il gate lint) — rivalutare quando supporterà TS >=7.1 (issue typescript-eslint #10940) (package.json) | simbolo | PASS | — |
 | I114 | inventario dipendenze dichiarato↔installato dal bun.lock (strumento dell'audit dipendenze) | file | PASS | — |
+| I115 | prisma 7 adottato (chiude la catena di produzione deepmerge-ts/defu via @prisma/config 7.10.1: deepmerge-ts 8.0.2 fissato — bun audit 25→2 nel I114 → 1 residua dev-only) (package.json) | simbolo | PASS | — |
+| I115 | @libsql/client 0.18 (range richiesto dall'adapter 7: ^0.17 — i due major sono ACCOPPIATI) (package.json) | simbolo | PASS | — |
+| I115 | schema senza URL nel datasource (prisma 7: P1012 — l'URL vive in prisma.config.ts per il CLI, nella config dell'adapter per il client) — assenza richiesta (prisma/schema.prisma) | assenza | PASS | — |
+| I115 | config CLI prisma 7 (defineConfig: schema + datasource per i comandi migrate/db push) | file | PASS | — |
+| I115 | config CLI con l'API prisma/config (defineConfig) (prisma.config.ts) | simbolo | PASS | — |
+| I115 | nessun ricorso all'opzione RIMOSSA dal client 7 (entrambi i rami passano dall'adapter PrismaLibSql — anche il file: locale, stesso dialetto SQLite) — assenza richiesta (src/lib/db-factory.ts) | assenza | PASS | — |
+| I115 | anti-drift sul flag CLI 7 (--to-schema: --to-schema-datamodel è stato rimosso) (tests/lib/database-schema.test.ts) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (553 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (560 pass, 0 fail, 0 scoperte)

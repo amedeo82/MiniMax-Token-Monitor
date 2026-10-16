@@ -57,7 +57,7 @@ describe("I107-fix3 — schema incorporato (bootstrap DDL)", () => {
 
   test("esattezza anti-drift: il DDL incorporato coincide con `prisma migrate diff` dello schema", () => {
     const diff = Bun.spawnSync(
-      ["bunx", "prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", "prisma/schema.prisma", "--script"],
+      ["bunx", "prisma", "migrate", "diff", "--from-empty", "--to-schema", "prisma/schema.prisma", "--script"],
       { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
     );
     expect(diff.exitCode).toBe(0);

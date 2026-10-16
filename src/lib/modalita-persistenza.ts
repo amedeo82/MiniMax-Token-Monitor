@@ -32,19 +32,22 @@ export function modalitaPersistenza(): ModalitaPersistenza {
  * «nessuna env extra», docs/09 §6).
  *
  * Il default è un percorso ASSOLUTO qualificato dal CWD del processo server
- * (`file:${cwd}/db/custom.db`): Prisma risolve i percorsi `file:` relativi
- * rispetto a prisma/schema.prisma e NON rispetto al CWD (probe empirica
- * I107-fix: `file:./db/custom.db` dal costruttore atterrava su
- * `prisma/db/custom.db`) — il default relativo sarebbe stato creato/aperto
- * nel posto sbagliato.
+ * (`file:${cwd}/db/custom.db`): dal I115 l'URL `file:` è consumato DIRETTAMENTE
+ * dal driver libsql (adapter prisma 7), che risolve i percorsi relativi contro
+ * il CWD — con il vecchio motore nativo (fino a I114) Prisma li risolveva
+ * contro prisma/schema.prisma (probe empirica I107-fix: `file:./db/custom.db`
+ * dal costruttore atterrava su `prisma/db/custom.db`): il default assoluto
+ * è corretto sotto ENTRAMBE le semantiche.
  *
- * Motivo dell'esistenza: `new PrismaClient()` SENZA `datasourceUrl` esplicito
- * esige `env("DATABASE_URL")` dallo schema e il primo `$queryRaw` esplode con
- * «Environment variable not found: DATABASE_URL» in ogni ambiente senza file
- * `.env` (bug I107 riprodotto: pannello «Persistenza» in deployment senza
- * variabili configurate). Il ramo adapter libsql NON ne ha bisogno (il driver
- * gestisce la connessione), il motore nativo SÌ — quindi il ramo nativo passa
- * SEMPRE un URL esplicito via questa funzione.
+ * Motivo dell'esistenza: l'URL della persistenza locale deve essere SEMPRE
+ * esplicito e governato da una regola UNICA (regola I107-fix, valida ancora):
+ * senza URL esplicito il vecchio client nativo esigeva env("DATABASE_URL")
+ * dallo schema e il primo $queryRaw esplodeva con «Environment variable not
+ * found: DATABASE_URL» in ogni ambiente senza file `.env` (bug I107
+ * riprodotto: pannello «Persistenza» in deployment senza variabili). Dal I115
+ * lo schema non porta più URL (prisma 7) e l'URL esplicito viaggia nella
+ * config dell'adapter libsql — la funzione resta la FONTE UNICA della regola
+ * (passthrough DATABASE_URL / default assoluto / Vercel tmpdir).
  *
  * I107-fix2 — regola SERVERLESS: su Vercel (`VERCEL=1`) il filesystem del
  * deployment è READ-ONLY (solo `/tmp` è scrivibile) e la directory `db/` non

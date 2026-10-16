@@ -9,9 +9,11 @@
  *    verso Turso (`libsql://…`, con `TURSO_AUTH_TOKEN` opzionale per i database
  *    protetti) oppure verso qualsiasi URL libsql (`file:` compreso). Stesso schema,
  *    stesse route, SQL raw parametrizzato ($queryRaw/$executeRaw) incluso.
- * 2. Env assente (sviluppo locale, CI) → PrismaClient NATIVO su SQLite
- *    (`DATABASE_URL`, default `db/custom.db`): comportamento IDENTICO a prima
- *    di I106 — nessun adapter, nessun servizio esterno, zero sorprese.
+ * 2. Env assente (sviluppo locale, CI) → STESSO adapter libsql su `file:` SQLite
+ *    (`DATABASE_URL`, default `db/custom.db`): dal I115 (prisma 7) il costruttore
+ *    NON ha più `datasourceUrl` né motore nativo — l'adapter è l'UNICO modo di
+ *    connettersi; il comportamento del ramo locale resta IDENTICO a prima
+ *    (stesso file SQLite, stesse route, zero sorprese).
  *
  * Il modulo è separato da src/lib/db.ts PER I TEST: i test dei contratti HTTP
  * (I99) e dei guard (I95) mockano "@/lib/db" a livello di processo — importare
@@ -26,7 +28,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSQL } from "@prisma/adapter-libsql";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 import { preparaSchema } from "./schema-persistenza";
 import { urlPersistenzaLocale } from "./modalita-persistenza";
@@ -50,27 +52,26 @@ export {
  */
 export function creaPrismaClient(): PrismaClient {
   const url = process.env.TURSO_DATABASE_URL?.trim();
-  let client: PrismaClient;
+  let adapter: PrismaLibSql;
   if (url) {
     // I106 — ramo portabile: adapter libsql. Il token è opzionale (database
     // Turso pubblici e URL `file:` non lo richiedono); mai stampato.
     const authToken = process.env.TURSO_AUTH_TOKEN?.trim() || undefined;
-    const adapter = new PrismaLibSQL({ url, authToken });
-    client = new PrismaClient({ adapter, log: ["query"] });
+    adapter = new PrismaLibSql({ url, authToken });
   } else {
-    // Ramo locale (default): URL SEMPRE esplicito via urlPersistenzaLocale()
-    // (DATABASE_URL se presente, altrimenti il default documentato db/custom.db
-    // come percorso assoluto — vedi la nota in modalita-persistenza.ts; su Vercel
-    // senza env il default vive nel tmpdir scrivibile, I107-fix2).
-    // BUG I107-fix: senza override il client esigeva env("DATABASE_URL") dallo
-    // schema e il primo $queryRaw esplodeva «Environment variable not found:
-    // DATABASE_URL» in ogni ambiente senza file .env (riprodotto: pannello
-    // «Persistenza» su deployment senza variabili configurate). Con
-    // `datasourceUrl` il comportamento con DATABASE_URL impostata è IDENTICO
-    // (stesso valore che env() avrebbe risolto); senza, vale il default.
+    // I115 — prisma 7: `datasourceUrl` è stato RIMOSSO dalle opzioni del client
+    // (insieme al motore nativo Rust): ENTRAMBI i rami passano dall'adapter,
+    // anche il locale (stesso file SQLite, via URL `file:` che libsql apre
+    // nativamente). La regola I107-fix «URL SEMPRE esplicito» resta valida —
+    // viaggia ora dentro la config dell'adapter: il driver gestisce la
+    // connessione e lo schema non porta più l'URL (vedi prisma.config.ts per
+    // il CLI). Default: DATABASE_URL se presente, altrimenti il default
+    // documentato db/custom.db come percorso ASSOLUTO (vedi la nota in
+    // modalita-persistenza.ts; su Vercel senza env il default vive nel tmpdir
+    // scrivibile, I107-fix2).
     const urlLocale = urlPersistenzaLocale();
     preparaDirectoryFile(urlLocale);
-    client = new PrismaClient({ datasourceUrl: urlLocale, log: ["query"] });
+    adapter = new PrismaLibSql({ url: urlLocale });
   }
   // I107-fix3 — schema GARANTITO all'avvio (D1 «zero migrazione»): DDL
   // idempotente incorporato in src/lib/schema-persistenza.ts, su ENTRAMBE le
@@ -79,6 +80,7 @@ export function creaPrismaClient(): PrismaClient {
   // fresco (/tmp su Vercel, Turso appena creato) funziona senza db:push né
   // db-push-turso.mjs. I guasti DDL non sono mascherati (stderr) e riemergono
   // dalle query reali.
+  const client = new PrismaClient({ adapter, log: ["query"] });
   void preparaSchema(client);
   return client;
 }

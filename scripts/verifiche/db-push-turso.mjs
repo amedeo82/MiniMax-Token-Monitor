@@ -35,7 +35,7 @@ const TABELLE_ATTESE = ["UsagePoint", "DownsampledPoint", "UsageEventRecord", "M
 function generaSql() {
   const stdout = execFileSync(
     "bunx",
-    ["prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", join("prisma", "schema.prisma"), "--script"],
+    ["prisma", "migrate", "diff", "--from-empty", "--to-schema", join("prisma", "schema.prisma"), "--script"],
     { cwd: ROOT, encoding: "utf8", maxBuffer: 16 * 1024 * 1024, env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL ?? "file:./db/custom.db" } },
   );
   if (!stdout.includes("CREATE TABLE")) throw new Error("migrate diff non ha prodotto CREATE TABLE");

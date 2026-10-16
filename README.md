@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
 [![Test 513 pass](https://img.shields.io/badge/test-513_pass-31C48D)](tests)
-[![Audit 553 PASS](https://img.shields.io/badge/audit-553_PASS-31C48D)](scripts/verifiche)
+[![Audit 560 PASS](https://img.shields.io/badge/audit-560_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -125,7 +125,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 **Qualità** (I50/I55)
 - **Suite test automatica**: 513 test / 1699 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **manutenzione database con e2e su entrambe le codifiche DateTime (I111)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 553 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**; dal I114 presidia anche le decisioni sulle dipendenze (eslint 10 adottato, typescript su 5.9.x in attesa del supporto typescript-eslint a TS 7.1+, inventario dichiarato↔installato via `scripts/verifiche/audit-deps-inventario.mjs`)
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 560 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**; dal I114 presidia anche le decisioni sulle dipendenze (eslint 10 adottato, typescript su 5.9.x in attesa del supporto typescript-eslint a TS 7.1+, inventario dichiarato↔installato via `scripts/verifiche/audit-deps-inventario.mjs`; dal I115 presidia il major prisma 7 (adapter obbligatorio anche sul `file:` locale, URL fuori dallo schema, `prisma.config.ts`, flag CLI `--to-schema`))
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
@@ -201,10 +201,13 @@ server), esito del test di connessione e conteggi per tabella, via `GET /api/per
 
 Il default locale è **incorporato nel codice** (I107-fix): `urlPersistenzaLocale()` usa
 `DATABASE_URL` se presente, altrimenti `db/custom.db` come percorso assoluto risolto dal
-CWD — il ramo nativo passa sempre un `datasourceUrl` esplicito al client, quindi in
-locale/CI funziona anche senza file `.env` (Prisma risolve i percorsi `file:` relativi
-rispetto a `prisma/schema.prisma`, non al CWD: il default documentato è qualificato in
-modo assoluto proprio per questo). La factory prepara inoltre la **directory padre** del
+CWD — dal I115 (Prisma 7) l'URL esplicito viaggia nella **config dell'adapter libsql**
+(l'opzione `datasourceUrl` e il motore nativo sono stati rimossi dal client: l'adapter è
+l'unico modo di connettersi, anche sul `file:` locale), quindi in locale/CI funziona
+ancora senza file `.env`. Il default è qualificato in modo assoluto perché il driver
+libsql risolve i percorsi `file:` relativi contro il CWD (con il vecchio motore nativo
+erano risolti contro `prisma/schema.prisma`: l'assoluto è corretto sotto entrambe le
+semantiche). La factory prepara inoltre la **directory padre** del
 file (I107-fix2): SQLite non crea le cartelle e un clone fresco è senza `db/` (gitignored).
 
 **Serverless senza env Turso** (I107-fix2/fix3): su Vercel il filesystem del deployment è

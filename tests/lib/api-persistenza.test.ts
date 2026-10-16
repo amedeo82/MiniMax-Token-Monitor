@@ -134,9 +134,10 @@ describe("I107 — GET /api/persistenza (diagnostica, solo lettura)", () => {
     // i GET successivi in questa suite non le ripetono).
     expect(ddlEseguiti.filter((s) => s.startsWith("CREATE TABLE IF NOT EXISTS"))).toHaveLength(4);
     // I107-fix: DATABASE_URL assente → default ASSOLUTO risolto dal CWD
-    // (prima del fix il display mostrava «db/custom.db» ma il motore nativo,
-    // senza datasourceUrl esplicito, esigeva env("DATABASE_URL") ed esplodeva
-    // «Environment variable not found» in ambienti senza file .env).
+    // (prima del fix il display mostrava «db/custom.db» ma il client, senza
+    // URL esplicito — allora datasourceUrl, oggi la config dell'adapter I115 —
+    // esigeva env("DATABASE_URL") ed esplodeva «Environment variable not
+    // found» in ambienti senza file .env).
     expect(body["host"]).toBe(`file:${process.cwd()}/db/custom.db`);
     expect((body["test"] as Record<string, unknown>)["ok"]).toBe(true);
     expect(typeof (body["test"] as Record<string, unknown>)["latenzaMs"]).toBe("number");

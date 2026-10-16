@@ -28,6 +28,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { preparaSchema } from "../../src/lib/schema-persistenza.ts";
 
 const N = 8;
@@ -36,7 +37,8 @@ const TIMEOUT_MS = 15_000;
 /** Client Prisma nativo su file SQLite FRESH in una directory temporanea. */
 function clienteSuFileFresco() {
   const dir = mkdtempSync(join(tmpdir(), "i107-fix4-"));
-  const client = new PrismaClient({ datasourceUrl: `file:${join(dir, "custom.db")}` });
+  // I115 — prisma 7: datasourceUrl rimosso, adapter obbligatorio (anche sul file:).
+  const client = new PrismaClient({ adapter: new PrismaLibSql({ url: `file:${join(dir, "custom.db")}` }) });
   return { dir, client };
 }
 

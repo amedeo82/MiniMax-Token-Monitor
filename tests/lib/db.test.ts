@@ -5,20 +5,24 @@
  * cattura degli argomenti + import dinamico del modulo REALE di db — si
  * verifica la SELEZIONE del motore guidata dall'ambiente, non le query:
  *
- * - senza TURSO_* → PrismaClient NATIVO senza adapter (sviluppo locale
- *   invariato — accettazione I106);
+ * - senza TURSO_* → adapter libsql su `file:` locale (dal I115 prisma 7 esige
+ *   l'adapter ovunque: `datasourceUrl` e motore nativo sono stati RIMOSSI;
+ *   stesso file SQLite, stesse route — comportamento equivalente all'accettazione
+ *   I106);
  * - con TURSO_DATABASE_URL → adapter libsql costruito con {url, authToken}
  *   e passato al client (ramo portabile Turso);
  * - token assente/vuoto → `authToken: undefined` (MAI la stringa «undefined»,
  *   lezione Task 45: l'igiene dell'env è fatta con delete, mai con undefined);
  * - url/token con spazi → trim (gli spazi incidono sul protocollo libsql://);
- * - I107-fix: il ramo nativo passa SEMPRE `datasourceUrl` esplicito — senza,
- *   Prisma esige env("DATABASE_URL") dallo schema e il primo $queryRaw esplode
+ * - I107-fix: l'URL della persistenza locale è SEMPRE esplicito — fino a I114
+ *   viaggiava in `datasourceUrl`, dal I115 (prisma 7: opzione rimossa) nella
+ *   CONFIG dell'adapter libsql: senza URL esplicito il vecchio client nativo
+ *   esigeva env("DATABASE_URL") dallo schema e il primo $queryRaw esplodeva
  *   «Environment variable not found: DATABASE_URL» in ogni ambiente senza
  *   file .env (bug riprodotto: pannello «Persistenza» su deployment senza
- *   variabili configurate). Default ASSOLUTO db/custom.db: Prisma risolve i
- *   percorsi file: relativi rispetto a prisma/schema.prisma, NON al CWD
- *   (probe empirica I107-fix).
+ *   variabili configurate). Default ASSOLUTO db/custom.db: corretto sotto
+ *   entrambe le semantiche (motore nativo: risolto contro prisma/schema.prisma;
+ *   driver libsql I115: risolto contro il CWD) — probe empirica I107-fix.
  * - I107-fix2: con VERCEL=1 (serverless, filesystem read-only tranne /tmp) il
  *   default NON va nel CWD ma in tmpdir()/db/custom.db; DATABASE_URL esplicita
  *   vince SEMPRE (passthrough anche su Vercel). La factory prepara la
@@ -57,7 +61,8 @@ mock.module("@prisma/client", () => ({
 }));
 
 mock.module("@prisma/adapter-libsql", () => ({
-  PrismaLibSQL: class {
+  PrismaLibSql: class {
+    // I115: il costruttore reale si chiama PrismaLibSql (era PrismaLibSQL in v6).
     config: Record<string, unknown>;
     constructor(config: Record<string, unknown>) {
       this.config = config;
@@ -132,35 +137,35 @@ describe("I106 — selezione del motore guidata dall'ambiente", () => {
     baselineAssente(); // I110: baseline DICHIARATO, mai lo stato ambientale
   });
 
-  test("env TURSO_* assente → PrismaClient nativo SENZA adapter (sviluppo locale invariato)", () => {
+  test("env TURSO_* assente → adapter libsql su file: locale (prisma 7: adapter obbligatorio, stesso file SQLite di I106)", () => {
     const client = creaPrismaClient();
-    expect(configsAdapter.length).toBe(0); // l'adapter non è mai costruito
+    expect(configsAdapter.length).toBe(1); // I115: l'adapter è l'UNICO modo di connettersi
+    expect(configsAdapter[0]?.["url"]).toBe(`file:${process.cwd()}/db/custom.db`); // URL sempre esplicito (regola I107-fix)
     expect(costruttoriClient.length).toBe(1);
-    expect(costruttoriClient[0]?.["adapter"]).toBeUndefined();
-    expect(costruttoriClient[0]?.["datasourceUrl"]).toBeDefined(); // I107-fix: URL sempre esplicito
+    expect(costruttoriClient[0]?.["adapter"]).toBeDefined();
     expect(client).toBeDefined();
     expect(modalitaPersistenza()).toBe("locale");
   });
 
-  test("I107-fix: DATABASE_URL assente → datasourceUrl = default ASSOLUTO db/custom.db (nessuna env richiesta)", () => {
+  test("I107-fix: DATABASE_URL assente → URL default ASSOLUTO db/custom.db nella config dell'adapter (nessuna env richiesta)", () => {
     impostaEnv({ DATABASE_URL: undefined });
     creaPrismaClient();
-    expect(costruttoriClient[0]?.["adapter"]).toBeUndefined();
-    // Percorso ASSOLUTO dal CWD: un default relativo (file:./db/custom.db)
-    // sarebbe risolto contro prisma/ (schema) e atterrato su prisma/db/.
-    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe(`file:${process.cwd()}/db/custom.db`);
+    expect(configsAdapter.length).toBe(1);
+    // Percorso ASSOLUTO dal CWD: corretto sotto entrambe le semantiche
+    // (motore nativo pre-I115: risolto contro prisma/; driver libsql I115: CWD).
+    expect(configsAdapter[0]?.["url"]).toBe(`file:${process.cwd()}/db/custom.db`);
   });
 
-  test("I107-fix: DATABASE_URL presente → passthrough identico come datasourceUrl (comportamento invariato)", () => {
+  test("I107-fix: DATABASE_URL presente → passthrough identico nella config dell'adapter (comportamento invariato)", () => {
     impostaEnv({ DATABASE_URL: "file:/percorso/archivio.db" });
     creaPrismaClient();
-    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe("file:/percorso/archivio.db");
+    expect(configsAdapter[0]?.["url"]).toBe("file:/percorso/archivio.db");
   });
 
   test("I107-fix: DATABASE_URL con spazi → trim (coerente con la regola TURSO_*)", () => {
     impostaEnv({ DATABASE_URL: "  file:/percorso/archivio.db  " });
     creaPrismaClient();
-    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe("file:/percorso/archivio.db");
+    expect(configsAdapter[0]?.["url"]).toBe("file:/percorso/archivio.db");
   });
 
   test("I107-fix: urlPersistenzaLocale() segue la stessa regola della factory (unità pura nel modulo proprio)", () => {
@@ -240,14 +245,14 @@ describe("I107-fix2 — default serverless (VERCEL) e preparazione della directo
     expect(url).toBe(`file:${join(tmpdir(), "db", "custom.db")}`);
     expect(url.startsWith(`file:${process.cwd()}`)).toBe(false);
     creaPrismaClient();
-    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe(url);
+    expect(configsAdapter[0]?.["url"]).toBe(url);
   });
 
   test("VERCEL=1 con DATABASE_URL → passthrough identico (la env esplicita vince anche su Vercel)", () => {
     impostaEnv({ DATABASE_URL: "file:/dati/esterni.db", VERCEL: "1" });
     expect(mod.urlPersistenzaLocale()).toBe("file:/dati/esterni.db");
     creaPrismaClient();
-    expect(costruttoriClient[0]?.["datasourceUrl"]).toBe("file:/dati/esterni.db");
+    expect(configsAdapter[0]?.["url"]).toBe("file:/dati/esterni.db");
   });
 
   test("la factory prepara la directory padre del file SQLite (SQLite NON crea le cartelle)", () => {
