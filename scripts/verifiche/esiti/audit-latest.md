@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T15:46:36.300Z
+# Audit implementazioni — 2026-10-16T19:40:38.906Z
 
-- Verifiche totali: **525** · PASS: **525** · FAIL: **0**
+- Verifiche totali: **540** · PASS: **540** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -361,7 +361,7 @@
 | I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
 | I105 | contatore audit §Qualità allineato — contatore dinamico | simbolo | PASS | — |
 | I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
-| I105 | indice documentazione README completo (docs/09 incluso) (README.md) | simbolo | PASS | — |
+| I105 | indice documentazione README completo (docs/10 incluso) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | docs/09 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
@@ -530,5 +530,20 @@
 | I110 | evidenza a nome fisso dell'attivazione (7 passi: selezione ambiente, client, DDL incorporato sul cloud, SELECT 1, conteggi, round-trip, idempotenza — host sanificato, token MAI stampato) | file | PASS | — |
 | I110 | segreti fuori dall'indice: .env è gitignored e le credenziali (TURSO_*, DATABASE_URL, chiavi) restano SOLO nell'ambiente (header db-factory.ts, README §Persistenza) — il commit dd03d16 dell'utente l'aveva aggiunto con git add -f e in CI rompeva anche la suite: bun auto-carica il .env e il test I106 «env assente» vedeva l'adapter Turso — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I110 | suite indipendente dall'ambiente: baseline DICHIARATO (chiavi cancellate all'avvio e a ogni beforeEach), lo stato ambientale (.env incluso) ripristinato solo nell'afterAll — mai assumere lo stato del processo (tests/lib/db.test.ts) | simbolo | PASS | — |
+| I111 | lib manutenzione (unità pura, pattern I106/I107): misura storage PRAGMA, statistiche tabelle, integrità, ritenuta da ambiente con clamp, valutazione quota, proiezione scritture, pulizia con dryRun, VACUUM onesto, orchestratore | file | PASS | — |
+| I111 | limiti del free tier Turso come costante verificabile (5 GiB / 500M read / 10M write / 100 database — fonti datate in docs/10 §2) (src/lib/manutenzione-db.ts) | simbolo | PASS | — |
+| I111 | confronti temporali DUALI — INTEGER (motore Prisma, epoch ms) e TEXT (SQL raw I42, ISO 8601): il bug della prima stesura, beccato dalla suite e2e, non può tornare (probe-i111-datetime.ts, docs/10 §4) (src/lib/manutenzione-db.ts) | simbolo | PASS | — |
+| I111 | procedure complete: limiti free tier con fonti (§2), architettura (§3), due codifiche DateTime (§4), procedure P1–P6 (§5), configurazione env (§6), runbook (§7), verifiche (§8), stime e onestà (§9) | file | PASS | — |
+| I111 | GET rapporto read-only senza chiave + POST azioni protette (pulizia | vacuum | manutenzione) | file | PASS | — |
+| I111 | gate dello schema I107-fix4 anche sulle rotte di manutenzione: nessuna misura o scrittura parte a schema incompleto (src/app/api/manutenzione/route.ts) | simbolo | PASS | — |
+| I111 | il GET NON scrive nulla: nessuna pulizia e vacuum disattivato nel rapporto read-only (dimostrato dalla suite) (src/app/api/manutenzione/route.ts) | simbolo | PASS | — |
+| I111 | POST sotto la guardia I95 (ADMIN_TOKEN timing-safe + rate limit scritture) — qui la guardia conta doppio: le azioni cancellano righe (src/app/api/manutenzione/route.ts) | simbolo | PASS | — |
+| I111 | cron notturno autenticato: senza env → 403 ONESTO (un endpoint che cancella non si apre mai al pubblico), Bearer sbagliato → 401 timing-safe, kill-switch MANUTENZIONE_AUTO_PULIZIA=0 (src/app/api/manutenzione/cron/route.ts) | simbolo | PASS | — |
+| I111 | cron programmato 02:30 UTC ogni giorno (vercel.json §crons): pulizia e verifica anche a traffico zero (vercel.json) | simbolo | PASS | — |
+| I111 | validazione zod dell'azione di manutenzione (I103: niente check manuali sparsi) (src/lib/api-schemi.ts) | simbolo | PASS | — |
+| I111 | suite lib: funzioni pure + client finto (dryRun zero DELETE, VACUUM onesto, orchestratore) + e2e su file con ENTRAMBE le codifiche DateTime, cap FIFO e idempotenza (tests/lib/database-manutenzione.test.ts) | simbolo | PASS | — |
+| I111 | contratti route: GET read-only dimostrato (zero $executeRaw), zod 400, guard 401, tre azioni, cron 403/401/200 con kill-switch | file | PASS | — |
+| I111 | probe empirica delle due codifiche DateTime nel database (motore Prisma INTEGER vs SQL raw TEXT) e del confronto duale corretto | file | PASS | — |
+| I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (525 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (540 pass, 0 fail, 0 scoperte)

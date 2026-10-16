@@ -580,8 +580,8 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "487 test / 1546 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
-  check.simbolo("I105", "README.md", "01–09", "indice documentazione README completo (docs/09 incluso)"),
+  check.simbolo("I105", "README.md", "513 test / 1737 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "01–10", "indice documentazione README completo (docs/10 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -777,6 +777,41 @@ const CHECKS = [
   check.file("I110", "scripts/verifiche/esiti/i110-turso-attivazione-latest.md", "evidenza a nome fisso dell'attivazione (7 passi: selezione ambiente, client, DDL incorporato sul cloud, SELECT 1, conteggi, round-trip, idempotenza — host sanificato, token MAI stampato)"),
   check.nonTracciato("I110", "(.*/)?\\.env(\\..+)?", "segreti fuori dall'indice: .env è gitignored e le credenziali (TURSO_*, DATABASE_URL, chiavi) restano SOLO nell'ambiente (header db-factory.ts, README §Persistenza) — il commit dd03d16 dell'utente l'aveva aggiunto con git add -f e in CI rompeva anche la suite: bun auto-carica il .env e il test I106 «env assente» vedeva l'adapter Turso"),
   check.simbolo("I110", "tests/lib/db.test.ts", "baselineAssente", "suite indipendente dall'ambiente: baseline DICHIARATO (chiavi cancellate all'avvio e a ogni beforeEach), lo stato ambientale (.env incluso) ripristinato solo nell'afterAll — mai assumere lo stato del processo"),
+
+  /* --- I111 — manutenzione database (anti-rottura + quota Turso, 17/10/2026) --- */
+  check.file("I111", "src/lib/manutenzione-db.ts", "lib manutenzione (unità pura, pattern I106/I107): misura storage PRAGMA, statistiche tabelle, integrità, ritenuta da ambiente con clamp, valutazione quota, proiezione scritture, pulizia con dryRun, VACUUM onesto, orchestratore"),
+  check.simbolo("I111", "src/lib/manutenzione-db.ts", "LIMITI_TURSO_FREE", "limiti del free tier Turso come costante verificabile (5 GiB / 500M read / 10M write / 100 database — fonti datate in docs/10 §2)"),
+  check.simbolo("I111", "src/lib/manutenzione-db.ts", "typeof\\(\"t\"\\) = 'integer'", "confronti temporali DUALI — INTEGER (motore Prisma, epoch ms) e TEXT (SQL raw I42, ISO 8601): il bug della prima stesura, beccato dalla suite e2e, non può tornare (probe-i111-datetime.ts, docs/10 §4)"),
+  check.file("I111", "docs/10-manutenzione-database.md", "procedure complete: limiti free tier con fonti (§2), architettura (§3), due codifiche DateTime (§4), procedure P1–P6 (§5), configurazione env (§6), runbook (§7), verifiche (§8), stime e onestà (§9)"),
+  check.file("I111", "src/app/api/manutenzione/route.ts", "GET rapporto read-only senza chiave + POST azioni protette (pulizia | vacuum | manutenzione)"),
+  check.simbolo("I111", "src/app/api/manutenzione/route.ts", "await preparaSchema\\(db\\)", "gate dello schema I107-fix4 anche sulle rotte di manutenzione: nessuna misura o scrittura parte a schema incompleto"),
+  check.simbolo("I111", "src/app/api/manutenzione/route.ts", 'vacuum: "mai"', "il GET NON scrive nulla: nessuna pulizia e vacuum disattivato nel rapporto read-only (dimostrato dalla suite)"),
+  check.simbolo("I111", "src/app/api/manutenzione/route.ts", "bloccoScrittura", "POST sotto la guardia I95 (ADMIN_TOKEN timing-safe + rate limit scritture) — qui la guardia conta doppio: le azioni cancellano righe"),
+  check.simbolo("I111", "src/app/api/manutenzione/cron/route.ts", "CRON_SECRET", "cron notturno autenticato: senza env → 403 ONESTO (un endpoint che cancella non si apre mai al pubblico), Bearer sbagliato → 401 timing-safe, kill-switch MANUTENZIONE_AUTO_PULIZIA=0"),
+  check.simbolo("I111", "vercel.json", '"path": "/api/manutenzione/cron"', "cron programmato 02:30 UTC ogni giorno (vercel.json §crons): pulizia e verifica anche a traffico zero"),
+  check.simbolo("I111", "src/lib/api-schemi.ts", "schemaAzioneManutenzione", "validazione zod dell'azione di manutenzione (I103: niente check manuali sparsi)"),
+  check.simbolo("I111", "tests/lib/database-manutenzione.test.ts", "motore reale", "suite lib: funzioni pure + client finto (dryRun zero DELETE, VACUUM onesto, orchestratore) + e2e su file con ENTRAMBE le codifiche DateTime, cap FIFO e idempotenza"),
+  check.file("I111", "tests/lib/api-manutenzione.test.ts", "contratti route: GET read-only dimostrato (zero $executeRaw), zod 400, guard 401, tre azioni, cron 403/401/200 con kill-switch"),
+  check.file("I111", "scripts/verifiche/probe-i111-datetime.ts", "probe empirica delle due codifiche DateTime nel database (motore Prisma INTEGER vs SQL raw TEXT) e del confronto duale corretto"),
+  {
+    item: "I111",
+    what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",
+    kind: "versione",
+    run: () => {
+      const mv = /APP_VERSION = "(\d{4}-\d{2}-\d{2}) · (I\d+)"/.exec(read("src/lib/version.ts") ?? "");
+      if (!mv) return "APP_VERSION non trovata in src/lib/version.ts";
+      const d04 = read("docs/04-stato-avanzamento.md") ?? "";
+      const sezione = d04.indexOf("## 8. Changelog della documentazione");
+      if (sezione < 0) return "sezione §8 non trovata in docs/04";
+      const riga = /^\| (\d{4}-\d{2}-\d{2}) \|([^\n]*)/m.exec(d04.slice(sezione));
+      if (!riga) return "nessuna riga changelog trovata in docs/04 §8";
+      const item = /\*\*(I\d+)/.exec(riga[2] ?? "");
+      if (!item) return "item I<n> non trovato nella riga changelog più recente di docs/04 §8";
+      return mv[1] === riga[1] && mv[2] === item[1]
+        ? null
+        : `APP_VERSION "${mv[1]} · ${mv[2]}" non allineata al changelog canonico (attesa "${riga[1]} · ${item[1]}")`;
+    },
+  },
 ];
 
 /* ------------------------------------------------------------------ */

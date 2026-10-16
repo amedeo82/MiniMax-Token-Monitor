@@ -14,8 +14,8 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
-[![Test 487 pass](https://img.shields.io/badge/test-487_pass-31C48D)](tests)
-[![Audit 525 PASS](https://img.shields.io/badge/audit-525_PASS-31C48D)](scripts/verifiche)
+[![Test 513 pass](https://img.shields.io/badge/test-513_pass-31C48D)](tests)
+[![Audit 539 PASS](https://img.shields.io/badge/audit-540_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -116,6 +116,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Export orario** (I68): storico aggregato per ora (ultimo valore per ora, grana derivata) dal server
 - **API di sintesi** (I80): `GET /api/summary` read-only senza chiave — KPI aggregati (punti, ultimo rilevamento, eventi, bucket orari) per statusline, home assistant e widget esterni
 - **Diagnostica persistenza** (I107): `GET /api/persistenza` read-only senza chiave — modalità attiva (SQLite/Turso), host sanificato senza credenziali, test di connessione reale e conteggi per tabella, resa nel pannello **Impostazioni → Dati → Persistenza server**
+- **Manutenzione database** (I111): `GET /api/manutenzione` read-only senza chiave — rapporto di salute e quota (storage PRAGMA, livello ok/attenzione/critica sul free tier, integrità `quick_check`, velocità 24 h, proiezione scritture); `POST` protetto I95 con azioni `pulizia`/`vacuum`/`manutenzione` (ritenuta + cap FIFO, byte recuperati dichiarati); **cron notturno automatico** 02:30 UTC (`vercel.json`, Bearer `CRON_SECRET`) — procedure complete in `docs/10`
 
 **Persistenza durevole** (F7/F8, offline-first)
 - Storico replicato su **SQLite server-side** (fino a 10.000 punti / 90 giorni): sopravvive a cache svuotate e cambio dispositivo, con merge automatico all'avvio
@@ -123,8 +124,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 487 test / 1546 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 525 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit
+- **Suite test automatica**: 513 test / 1737 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **manutenzione database con e2e su entrambe le codifiche DateTime (I111)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 540 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
@@ -144,6 +145,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | [`docs/07-analisi-miglioramenti-aggiuntivi.md`](docs/07-analisi-miglioramenti-aggiuntivi.md) | Catalogo dei miglioramenti I68–I82 (downsampling, selettore intervallo, anomalie, campionamento, EWMA, modalità compatta, nav mobile, vista stampa, error boundary, filtri eventi, tema chiaro, audit a11y, `/api/summary`, test di componente, multi-modello) — **15 di 15 implementate** | Prima di estendere analisi o UX; le note di implementazione rimandano a `docs/03` §5.x |
 | [`docs/08-analisi-codebase-miglioramenti.md`](docs/08-analisi-codebase-miglioramenti.md) | Analisi della codebase (14/10) e backlog dei miglioramenti I94–I106: 13 proposte con problema/proposta/impatto/rischio/accettazione, piano a 3 ondate, decisioni del clarify (§7) | Prima di proporre o implementare miglioramenti: una proposta già catalogata NON va riproposta |
 | [`docs/09-analisi-database-alternativi.md`](docs/09-analisi-database-alternativi.md) | Analisi dei database alternativi (15/10): 10 candidati in 3 famiglie con ricerca web datata (fonti in §9), profilo dati misurato, 7 criteri, matrice di confronto, scenari locale/cloud/ibrido, raccomandazione (strada primaria SQLite/libSQL confermata; I107 pannello «Persistenza»; I108 Postgres opzionale Neon/Supabase), decisioni clarify (§8) + **proposta I109 «Turso Sync/embedded replicas» con verifica empirica locale 7/7 PASS (§10, decisione D5 aperta)** | Prima di scegliere o implementare provider di persistenza: la strada è decisa salvo nuova decisione del §8 |
+| [`docs/10-manutenzione-database.md`](docs/10-manutenzione-database.md) | Procedure di manutenzione del database (17/10, I111): limiti del free tier Turso con fonti datate (§2), architettura della manutenzione nel progetto (§3), le due codifiche DateTime (§4, probe empirica), procedure P1–P6 — cron notturno, integrità, ritenuta/cap, VACUUM e freelist, monitoraggio quota, proiezione scritture (§5), configurazione env con clamp (§6), runbook operativo con checklist e escalation (§7), verifiche (§8), stime e onestà dei limiti (§9) | Per la salute e la quota del database: setup del cron, controlli periodici, cosa fare a livello attenzione/critica |
 
 > **Protocollo per le prossime sessioni**: leggere prima `docs/04-stato-avanzamento.md`
 > (e questo README), lavorare, poi aggiornare lo stato e il changelog. In più
@@ -259,6 +261,18 @@ resta il passo 2 qui sopra. La suite è inoltre **indipendente dall'ambiente**: 
 della factory dichiara il proprio baseline (`baselineAssente`), quindi la presenza del `.env`
 non altera più i test (regressione CI del 16/10 risolta).
 
+**Manutenzione automatica del database** (I111, procedure complete in
+[`docs/10-manutenzione-database.md`](docs/10-manutenzione-database.md)): con la persistenza su
+Turso la dimensione e la salute dell'archivio sono presidiate senza intervento manuale —
+**cron notturno 02:30 UTC** (impostare `CRON_SECRET` su Vercel e ridistribuire: il ciclo misura
+storage e integrità, valuta la quota del free tier ed elimina oltre la ritenuta — punti/bucket/
+modelli 90 gg, eventi 180 gg, cap FIFO 10.000/10.000/5.000 — con VACUUM automatico solo dopo
+cancellazioni); rapporto on-demand via `GET /api/manutenzione` (read-only, senza chiave) e
+azioni manuali via `POST` protetto I95 (`pulizia` / `vacuum` / `manutenzione`); disattivare
+solo la cancellazione con `MANUTENZIONE_AUTO_PULIZIA="0"`. Con i cap in vigore l'archivio resta
+~25.000 righe (pochi MB, molto sotto i 5 GB del free tier) e il cron lo verifica ogni notte
+anche a traffico zero.
+
 Verifica del ramo adattato (scrivi → leggi → dedup → SQL raw, su db temporaneo):
 `bun scripts/verifiche/verifica-i106.mjs` (esito in `scripts/verifiche/esiti/i106-persistenza-latest.md`;
 con le env Turso impostate esegue invece la lettura read-only del database remoto).
@@ -331,12 +345,13 @@ src/
     ├── db.ts / db-factory.ts        # Shim canonico + I106 factory persistenza portabile (Turso via adapter, fallback SQLite)
     ├── modalita-persistenza.ts      # I107 regola ambiente→modalità in modulo proprio (pattern unità pura I106)
     ├── schema-persistenza.ts        # I107-fix3 schema incorporato: DDL idempotente + bootstrap all'avvio (zero migrazione)
+    ├── manutenzione-db.ts           # I111 manutenzione: storage/quota/integrità/ritenuta (unità pura, procedure in docs/10)
     └── export.ts / demo.ts / utils.ts                                   # Export CSV/JSON, demo
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (44 file) + components/ (9 componenti) = 487 test / 1546 asserzioni
-docs/          # Questa documentazione (01–09)
+tests/                               # Suite bun: lib/ (46 file) + components/ (9 componenti) = 513 test / 1737 asserzioni
+docs/          # Questa documentazione (01–10)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro

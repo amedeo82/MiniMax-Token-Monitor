@@ -114,3 +114,10 @@ export const schemaPuntoModello = z.object({
   source: sorgente,
   region: regione,
 });
+
+/** Azione di manutenzione (I111): «pulizia» = ritenuta+caps, «vacuum» =
+    recupero pagine libere, «manutenzione» = ciclo completo (misura →
+    integrità → quota → pulizia → VACUUM automatico se ha eliminato). */
+export const schemaAzioneManutenzione = z.object({
+  azione: z.enum(["pulizia", "vacuum", "manutenzione"]),
+});
