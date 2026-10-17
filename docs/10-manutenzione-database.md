@@ -63,7 +63,7 @@ Cinque pezzi, tutti già coperti da test (§8):
 |---|---|
 | `src/lib/manutenzione-db.ts` | Unità pura (pattern I106/I107: il client arriva come parametro, nessun import del singleton): misura storage, statistiche per tabella, integrità, politica di ritenuta da ambiente con clamp, valutazione quota, proiezione scritture, pulizia con `dryRun`, VACUUM con degrado onesto, orchestratore `eseguiManutenzioneDb`, formato `formattaBytes` it-IT deterministico — dal I117 anche il REGISTRO delle esecuzioni (`registraEsecuzione`/`leggiUltimeEsecuzioni`, P8) |
 | `GET /api/manutenzione` | **Solo lettura, senza chiave** (stesso perimetro di `/api/persistenza`): rapporto completo — storage, quota (livello ok/attenzione/critica), integrità, statistiche con velocità 24 h, proiezione mensile scritture, politica attiva. Zero scritture dimostrato dalla suite. Dal I117 include anche `ultimeEsecuzioni` (il registro, P8); dal I118 è il dato consumato dal pannello **Impostazioni → Dati → Registro manutenzione** |
-| `POST /api/manutenzione` | Azioni protette dalla guardia I95 (`ADMIN_TOKEN` + rate limit): `{"azione":"pulizia"}` (DELETE ritenuta+cap, quota rivalutata a fine), `{"azione":"vacuum"}` (prima/dopo misurati, byte recuperati), `{"azione":"manutenzione"}` (ciclo completo, VACUUM automatico solo se la pulizia ha eliminato — dal I117 si registra in P8 con innesco «post») |
+| `POST /api/manutenzione` | Azioni protette dalla guardia I95 (`ADMIN_TOKEN` + rate limit): `{"azione":"pulizia"}` (DELETE ritenuta+cap, quota rivalutata a fine), `{"azione":"vacuum"}` (prima/dopo misurati, byte recuperati), `{"azione":"manutenzione"}` (ciclo completo, VACUUM automatico solo se la pulizia ha eliminato — dal I117 si registra in P8 con innesco «post»), `{"azione":"rimuovi-demo", "dryRun": true?}` (I122: DELETE selettivo dei SOLI punti `source="demo"` con backup delle righe nella risposta — i rilevamenti demo replicati generano falsi reset nelle analisi; con `dryRun` conta e mostra le righe SENZA cancellare) |
 | `GET /api/manutenzione/cron` + `vercel.json` | Cron notturno **02:30 UTC** (Vercel invia `Authorization: Bearer $CRON_SECRET`): ciclo completo con pulizia reale. Senza `CRON_SECRET` → **403 onesto** (un endpoint che cancella non può essere aperto al pubblico); Bearer sbagliato → 401 timing-safe. Dal I117 ogni ciclo si registra in P8 e stampa la riga compatta `[manutenzione-cron]` nei runtime logs |
 | `RegistroManutenzione` (tabella, I117) | La prova DURATURA dell'esecuzione del cron: una riga per ciclo (innesco, esito, durata, dettaglio compatto) scritta nel database — sopravvive alla breve retention dei log della piattaforma. Cap FIFO a 100 righe applicato alla scrittura; creata idempotentemente dal gate `preparaSchema` (IF NOT EXISTS: nessuna migrazione, i DB esistenti la guadagnano al primo avvio) |
 
@@ -267,6 +267,18 @@ curl -s -X POST https://<deployment>/api/manutenzione \
 curl -s -X POST https://<deployment>/api/manutenzione \
   -H "Content-Type: application/json" -H "x-admin-token: $ADMIN_TOKEN" \
   -d '{"azione":"vacuum"}'
+
+# I122 — rimozione selettiva dei punti demo (falsi reset nelle analisi).
+# SEMPRE prima il dryRun: conteggio + righe interessate, ZERO cancellazioni:
+curl -s -X POST https://<deployment>/api/manutenzione \
+  -H "Content-Type: application/json" -H "x-admin-token: $ADMIN_TOKEN" \
+  -d '{"azione":"rimuovi-demo","dryRun":true}' | python3 -m json.tool
+
+# Rimozione reale: la risposta contiene il BACKUP delle righe cancellate
+# (cap 500, "troncato": true se parziale) — conservarla per il recupero:
+curl -s -X POST https://<deployment>/api/manutenzione \
+  -H "Content-Type: application/json" -H "x-admin-token: $ADMIN_TOKEN" \
+  -d '{"azione":"rimuovi-demo"}' | python3 -m json.tool > backup-rimozione-demo.json
 ```
 
 Rapporto sul database LOCALE (file SQLite) invece che Turso — strada P7 (§5):
@@ -304,7 +316,7 @@ Checklist:
 
 ## 8. Verifiche (cosa dimostra la suite)
 
-- `tests/lib/database-manutenzione.test.ts` (21 test): funzioni pure (soglie, clamp, proiezione,
+- `tests/lib/database-manutenzione.test.ts` (dal I122: 21+4 test — il describe I122 copre `eseguiRimozioneDemo` su client finto LIMIT-aware: dryRun ZERO DELETE, backup PRIMA del DELETE, DELETE parametrizzato su `source="demo"`, cap/troncato, client senza superficie SQL; il motore reale in processo figlio verifica dryRun senza cancellazioni, reale con backup completo e idempotenza). Base I111 (21 test): funzioni pure (soglie, clamp, proiezione,
   formato it-IT deterministico senza dipendere dai dati ICU — lezione I107), semantica su client
   finto (dryRun = zero DELETE; DELETE di ritenuta+cap con i cutoff giusti; VACUUM riuscito e
   rifiutato con errore onesto; orchestratore con VACUUM auto/mai/sempre), e **motore reale** su

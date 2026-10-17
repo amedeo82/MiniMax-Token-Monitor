@@ -32,6 +32,7 @@ import {
   dettaglioManutenzione,
   eseguiManutenzioneDb,
   eseguiPuliziaRitenuta,
+  eseguiRimozioneDemo,
   eseguiVacuum,
   formattaBytes,
   leggiUltimeEsecuzioni,
@@ -42,6 +43,7 @@ import {
   REGISTRO_CAP,
   registraEsecuzione,
   RETENZIONE_DEFAULT,
+  RIMOZIONE_DEMO_BACKUP_MAX,
   SOGLIA_OMISSIONE_INTEGRITA_BYTES,
   soglieQuotaDaEnv,
   statisticaTabelle,
@@ -275,6 +277,99 @@ describe("I111 — semantica su client finto (dryRun, statement, vacuum)", () =>
     expect(r5.vacuum).toBeNull();
     expect(readOnly.reg.exec).toHaveLength(0); // il GET-like NON scrive nulla
     expect(readOnly.reg.unsafe).toHaveLength(0);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* 2-bis. I122 — rimozione selettiva demo (client finto dedicato)      */
+/* ------------------------------------------------------------------ */
+
+describe("I122 — eseguiRimozioneDemo (semantica su client finto)", () => {
+  const RIGHE_DEMO = [
+    { id: 2, t: 1790000000000, interval: 37.1, weekly: 77.6, source: "demo", region: "eu" },
+    { id: 1, t: 1789999000000, interval: 39, weekly: 77.1, source: "demo", region: "eu" },
+  ];
+
+  /** Client finto SELF-CONTAINED: registra query/exec IN ORDINE (log unico per
+      l'assert del backup PRIMA del DELETE), risponde a COUNT/SELECT/DELETE demo. */
+  function clientDemo(opzioni: { conteggio?: number; righe?: unknown[]; eliminati?: number } = {}) {
+    const log: string[] = [];
+    const execParams: unknown[][] = [];
+    const c = {
+      async $queryRaw(q: TemplateStringsArray, ...vals: unknown[]): Promise<unknown[]> {
+        const sql = q.join("");
+        log.push(`Q: ${sql}`);
+        if (sql.includes("COUNT(*)") && sql.includes('"source"')) return [{ v: opzioni.conteggio ?? 2 }];
+        if (sql.includes('FROM "UsagePoint" WHERE "source"')) {
+          // Simula il LIMIT: l'ultimo parametro è il cap (il fake è LIMIT-aware).
+          const cap = Number(vals[vals.length - 1] ?? Number.POSITIVE_INFINITY);
+          return (opzioni.righe ?? RIGHE_DEMO).slice(0, cap);
+        }
+        return [{ v: 0 }];
+      },
+      async $executeRaw(q: TemplateStringsArray, ...vals: unknown[]): Promise<number> {
+        const sql = q.join("");
+        log.push(`E: ${sql}`);
+        execParams.push(vals);
+        return opzioni.eliminati ?? 2;
+      },
+      async $executeRawUnsafe(): Promise<number> {
+        return 0;
+      },
+    };
+    return { c, log, execParams };
+  }
+
+  test("dryRun: ZERO DELETE — conteggio + backup delle righe che verrebbero eliminate", async () => {
+    const { c, log, execParams } = clientDemo({ conteggio: 2 });
+    const esito = await eseguiRimozioneDemo(c, { dryRun: true });
+    expect(esito.dryRun).toBe(true);
+    expect(esito.eseguita).toBe(false);
+    expect(esito.eliminati).toBe(2);
+    expect(esito.righe).toHaveLength(2);
+    expect(esito.righe.every((r) => r.source === "demo")).toBe(true);
+    expect(esito.troncato).toBe(false);
+    expect(log.some((s) => s.startsWith("E:"))).toBe(false); // nessuna scrittura emessa
+    expect(execParams).toHaveLength(0);
+  });
+
+  test("modalità reale: backup (SELECT) PRIMA del DELETE, cancellazione parametrizzata su source=demo", async () => {
+    const { c, log, execParams } = clientDemo({ eliminati: 2 });
+    const esito = await eseguiRimozioneDemo(c);
+    expect(esito.eseguita).toBe(true);
+    expect(esito.dryRun).toBe(false);
+    expect(esito.eliminati).toBe(2);
+    expect(esito.righe).toHaveLength(2);
+    // Backup PRIMA: l'ultima SELECT delle righe demo precede il DELETE nel log unico.
+    const ultimaSelect = Math.max(
+      ...log.map((s, i) => (s.startsWith("Q:") && s.includes('FROM "UsagePoint" WHERE "source"') ? i : -1)),
+    );
+    const deleteIdx = log.findIndex((s) => s.startsWith("E:") && s.includes('DELETE FROM "UsagePoint"'));
+    expect(deleteIdx).toBeGreaterThan(-1);
+    expect(deleteIdx).toBeGreaterThan(ultimaSelect);
+    // Parametrizzato: il valore "demo" è un PARAMETRO (nell'array dei vals),
+    // mai parte della stringa SQL (lezione tagged template: il join non contiene
+    // i valori — l'asserzione del parametro è quella su execParams qui sopra).
+    expect(execParams).toHaveLength(1);
+    expect(execParams[0]).toContain("demo");
+    expect(log[deleteIdx]).not.toContain("= demo");
+  });
+
+  test("backup cap: oltre il cap il backup è PARZIALE ma il conteggio resta completo (troncato: true)", async () => {
+    const { c } = clientDemo({ conteggio: 34, righe: RIGHE_DEMO });
+    const esito = await eseguiRimozioneDemo(c, { dryRun: true, backupMax: 2 });
+    expect(esito.righe).toHaveLength(2);
+    expect(esito.eliminati).toBe(34);
+    expect(esito.troncato).toBe(true);
+    // Il cap di default è 500 e il clamp tiene il valore ≥ 1 (mai cap 0 = backup vuoto).
+    expect(RIMOZIONE_DEMO_BACKUP_MAX).toBe(500);
+    const cap1 = await eseguiRimozioneDemo(c, { dryRun: true, backupMax: 0 });
+    expect(cap1.righe).toHaveLength(1); // clamp a 1
+    expect(cap1.troncato).toBe(true);
+  });
+
+  test("client senza superficie SQL → errore ONESTO (mai un fallback silenzioso)", async () => {
+    expect(eseguiRimozioneDemo({} as object)).rejects.toThrow(/superficie SQL/);
   });
 });
 

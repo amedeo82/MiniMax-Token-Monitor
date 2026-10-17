@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "560 test / 1896 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "567 test / 1939 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–11", "indice documentazione README completo (docs/11 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -866,6 +866,14 @@ const CHECKS = [
   /* --- I121 — la POST del proxy usage entra nel perimetro del token (perimetro I95 completo) --- */
   check.simbolo("I121", "src/app/page.tsx", "headerAdmin\\(\\)", "la POST /api/minimax/usage allega x-admin-token: la guardia I95 protegge ANCHE la POST proxy (api-protezione.ts: «POST/DELETE degli archivi, POST proxy») — con ADMIN_TOKEN attivo il refresh non fallisce più con 401 «Scrittura protetta» (bug riportato dall'utente a I120 attivo)"),
   check.simbolo("I121", "tests/lib/admin-token-scritture.test.ts", "I121", "perimetro fissato: verifica statica che la fetch del proxy in page.tsx allega ...headerAdmin() — sette scritture protette, zero eccezioni"),
+  /* --- I122 — azione «rimuovi-demo»: pulizia selettiva dei punti demo (falsi reset nelle analisi) --- */
+  check.simbolo("I122", "src/lib/manutenzione-db.ts", "export async function eseguiRimozioneDemo", "DELETE selettivo source=demo con backup PRIMA del DELETE (righe nella risposta) e dryRun (conteggio senza cancellare) — i punti demo replicati generano falsi reset nelle analisi (12/12 marker di produzione falsi, verificati 17/10)"),
+  check.simbolo("I122", "src/lib/manutenzione-db.ts", "RIMOZIONE_DEMO_BACKUP_MAX", "cap del backup restituito (500): oltre il cap il backup è PARZIALE ma il DELETE resta totale (troncato: true dichiara)"),
+  check.simbolo("I122", "src/lib/api-schemi.ts", "\"rimuovi-demo\"", "schema zod azione estesa: rimuovi-demo nel contratto POST /api/manutenzione, dryRun booleano opzionale"),
+  check.simbolo("I122", "src/app/api/manutenzione/route.ts", "eseguiRimozioneDemo\\(", "dispatch POST «rimuovi-demo» nella route protetta I95 (guard ADMIN_TOKEN + rate limit scritture), risposta completa con rimozione+backup"),
+  check.simbolo("I122", "tests/lib/database-manutenzione.test.ts", "I122", "semantica su client finto: dryRun ZERO DELETE, backup PRIMA del DELETE, DELETE parametrizzato su source=demo, cap/troncato, client senza superficie SQL → errore"),
+  check.simbolo("I122", "tests/lib/api-manutenzione.test.ts", "rimuovi-demo", "contratto route: dryRun 200 senza scritture, reale con DELETE parametrizzato + backup, dryRun non-booleano → 400"),
+  check.simbolo("I122", "scripts/verifiche/verifica-i111-motore-reale.ts", "eseguiRimozioneDemo", "e2e motore reale in processo figlio: dryRun non cancella, reale con backup completo, restano SOLO i punti reali, idempotenza"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

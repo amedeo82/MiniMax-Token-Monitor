@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-17T14:22:02.281Z
+# Audit implementazioni — 2026-10-17T15:36:07.878Z
 
-- Verifiche totali: **602** · PASS: **602** · FAIL: **0**
+- Verifiche totali: **609** · PASS: **609** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -606,8 +606,13 @@
 | I120 | test di componente della sezione: campo dal localStorage, salvataggio immediato, mostra/nascondi, sonda 400/401 con header e body verificati, rimozione | file | PASS | — |
 | I121 | la POST /api/minimax/usage allega x-admin-token: la guardia I95 protegge ANCHE la POST proxy (api-protezione.ts: «POST/DELETE degli archivi, POST proxy») — con ADMIN_TOKEN attivo il refresh non fallisce più con 401 «Scrittura protetta» (bug riportato dall'utente a I120 attivo) (src/app/page.tsx) | simbolo | PASS | — |
 | I121 | perimetro fissato: verifica statica che la fetch del proxy in page.tsx allega ...headerAdmin() — sette scritture protette, zero eccezioni (tests/lib/admin-token-scritture.test.ts) | simbolo | PASS | — |
+| I122 | DELETE selettivo source=demo con backup PRIMA del DELETE (righe nella risposta) e dryRun (conteggio senza cancellare) — i punti demo replicati generano falsi reset nelle analisi (12/12 marker di produzione falsi, verificati 17/10) (src/lib/manutenzione-db.ts) | simbolo | PASS | — |
+| I122 | cap del backup restituito (500): oltre il cap il backup è PARZIALE ma il DELETE resta totale (troncato: true dichiara) (src/lib/manutenzione-db.ts) | simbolo | PASS | — |
+| I122 | schema zod azione estesa: rimuovi-demo nel contratto POST /api/manutenzione, dryRun booleano opzionale (src/lib/api-schemi.ts) | simbolo | PASS | — |
+| I122 | dispatch POST «rimuovi-demo» nella route protetta I95 (guard ADMIN_TOKEN + rate limit scritture), risposta completa con rimozione+backup (src/app/api/manutenzione/route.ts) | simbolo | PASS | — |
+| I122 | semantica su client finto: dryRun ZERO DELETE, backup PRIMA del DELETE, DELETE parametrizzato su source=demo, cap/troncato, client senza superficie SQL → errore (tests/lib/database-manutenzione.test.ts) | simbolo | PASS | — |
+| I122 | contratto route: dryRun 200 senza scritture, reale con DELETE parametrizzato + backup, dryRun non-booleano → 400 (tests/lib/api-manutenzione.test.ts) | simbolo | PASS | — |
+| I122 | e2e motore reale in processo figlio: dryRun non cancella, reale con backup completo, restano SOLO i punti reali, idempotenza (scripts/verifiche/verifica-i111-motore-reale.ts) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (602 pass, 0 fail, 0 scoperte)
-
-Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-17T14-22-02.md
+Verdetto: **PASS** (609 pass, 0 fail, 0 scoperte)

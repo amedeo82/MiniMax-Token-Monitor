@@ -543,6 +543,83 @@ export async function eseguiPuliziaRitenuta(
 }
 
 /* ------------------------------------------------------------------ */
+/* I122 — Rimozione selettiva dei punti demo                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cap del backup restituito dall'azione «rimuovi-demo»: 500 righe coprono
+ * ogni inquinamento realistico (la serie osservata aveva 34 demo in 2 giorni)
+ * senza gonfiare la risposta HTTP. Se il conteggio supera il cap il backup è
+ * PARZIALE ma il DELETE resta totale: `troncato: true` lo dichiara.
+ */
+export const RIMOZIONE_DEMO_BACKUP_MAX = 500;
+
+/** Una riga di backup (punto demo): `t` come conservato nel DB (ms INTEGER
+    per le righe del motore Prisma, ISO TEXT per quelle scritte da SQL raw —
+    dualità I111). */
+export interface RigaDemoBackup {
+  id: number;
+  t: number | string;
+  interval: number | null;
+  weekly: number | null;
+  source: string;
+  region: string;
+}
+
+export interface EsitoRimozioneDemo {
+  eseguita: boolean;
+  /** true = solo CONTEGGIO + backup delle righe che verrebbero eliminate. */
+  dryRun: boolean;
+  /** Righe demo cancellate (o, con dryRun, che verrebbero cancellate). */
+  eliminati: number;
+  /** Backup delle righe interessate, più recenti prima (cap backupMax). */
+  righe: RigaDemoBackup[];
+  /** true se le righe totali superano il cap: backup PARZIALE, DELETE totale. */
+  troncato: boolean;
+}
+
+/**
+ * I122 — Cancella (o, con dryRun, conta soltanto) TUTTI i punti dello storico
+ * con source="demo". Perché esiste: i rilevamenti demo delle sessioni senza
+ * chiave finiscono nell'archivio condiviso BY DESIGN (replica source "demo"),
+ * e mescolati ai punti reali generano FALSI RESET nelle analisi (salto
+ * demo→api oltre RESET_JUMP/RESET_TARGET: 12 marker di produzione falsi su
+ * 12, verificati il 17/10). La ripresa del monitor dopo ogni deploy apre
+ * contesti senza impostazioni → demo: l'inquinamento è ricorrente, il rimedio
+ * va eseguibile senza toccare i punti reali (la «svuota» totale è troppo).
+ *
+ * Backup: le righe interessate vengono LETTE PRIMA del DELETE e restituite
+ * nella risposta — il chiamante le conserva (il recupero è rincollare il JSON
+ * in /api/history via import, oppure rigettare la richiesta). Finestra di
+ * gara SELECT→DELETE: un punto demo scritto nel frattempo verrebbe cancellato
+ * senza backup (conteggio del DELETE = verità; a scale osservate è improbabile).
+ * SQL SEMPRE parametrizzato (source è un valore, mai un identificatore).
+ */
+export async function eseguiRimozioneDemo(
+  client: object,
+  opzioni: { dryRun?: boolean; backupMax?: number } = {},
+): Promise<EsitoRimozioneDemo> {
+  const c = superficieSql(client);
+  if (!c) throw new Error("Client senza superficie SQL: rimozione demo non eseguibile.");
+  const dryRun = opzioni.dryRun === true;
+  const cap = Math.max(1, Math.round(opzioni.backupMax ?? RIMOZIONE_DEMO_BACKUP_MAX));
+
+  const conteggio = Number(
+    ((await c.$queryRaw`SELECT COUNT(*) AS v FROM "UsagePoint" WHERE "source" = ${"demo"}`) as Array<{
+      v: number | bigint;
+    }>)[0]?.v ?? 0,
+  );
+  const righe = (await c.$queryRaw`SELECT "id", "t", "interval", "weekly", "source", "region" FROM "UsagePoint" WHERE "source" = ${"demo"} ORDER BY "t" DESC, "id" DESC LIMIT ${cap}`) as unknown as RigaDemoBackup[];
+
+  if (dryRun) {
+    return { eseguita: false, dryRun: true, eliminati: conteggio, righe, troncato: conteggio > righe.length };
+  }
+
+  const eliminati = Number(await c.$executeRaw`DELETE FROM "UsagePoint" WHERE "source" = ${"demo"}`);
+  return { eseguita: true, dryRun: false, eliminati, righe, troncato: conteggio > righe.length };
+}
+
+/* ------------------------------------------------------------------ */
 /* VACUUM (restituisce le pagine libere: riduce i byte fatturati)      */
 /* ------------------------------------------------------------------ */
 

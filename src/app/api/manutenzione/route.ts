@@ -8,6 +8,7 @@ import {
   dettaglioManutenzione,
   eseguiManutenzioneDb,
   eseguiPuliziaRitenuta,
+  eseguiRimozioneDemo,
   eseguiVacuum,
   formattaBytes,
   leggiUltimeEsecuzioni,
@@ -35,13 +36,17 @@ export const dynamic = "force-dynamic";
  * cron è realmente passato, indipendente dalla breve retention dei log Vercel.
  *
  * POST (protetto dalla guardia I95: ADMIN_TOKEN + rate limit scritture):
- * { "azione": "pulizia" | "vacuum" | "manutenzione" }
+ * { "azione": "pulizia" | "vacuum" | "manutenzione" | "rimuovi-demo", "dryRun"?: boolean }
  * - «pulizia»: DELETE oltre la ritenuta e i cap FIFO (ritorna ciò che elimina
  *   e la quota rivalutata a fine cancellazioni);
  * - «vacuum»: riscrive il file restituendo le pagine libere al servizio
  *   (prima/dopo misurati, byte recuperati dichiarati);
  * - «manutenzione»: ciclo completo — misura, integrità, quota, pulizia e
- *   VACUUM automatico SOLO se la pulizia ha eliminato righe.
+ *   VACUUM automatico SOLO se la pulizia ha eliminato righe;
+ * - I122 «rimuovi-demo»: DELETE selettivo dei SOLI punti source="demo" (i
+ *   rilevamenti demo replicati generano falsi reset nelle analisi) con BACKUP
+ *   delle righe nella risposta; con "dryRun": true conta e mostra le righe
+ *   SENZA cancellare (verifica pre-volo).
  *
  * I107-fix4 — ogni handler attende il gate `preparaSchema(db)` PRIMA di
  * toccare il DB: nessuna misura o scrittura parte a schema incompleto.
@@ -101,7 +106,8 @@ export async function POST(req: NextRequest) {
         ok: false,
         error: {
           code: "bad_request",
-          message: 'Azione non valida: serve { "azione": "pulizia" | "vacuum" | "manutenzione" }.',
+          message:
+            'Azione non valida: serve { "azione": "pulizia" | "vacuum" | "manutenzione" | "rimuovi-demo" }.',
         },
       },
       { status: 400 },
@@ -139,6 +145,17 @@ export async function POST(req: NextRequest) {
         riepilogo: vacuum.eseguito
           ? `VACUUM eseguito: ${formattaBytes(prima)} → ${formattaBytes(dopo)}`
           : `VACUUM non eseguito: ${vacuum.errore ?? "motivo non noto"}`,
+        generatoIl: new Date().toISOString(),
+      });
+    }
+    if (azione === "rimuovi-demo") {
+      /* I122 — backup PRIMA del DELETE dentro eseguiRimozioneDemo: la risposta
+         contiene le righe da conservare (il recupero è rincollare il JSON). */
+      const rimozione = await eseguiRimozioneDemo(db, { dryRun: parsed.data.dryRun === true });
+      return NextResponse.json({
+        ok: true,
+        azione,
+        rimozione,
         generatoIl: new Date().toISOString(),
       });
     }

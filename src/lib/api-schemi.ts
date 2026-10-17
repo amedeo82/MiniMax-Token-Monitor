@@ -117,7 +117,12 @@ export const schemaPuntoModello = z.object({
 
 /** Azione di manutenzione (I111): «pulizia» = ritenuta+caps, «vacuum» =
     recupero pagine libere, «manutenzione» = ciclo completo (misura →
-    integrità → quota → pulizia → VACUUM automatico se ha eliminato). */
+    integrità → quota → pulizia → VACUUM automatico se ha eliminato).
+    I122 — «rimuovi-demo» = DELETE selettivo dei soli punti source="demo"
+    (falsi reset nelle analisi), con backup delle righe nella risposta;
+    `dryRun` (opzionale, solo per rimuovi-demo) = conteggio + backup SENZA
+    cancellare. */
 export const schemaAzioneManutenzione = z.object({
-  azione: z.enum(["pulizia", "vacuum", "manutenzione"]),
+  azione: z.enum(["pulizia", "vacuum", "manutenzione", "rimuovi-demo"]),
+  dryRun: z.boolean().optional(),
 });

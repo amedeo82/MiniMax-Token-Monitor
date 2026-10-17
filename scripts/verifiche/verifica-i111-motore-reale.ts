@@ -8,8 +8,10 @@
  * Stessa partitura dell'ormai rimossa e2e in-process: ritenuta che elimina
  * davvero le righe vecchie di ENTRAMBE le codifiche DateTime (INTEGER del
  * motore + TEXT dell'SQL raw), cap FIFO che conserva le più recenti, PRAGMA
- * misurabili, quick_check ok, ciclo completo e idempotenza. Zero credenziali:
- * file temporaneo. Esito: «I111-MOTORE-REALE: PASS» + exit 0, altrimenti
+ * misurabili, quick_check ok, ciclo completo e idempotenza. I122 — anche la
+ * rimozione selettiva dei punti demo (dryRun senza cancellazioni, reale con
+ * backup, idempotenza). Zero credenziali: file temporaneo. Esito:
+ * «I111-MOTORE-REALE: PASS» + exit 0, altrimenti
  * «I111-MOTORE-REALE: FAIL <dettaglio>» + exit 1 (il test padre lo riporta
  * PAROLE PER PAROLE: il fallimento dice SEMPRE perché).
  */
@@ -23,6 +25,7 @@ import { PrismaLibSql } from "@prisma/adapter-libsql";
 import {
   eseguiManutenzioneDb,
   eseguiPuliziaRitenuta,
+  eseguiRimozioneDemo,
   eseguiVacuum,
   LIMITI_TURSO_FREE,
   misuraDimensioneDb,
@@ -125,6 +128,28 @@ try {
   /* Seconda pulizia: idempotente — zero righe oltre ritenuta e cap. */
   const ritorno = await eseguiPuliziaRitenuta(client, { ...RETENZIONE_DEFAULT, maxModelli: 3 });
   verifica(ritorno.totale === 0, "seconda pulizia idempotente (zero righe)");
+
+  /* I122 — rimozione demo: dryRun che NON cancella, poi reale con backup. */
+  await client.usagePoint.create({ data: { t: giorni(0.5), interval: 37.1, weekly: 77.6, source: "demo" } });
+  await client.usagePoint.create({ data: { t: giorni(0.25), interval: 39, weekly: 77.1, source: "demo" } });
+  verifica((await client.usagePoint.count()) === 6, "aggiunti 2 punti demo (6 totali)");
+  const stimaDemo = await eseguiRimozioneDemo(client, { dryRun: true });
+  verifica(stimaDemo.dryRun && !stimaDemo.eseguita, "rimozione demo: dryRun dichiarata");
+  verifica(stimaDemo.eliminati === 2, `rimozione demo dryRun: eliminati = 2, ricevuti ${stimaDemo.eliminati}`);
+  verifica(stimaDemo.righe.length === 2 && stimaDemo.righe.every((r) => r.source === "demo"), "rimozione demo dryRun: backup completo con solo righe demo");
+  verifica(!stimaDemo.troncato, "rimozione demo dryRun: backup non troncato");
+  verifica((await client.usagePoint.count()) === 6, "rimozione demo dryRun: NESSUNA cancellazione (6 punti intatti)");
+  const rimozione = await eseguiRimozioneDemo(client);
+  verifica(rimozione.eseguita && !rimozione.dryRun, "rimozione demo reale eseguita");
+  verifica(rimozione.eliminati === 2, `rimozione demo reale: eliminati = 2, ricevuti ${rimozione.eliminati}`);
+  verifica(
+    rimozione.righe.length === 2 &&
+      rimozione.righe.every((r) => r.source === "demo" && typeof r.id === "number" && r.interval !== null),
+    "rimozione demo reale: backup con id, t, finestre e source",
+  );
+  verifica((await client.usagePoint.count()) === 4, "rimozione demo reale: restano SOLO i 4 punti reali");
+  verifica((await client.usagePoint.count({ where: { source: "demo" } })) === 0, "rimozione demo reale: zero demo residui");
+  verifica((await eseguiRimozioneDemo(client, { dryRun: true })).eliminati === 0, "rimozione demo idempotente (dryRun successiva = 0)");
 
   /* VACUUM sul motore nativo: eseguito e il file resta usabile. */
   verifica((await eseguiVacuum(client)).eseguito, "VACUUM eseguito sul motore nativo");

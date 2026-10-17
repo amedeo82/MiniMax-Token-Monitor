@@ -35,6 +35,9 @@ const reg = {
 const unsafeTotale: string[] = [];
 let eliminatiPerDelete = 3;
 let vacuumFallisce = false;
+/* I122 — stato del finto archivio demo: conteggio e righe restituite dal mock. */
+let conteggioDemo = 0;
+let righeDemo: unknown[] = [];
 
 const mockDb = {
   async $queryRaw(q: TemplateStringsArray, ...vals: unknown[]): Promise<unknown[]> {
@@ -45,6 +48,10 @@ const mockDb = {
     if (sql.includes("page_size")) return [{ page_size: 4096 }];
     if (sql.includes("freelist_count")) return [{ freelist_count: 4 }];
     if (sql.includes("quick_check")) return [{ quick_check: "ok" }];
+    /* I122 — COUNT e SELECT di backup dell'azione «rimuovi-demo» (l'ordine dei
+       controlli conta: il COUNT contiene ANCHE la clausola sulla source). */
+    if (sql.includes("COUNT(*)") && sql.includes('"source"')) return [{ v: conteggioDemo }];
+    if (sql.includes('FROM "UsagePoint" WHERE "source"')) return righeDemo;
     return [{ v: 0 }];
   },
   async $executeRaw(q: TemplateStringsArray, ...vals: unknown[]): Promise<number> {
@@ -115,6 +122,8 @@ beforeEach(() => {
   reg.unsafe = [];
   eliminatiPerDelete = 3;
   vacuumFallisce = false;
+  conteggioDemo = 0;
+  righeDemo = [];
   impostaEnv({ ADMIN_TOKEN: undefined, CRON_SECRET: undefined, MANUTENZIONE_AUTO_PULIZIA: undefined });
 });
 
@@ -251,6 +260,61 @@ describe("I111 — POST /api/manutenzione (azioni protette)", () => {
     expect((body["vacuum"] as Record<string, unknown>)["eseguito"]).toBe(false);
     expect((body["vacuum"] as Record<string, unknown>)["errore"]).toContain("VACUUM disabled");
     expect(body["riepilogo"]).toContain("non eseguito");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* I122 — azione «rimuovi-demo» (DELETE selettivo con backup)           */
+/* ------------------------------------------------------------------ */
+
+describe("I122 — POST azione «rimuovi-demo» (DELETE selettivo con backup)", () => {
+  const RIGHE = [
+    { id: 2, t: 1790000000000, interval: 37.1, weekly: 77.6, source: "demo", region: "eu" },
+    { id: 1, t: 1789999000000, interval: 39, weekly: 77.1, source: "demo", region: "eu" },
+  ];
+
+  test("dryRun: 200 con conteggio + backup e NESSUN DELETE emesso", async () => {
+    conteggioDemo = 2;
+    righeDemo = RIGHE;
+    const res = await postManutenzione(post({ azione: "rimuovi-demo", dryRun: true }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body["ok"]).toBe(true);
+    expect(body["azione"]).toBe("rimuovi-demo");
+    const r = body["rimozione"] as Record<string, unknown>;
+    expect(r["eseguita"]).toBe(false);
+    expect(r["dryRun"]).toBe(true);
+    expect(r["eliminati"]).toBe(2);
+    expect(r["troncato"]).toBe(false);
+    expect((r["righe"] as unknown[])).toHaveLength(2);
+    // Nessuna $executeRaw demo emessa (il COUNT/SELECT demo restano in $queryRaw).
+    expect(reg.exec.filter((s) => s.includes('DELETE FROM "UsagePoint" WHERE "source"'))).toHaveLength(0);
+  });
+
+  test("azione reale: DELETE parametrizzato con source=demo e backup delle righe nella risposta", async () => {
+    conteggioDemo = 2;
+    righeDemo = RIGHE;
+    eliminatiPerDelete = 2;
+    const res = await postManutenzione(post({ azione: "rimuovi-demo" }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    const r = body["rimozione"] as Record<string, unknown>;
+    expect(r["eseguita"]).toBe(true);
+    expect(r["dryRun"]).toBe(false);
+    expect(r["eliminati"]).toBe(2);
+    expect((r["righe"] as unknown[])).toHaveLength(2);
+    const deleteIdx = reg.exec.findIndex((s) => s.includes('DELETE FROM "UsagePoint" WHERE "source"'));
+    expect(deleteIdx).toBeGreaterThan(-1);
+    // Parametrizzato: "demo" è un PARAMETRO dell'$executeRaw, mai parte dell'SQL.
+    expect(reg.execParams[deleteIdx]).toContain("demo");
+    expect(reg.exec[deleteIdx]).not.toContain("= demo");
+  });
+
+  test("dryRun non-booleano → 400 (lo schema zod accetta solo boolean | assente)", async () => {
+    const res = await postManutenzione(post({ azione: "rimuovi-demo", dryRun: "sì" }));
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body["ok"]).toBe(false);
   });
 });
 

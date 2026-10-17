@@ -71,8 +71,18 @@ mock.module("@/lib/db", () => ({
 /* La regola ambiente→modalità è mockata nel SUO modulo (pattern I106: unità
    pura in modulo proprio): il mock di "@/lib/db" resta minimale come negli
    altri test I99/I95 — bun applica il primo mock registrato per specificatore,
-   quindi "@/lib/db" NON deve crescere di esportazioni richieste dalle route. */
+   quindi "@/lib/db" NON deve crescere di esportazioni richieste dalle route.
+   I122-fix — il mock è lo SPREAD del modulo REALE + i due override sotto:
+   bun applica il primo mock per specificatore A TUTTO il processo (lezione
+   I110, stessa partitura di @prisma/client in db.test.ts) — il mock parziale
+   senza livelloLogPrisma (esportato da I119 e importato da db-factory) faceva
+   SCOPPIARE il caricamento di db.test.ts e db-log-livello.test.ts IN BASE
+   ALL'ORDINE DEI FILE (non stabile tra ambienti). Lo spread rende il mock
+   completo per costruzione: le nuove esportazioni del modulo reale ci stanno
+   dentro da sole. */
+const modalitaReale = await import("@/lib/modalita-persistenza");
 mock.module("@/lib/modalita-persistenza", () => ({
+  ...modalitaReale,
   modalitaPersistenza: () => (process.env.TURSO_DATABASE_URL?.trim() ? "turso" : "locale"),
   // I107-fix/I107-fix2: mirror dell'helper reale (URL EFFETTIVO del ramo SQLite
   // nativo, unica fonte di verità per factory e host diagnostico). Default
