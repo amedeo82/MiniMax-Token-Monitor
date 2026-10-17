@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
   // Il tsc è verde su TUTTO il repo: tsconfig esclude gli scaffolding
   // non-progetto (examples/, skills/) che erano l'unico motivo dell'opzione.
   reactStrictMode: false,
+  /* I119 — audit sicurezza: il header «X-Powered-By: Next.js» è ATTIVO di
+     default e rivela la tecnologia del server (fingerprinting gratuito per
+     chi mappa le superfici d'attacco). Nessun consumer legittimo ne ha
+     bisogno: disattivato. */
+  poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: headerSicurezza() }];
   },

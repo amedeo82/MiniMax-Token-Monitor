@@ -31,7 +31,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 import { preparaSchema } from "./schema-persistenza";
-import { urlPersistenzaLocale } from "./modalita-persistenza";
+import { livelloLogPrisma, urlPersistenzaLocale } from "./modalita-persistenza";
 
 /* I107 — la regola ambiente→modalità vive nel MODULO PROPRIO
    src/lib/modalita-persistenza.ts (pattern «unità pura separata»): le route
@@ -42,6 +42,7 @@ import { urlPersistenzaLocale } from "./modalita-persistenza";
 export {
   modalitaPersistenza,
   urlPersistenzaLocale,
+  livelloLogPrisma,
   type ModalitaPersistenza,
 } from "./modalita-persistenza";
 
@@ -80,7 +81,13 @@ export function creaPrismaClient(): PrismaClient {
   // fresco (/tmp su Vercel, Turso appena creato) funziona senza db:push né
   // db-push-turso.mjs. I guasti DDL non sono mascherati (stderr) e riemergono
   // dalle query reali.
-  const client = new PrismaClient({ adapter, log: ["query"] });
+  /* I119 — log DIPENDENTI dall'ambiente (audit sicurezza, regola in
+     modalita-persistenza.ts): in produzione SOLO warn/error — fino a I119
+     `log: ["query"]` era SEMPRE attivo e ogni query con i parametri finiva
+     nei runtime logs della piattaforma (noise + esposizione di stringhe
+     inserite dagli utenti + overhead). In dev/test il comportamento storico
+     resta (query visibili). */
+  const client = new PrismaClient({ adapter, log: livelloLogPrisma() });
   void preparaSchema(client);
   return client;
 }

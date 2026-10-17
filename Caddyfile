@@ -1,23 +1,33 @@
+# Caddyfile dell'AMBIENTE DI SVILUPPO (sandbox/locale) — NON parte del
+# deployment di produzione, che gira su Vercel senza reverse proxy proprio.
+#
+# ⚠️ I119 — AUDIT SICUREZZA: il blocco @transform_port_query inoltra a
+# localhost:{query.XTransformPort} — CHIUNQUE può scegliere la porta con un
+# semplice parametro query (?XTransformPort=1234): esposto pubblicamente è
+# un proxy verso SERVIZI INTERNI del server (SSRF su loopback: database,
+# API di amministrazione, metriche). Accettabile SOLO se Caddy resta
+# raggiungibile da rete fidata/localhost. Se questo file venisse usato per
+# un self-hosting pubblico: RIMUOVERE il blocco @transform_port_query.
 :81 {
-	@transform_port_query {
-		query XTransformPort=*
-	}
+        @transform_port_query {
+                query XTransformPort=*
+        }
 
-	handle @transform_port_query {
-		reverse_proxy localhost:{query.XTransformPort} {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+        handle @transform_port_query {
+                reverse_proxy localhost:{query.XTransformPort} {
+                        header_up Host {host}
+                        header_up X-Forwarded-For {remote_host}
+                        header_up X-Forwarded-Proto {scheme}
+                        header_up X-Real-IP {remote_host}
+                }
+        }
 
-	handle {
-		reverse_proxy localhost:3000 {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+        handle {
+                reverse_proxy localhost:3000 {
+                        header_up Host {host}
+                        header_up X-Forwarded-For {remote_host}
+                        header_up X-Forwarded-Proto {scheme}
+                        header_up X-Real-IP {remote_host}
+                }
+        }
 }

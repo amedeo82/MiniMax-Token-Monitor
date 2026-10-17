@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-17T12:38:26.074Z
+# Audit implementazioni — 2026-10-17T13:18:32.556Z
 
-- Verifiche totali: **583** · PASS: **583** · FAIL: **0**
+- Verifiche totali: **590** · PASS: **590** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -361,7 +361,7 @@
 | I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
 | I105 | contatore audit §Qualità allineato — contatore dinamico | simbolo | PASS | — |
 | I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
-| I105 | indice documentazione README completo (docs/10 incluso) (README.md) | simbolo | PASS | — |
+| I105 | indice documentazione README completo (docs/11 incluso) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | docs/09 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
@@ -587,6 +587,13 @@
 | I118 | mock instradato per URL: all'apertura del dialogo convivono DUE fetch (persistenza + manutenzione) con fixture dedicate (tests/components/settings-persistenza.test.tsx) | simbolo | PASS | — |
 | I118 | test di componente dedicato: righe renderizzate, errore del motore nella riga fallita, registro vuoto onesto, errore API senza mascherare l'altro pannello, «Aggiorna registro» indipendente + helper puri verificati | file | PASS | — |
 | I118 | docs/10 aggiornato: la visualizzazione nell'app è la prima via di verifica del registro (P8) (docs/10-manutenzione-database.md) | simbolo | PASS | — |
+| I119 | fingerprinting X-Powered-By DISATTIVATO (default Next attivo: rivelava la tecnologia del server a chiunque mappi le superfici d'attacco) (next.config.ts) | simbolo | PASS | — |
+| I119 | regola PURA ambiente→log Prisma: produzione = warn/error (nessun query log con i parametri nei runtime logs), dev/test = query come prima — stessa famiglia di modalitaPersistenza/urlPersistenzaLocale (src/lib/modalita-persistenza.ts) | simbolo | PASS | — |
+| I119 | la factory NON logga più le query in produzione (fino a I119 `log: ["query"]` era sempre attivo: ogni query con i valori dei parametri finiva nei log della piattaforma — noise, esposizione di stringhe inserite dagli utenti, overhead) (src/lib/db-factory.ts) | simbolo | PASS | — |
+| I119 | contratto del livello log testato su env INIETTABILE (produzione/dev/test/assente + purezza senza side-effect su process.env) (tests/lib/db-log-livello.test.ts) | simbolo | PASS | — |
+| I119 | la disattivazione dell'header è presidiata dal test di configurazione (non solo dalla memoria) (tests/lib/header-sicurezza.test.ts) | simbolo | PASS | — |
+| I119 | avvertimento SSRF sul blocco @transform_port_query (?XTransformPort= porta localhost arbitraria): accettabile SOLO in rete fidata di sviluppo — in self-hosting pubblico va rimosso (produzione Vercel non usa Caddy) (Caddyfile) | simbolo | PASS | — |
+| I119 | report dell'audit sicurezza completo: metodologia (ricognizione, caccia ai segreti, injection, auth/authz, DoS, crypto, dipendenze, configurazioni), 16 voci di analisi con gravità, remediation applicate (poweredByHeader, log Prisma, Caddyfile), rischi RESIDUI con azioni utente (rotazione token Turso della storia git dd03d16, ADMIN_TOKEN/CRON_SECRET su Vercel, CSP enforcing futuro) | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (583 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (590 pass, 0 fail, 0 scoperte)

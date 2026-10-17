@@ -42,4 +42,10 @@ describe("I95 — header di sicurezza in next.config", () => {
     const h = await headerDi();
     expect(h.get("Strict-Transport-Security")).toContain("max-age=31536000");
   });
+
+  /* I119 — audit sicurezza: il fingerprinting X-Powered-By è DISATTIVATO
+     (default Next attivo: rivelava la tecnologia server a chiunque). */
+  test("X-Powered-By disattivato (poweredByHeader: false, I119)", () => {
+    expect(nextConfig.poweredByHeader).toBeFalse();
+  });
 });

@@ -68,3 +68,28 @@ export function urlPersistenzaLocale(): string {
   if (process.env.VERCEL === "1") return `file:${join(tmpdir(), "db", "custom.db")}`;
   return `file:${process.cwd()}/db/custom.db`;
 }
+
+/**
+ * I119 — Livello di log del PrismaClient DIPENDENTE DALL'AMBIENTE (audit
+ * sicurezza: igiene dei log di runtime).
+ *
+ * Fino a I119 la factory passava `log: ["query"]` SEMPRE: in produzione ogni
+ * query — con i valori dei parametri — finiva nei runtime logs (Vercel:
+ * retention piattaforma, visibili al team). Il database non contiene segreti
+ * (chiave MiniMax = client-side per design, token Turso = env), MA contiene
+ * stringhe inserite dagli utenti (messaggi degli eventi) e la traiettoria
+ * corretta è loggare il meno possibile: query log = noise + superficie di
+ * esposizione + overhead per ogni query.
+ *
+ * Regola (stesso pattern delle altre funzioni qui: ambiente→configurazione,
+ * iniettabile per i test):
+ * - `NODE_ENV === "production"` → `["warn", "error"]`: guasti REALI del motore
+ *   restano nei log, il traffico normale non vieta più nulla;
+ * - tutti gli altri ambienti (dev, test) → `["query"]`: la visibilità delle
+ *   query resta il comportamento storico di sviluppo.
+ */
+export function livelloLogPrisma(
+  env: Record<string, string | undefined> = process.env,
+): ("query" | "warn" | "error")[] {
+  return env.NODE_ENV === "production" ? ["warn", "error"] : ["query"];
+}
