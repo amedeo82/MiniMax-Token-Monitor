@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-17T13:53:05.434Z
+# Audit implementazioni — 2026-10-17T14:22:02.281Z
 
-- Verifiche totali: **600** · PASS: **600** · FAIL: **0**
+- Verifiche totali: **602** · PASS: **602** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -604,6 +604,10 @@
 | I120 | la sonda usa un'azione inesistente: il body è rifiutato con 400 DOPO la guardia — nessuna scrittura sul database (src/components/settings-dialog.tsx) | simbolo | PASS | — |
 | I120 | contratto di rete: le 6 scritture degli archivi allegano l'header SOLO con token salvato, invariate senza (tests/lib/admin-token-scritture.test.ts) | simbolo | PASS | — |
 | I120 | test di componente della sezione: campo dal localStorage, salvataggio immediato, mostra/nascondi, sonda 400/401 con header e body verificati, rimozione | file | PASS | — |
+| I121 | la POST /api/minimax/usage allega x-admin-token: la guardia I95 protegge ANCHE la POST proxy (api-protezione.ts: «POST/DELETE degli archivi, POST proxy») — con ADMIN_TOKEN attivo il refresh non fallisce più con 401 «Scrittura protetta» (bug riportato dall'utente a I120 attivo) (src/app/page.tsx) | simbolo | PASS | — |
+| I121 | perimetro fissato: verifica statica che la fetch del proxy in page.tsx allega ...headerAdmin() — sette scritture protette, zero eccezioni (tests/lib/admin-token-scritture.test.ts) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (600 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (602 pass, 0 fail, 0 scoperte)
+
+Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-17T14-22-02.md

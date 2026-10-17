@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "559 test / 1894 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "560 test / 1896 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–11", "indice documentazione README completo (docs/11 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -863,6 +863,9 @@ const CHECKS = [
   check.simbolo("I120", "src/components/settings-dialog.tsx", "__sonda_identita_i120__", "la sonda usa un'azione inesistente: il body è rifiutato con 400 DOPO la guardia — nessuna scrittura sul database"),
   check.simbolo("I120", "tests/lib/admin-token-scritture.test.ts", "x-admin-token", "contratto di rete: le 6 scritture degli archivi allegano l'header SOLO con token salvato, invariate senza"),
   check.file("I120", "tests/components/settings-sicurezza.test.tsx", "test di componente della sezione: campo dal localStorage, salvataggio immediato, mostra/nascondi, sonda 400/401 con header e body verificati, rimozione"),
+  /* --- I121 — la POST del proxy usage entra nel perimetro del token (perimetro I95 completo) --- */
+  check.simbolo("I121", "src/app/page.tsx", "headerAdmin\\(\\)", "la POST /api/minimax/usage allega x-admin-token: la guardia I95 protegge ANCHE la POST proxy (api-protezione.ts: «POST/DELETE degli archivi, POST proxy») — con ADMIN_TOKEN attivo il refresh non fallisce più con 401 «Scrittura protetta» (bug riportato dall'utente a I120 attivo)"),
+  check.simbolo("I121", "tests/lib/admin-token-scritture.test.ts", "I121", "perimetro fissato: verifica statica che la fetch del proxy in page.tsx allega ...headerAdmin() — sette scritture protette, zero eccezioni"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

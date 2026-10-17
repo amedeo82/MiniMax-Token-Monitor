@@ -70,7 +70,7 @@ guastare.
 | Area | Gravità | Esito |
 |------|---------|-------|
 | Credenziali Turso nella storia git (`dd03d16`) | **CRITICO** (mitigato: repo privato) | azione utente: **rotazione token** (§5.1) |
-| `ADMIN_TOKEN`/`CRON_SECRET` da verificare nell'env di produzione | **ALTO** (se assenti) | **I120**: supporto client implementato (header + sonda); resta l'azione operativa su Vercel (§5.2) |
+| `ADMIN_TOKEN`/`CRON_SECRET` da verificare nell'env di produzione | **ALTO** (se assenti) | **I120+I121**: supporto client completo — 7 scritture protette (archivi + proxy usage) + sonda; resta l'azione operativa su Vercel (§5.2) |
 | Log query Prisma (con parametri) in produzione | **MEDIO** | **FIXATO in I119** (§5.3) |
 | Fingerprinting `X-Powered-By` | **MEDIO** | **FIXATO in I119** (§5.4) |
 | `Caddyfile` dev: proxy a porta localhost da query param | **BASSO** (dev-only) | commento di avvertimento (§5.5) |
@@ -193,7 +193,7 @@ T22); l'audit di I110 introdusse il check `nonTracciato` che impedisce la ricadu
    o BFG per rimuovere il blob + force push coordinato: in un repo privato monoutente il
    beneficio è marginale rispetto alla rotazione.
 
-### 5.2 [ALTO → MITIGATO CON I120, AZIONE OPERATIVA RESIDUA] Variabili di guardia nell'ambiente di produzione
+### 5.2 [ALTO → MITIGATO CON I120+I121, AZIONE OPERATIVA RESIDUA] Variabili di guardia nell'ambiente di produzione
 
 Il design I95 è onesto: **senza `ADMIN_TOKEN` impostato, le scritture degli archivi restano
 aperte** (limitate dal rate limit) — scelta voluta per l'uso locale, che in produzione
@@ -209,6 +209,18 @@ header `x-admin-token` allegato alle 6 scritture SOLO quando salvato, SSR-safe),
 POST `/api/manutenzione` con azione inesistente: la guardia gira PRIMA del parsing del body,
 quindi la sonda NON scrive nulla e distingue 401 (token rifiutato) da 400 (accettato) /
 429 (accettato, budget esaurito). Contratto presidiato da 23 test nuovi.
+
+**Aggiornamento I121 — buco di perimetro beccato sul campo.** Attivando davvero
+`ADMIN_TOKEN` in produzione (17/10/2026) l'utente riporta: sonda verde ma **ogni
+aggiunta falliva con 401** «Scrittura protetta: serve l'header x-admin-token». Causa:
+il I120 aveva dichiarato il proxy `/api/minimax/usage` «fuori per design», ma la
+guardia I95 protegge ANCHE la POST proxy (api-protezione.ts: «POST/DELETE degli
+archivi, POST proxy»; la route chiama `bloccoScrittura`) — la fetch del client in
+`page.tsx` non allegava l'header. Correzione: `headerAdmin()` allegato anche a quella
+fetch (sette scritture protette, zero eccezioni), perimetro fissato da verifica
+statica nel test (`admin-token-scritture.test.ts`, describe I121) + 2 check audit.
+Lezione registrata in docs/04: **il perimetro di una guardia si legge DOVE la guardia
+è chiamata, non dove si spera che lo sia.**
 
 **Azione operativa residua (solo configurazione, più codice da scrivere):**
 

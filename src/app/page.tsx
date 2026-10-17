@@ -57,6 +57,7 @@ import {
 import { Region, REGION_LABELS, UsageSnapshot, ApiError, chiaviPerRegione, findModel, parseUsageResponse, inferServerTime, regioneAlt } from "@/lib/minimax";
 import { persistJson, setQuotaNotifier } from "@/lib/persist-json";
 import { delayAfterFailure, ritardoPolling, tickAllaVisibilita } from "@/lib/backoff";
+import { headerAdmin } from "@/lib/admin-token";
 import { makeDemoSnapshot, makeDemoHistory, makeDemoModelHistory } from "@/lib/demo";
 import {
   appendModelPoints,
@@ -582,7 +583,12 @@ export default function DashboardPage() {
           coppie.map((c) =>
             fetch("/api/minimax/usage", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              /* I121 — la guardia I95 protegge ANCHE la POST del proxy (api-protezione.ts:
+                 «POST/DELETE degli archivi, POST proxy»): con ADMIN_TOKEN impostato il
+                 server esige l'header anche qui, altrimenti ogni aggiunta fallirebbe con
+                 401 («Scrittura protetta: serve l'header x-admin-token»). headerAdmin()
+                 è SSR-safe e senza token restituisce {}: richiesta IDENTICA a prima. */
+              headers: { "Content-Type": "application/json", ...headerAdmin() },
               body: JSON.stringify({ apiKey: c.key, region: c.region }),
             }).then((res) => res.json() as Promise<RispostaProxy>),
           ),

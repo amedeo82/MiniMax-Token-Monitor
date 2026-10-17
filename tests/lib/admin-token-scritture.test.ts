@@ -6,8 +6,18 @@
  * browser (POST/DELETE di storico, eventi e punti per-modello) allegano
  * l'header SOLO quando l'utente ha salvato il token nel browser — e che senza
  * token le richieste restano IDENTICHE a prima del I120 (nessun header vuoto,
- * Content-Type invariato). Il proxy /api/minimax/usage resta FUORI per design
- * (canale della chiave dell'utente, docs/11 §4.3).
+ * Content-Type invariato).
+ *
+ * CORREZIONE I121 — «Il proxy resta FUORI per design» era un errore di
+ * perimetro: la guardia I95 protegge ANCHE la POST proxy (api-protezione.ts:
+ * «POST/DELETE degli archivi, POST proxy»; la route chiama bloccoScrittura):
+ * con ADMIN_TOKEN attivo in produzione OGNI aggiunta falliva con 401
+ * «Scrittura protetta», mentre la sonda del dialog (che allega l'header)
+ * passava — esattamente il bug riportato dall'utente. I121 allega
+ * headerAdmin() anche alla fetch del proxy in page.tsx e FISSA il perimetro
+ * con una verifica statica del sorgente: sette scritture protette, zero
+ * eccezioni. (Lezione: il perimetro di una guardia si legge DOVE la guardia
+ * è chiamata, non dove si spera che lo sia — docs/04 I121.)
  *
  * La rete è mockata al livello `fetch` globale; window punta a un finto
  * localStorage a perimetro (installato e ripristinato DOPO l'attesa —
@@ -163,5 +173,20 @@ describe("I120 — con token salvato: le 6 scritture allegano x-admin-token col 
       storico.pushPointToServer(PUNTO, { source: "api", region: "eu" });
       expect(headerRicevuto()["x-admin-token"]).toBe("tok-bordi");
     });
+  });
+});
+
+describe("I121 — la POST del proxy usage è DENTRO il perimetro del token", () => {
+  test("la fetch /api/minimax/usage in page.tsx allega ...headerAdmin()", async () => {
+    /* La chiamata al proxy vive inline nel componente Page (non in una funzione
+       lib testabile per unità): la garanzia di regressione è STATICAMENTE sul
+       sorgente — se qualcuno toglie l'header, questo test rompe la suite prima
+       che il bug torni in produzione (lezione I121: il perimetro della guardia
+       I95 si presidia dove la guardia è chiamata). */
+    const sorgente = await Bun.file(new URL("../../src/app/page.tsx", import.meta.url)).text();
+    const indice = sorgente.indexOf('fetch("/api/minimax/usage"');
+    expect(indice).toBeGreaterThan(-1);
+    const blocco = sorgente.slice(indice, indice + 700);
+    expect(blocco).toContain("...headerAdmin()");
   });
 });
