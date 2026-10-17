@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-17T10:20:15.006Z
+# Audit implementazioni — 2026-10-17T12:38:26.074Z
 
-- Verifiche totali: **575** · PASS: **575** · FAIL: **0**
+- Verifiche totali: **583** · PASS: **583** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -579,6 +579,14 @@
 | I117 | contratti route: cron e POST «manutenzione» si registrano (innesco cron/post nei parametri), azioni parziali NO, GET espone ultimeEsecuzioni (tests/lib/api-manutenzione.test.ts) | simbolo | PASS | — |
 | I117 | e2e motore reale su file temporaneo: roundtrip registra/leggi, cap FIFO che riporta ESATTAMENTE a REGISTRO_CAP, ordine id DESC (lezione I111 estesa alla lettura: la colonna DATETIME può tornare come Date dal driver) | file | PASS | — |
 | I117 | procedura P8 documentata: come verificare il cron a distanza di settimane (GET /api/manutenzione → ultimeEsecuzioni; console.log [manutenzione-cron] nei runtime logs) (docs/10-manutenzione-database.md) | simbolo | PASS | — |
+| I118 | pannello nel tab Dati (sotto Persistenza server): la visualizzazione NELL'APP del registro delle esecuzioni — la prova duratura del cron leggibile senza curl né runtime logs (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I118 | il pannello consuma GET /api/manutenzione (SOLO LETTURA, stesso perimetro pubblico di /api/persistenza) e rende le righe del registro: innesco, esito, durata, istante, dettaglio (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I118 | specchio CLIENT di formattaBytes (manutenzione-db.ts è codice server: importarlo trascinerebbe prisma nel bundle del browser) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I118 | stato vuoto ONESTO con la spiegazione di chi popola il registro (cron notturno + azione «manutenzione») — nessuna riga finta (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I118 | due bottoni «Aggiorna» disambiguati per gli screen reader (persistenza vs registro) — pannelli con stati INDIPENDENTI (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I118 | mock instradato per URL: all'apertura del dialogo convivono DUE fetch (persistenza + manutenzione) con fixture dedicate (tests/components/settings-persistenza.test.tsx) | simbolo | PASS | — |
+| I118 | test di componente dedicato: righe renderizzate, errore del motore nella riga fallita, registro vuoto onesto, errore API senza mascherare l'altro pannello, «Aggiorna registro» indipendente + helper puri verificati | file | PASS | — |
+| I118 | docs/10 aggiornato: la visualizzazione nell'app è la prima via di verifica del registro (P8) (docs/10-manutenzione-database.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (575 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (583 pass, 0 fail, 0 scoperte)

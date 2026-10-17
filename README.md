@@ -14,8 +14,8 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://mini-max-token-monitor.vercel.app/)
-[![Test 520 pass](https://img.shields.io/badge/test-520_pass-31C48D)](tests)
-[![Audit 575 PASS](https://img.shields.io/badge/audit-575_PASS-31C48D)](scripts/verifiche)
+[![Test 532 pass](https://img.shields.io/badge/test-532_pass-31C48D)](tests)
+[![Audit 583 PASS](https://img.shields.io/badge/audit-583_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 
@@ -116,7 +116,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Export orario** (I68): storico aggregato per ora (ultimo valore per ora, grana derivata) dal server
 - **API di sintesi** (I80): `GET /api/summary` read-only senza chiave — KPI aggregati (punti, ultimo rilevamento, eventi, bucket orari) per statusline, home assistant e widget esterni
 - **Diagnostica persistenza** (I107): `GET /api/persistenza` read-only senza chiave — modalità attiva (SQLite/Turso), host sanificato senza credenziali, test di connessione reale e conteggi per tabella, resa nel pannello **Impostazioni → Dati → Persistenza server**
-- **Manutenzione database** (I111): `GET /api/manutenzione` read-only senza chiave — rapporto di salute e quota (storage PRAGMA, livello ok/attenzione/critica sul free tier, integrità `quick_check`, velocità 24 h, proiezione scritture); `POST` protetto I95 con azioni `pulizia`/`vacuum`/`manutenzione` (ritenuta + cap FIFO, byte recuperati dichiarati); **cron notturno automatico** 02:30 UTC (`vercel.json`, Bearer `CRON_SECRET`); **registro delle esecuzioni** (I117): ogni ciclo — riuscito o fallito — lascia la prova duratura nel database e il `GET` espone `ultimeEsecuzioni` — procedure complete in `docs/10`
+- **Manutenzione database** (I111): `GET /api/manutenzione` read-only senza chiave — rapporto di salute e quota (storage PRAGMA, livello ok/attenzione/critica sul free tier, integrità `quick_check`, velocità 24 h, proiezione scritture); `POST` protetto I95 con azioni `pulizia`/`vacuum`/`manutenzione` (ritenuta + cap FIFO, byte recuperati dichiarati); **cron notturno automatico** 02:30 UTC (`vercel.json`, Bearer `CRON_SECRET`); **registro delle esecuzioni** (I117): ogni ciclo — riuscito o fallito — lascia la prova duratura nel database e il `GET` espone `ultimeEsecuzioni`, visualizzata nell'app nel pannello **Impostazioni → Dati → Registro manutenzione** (I118) — procedure complete in `docs/10`
 
 **Persistenza durevole** (F7/F8, offline-first)
 - Storico replicato su **SQLite server-side** (fino a 10.000 punti / 90 giorni): sopravvive a cache svuotate e cambio dispositivo, con merge automatico all'avvio
@@ -124,8 +124,8 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
 **Qualità** (I50/I55)
-- **Suite test automatica**: 520 test / 1743 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **manutenzione database con e2e su entrambe le codifiche DateTime (I111) e registro delle esecuzioni con e2e motore reale (I117)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel con testing-library + happy-dom)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 575 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**; dal I114 presidia anche le decisioni sulle dipendenze (eslint 10 adottato, typescript su 5.9.x in attesa del supporto typescript-eslint a TS 7.1+, inventario dichiarato↔installato via `scripts/verifiche/audit-deps-inventario.mjs`; dal I115 presidia il major prisma 7 (adapter obbligatorio anche sul `file:` locale, URL fuori dallo schema, `prisma.config.ts`, flag CLI `--to-schema`; dal I116 presidia la rigenerazione del client nel build — `postinstall` + script `build` — dopo l'errore di deploy Vercel col client stantio dell'era prisma 6; dal I117 presidia il registro delle esecuzioni della manutenzione)
+- **Suite test automatica**: 532 test / 1804 asserzioni (`bun test`) su parser, tempo, cicli, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **manutenzione database con e2e su entrambe le codifiche DateTime (I111) e registro delle esecuzioni con e2e motore reale (I117)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel + I118 pannello Registro manutenzione con testing-library + happy-dom)**
+- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 583 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**; dal I114 presidia anche le decisioni sulle dipendenze (eslint 10 adottato, typescript su 5.9.x in attesa del supporto typescript-eslint a TS 7.1+, inventario dichiarato↔installato via `scripts/verifiche/audit-deps-inventario.mjs`; dal I115 presidia il major prisma 7 (adapter obbligatorio anche sul `file:` locale, URL fuori dallo schema, `prisma.config.ts`, flag CLI `--to-schema`; dal I116 presidia la rigenerazione del client nel build — `postinstall` + script `build` — dopo l'errore di deploy Vercel col client stantio dell'era prisma 6; dal I117 presidia il registro delle esecuzioni della manutenzione; dal I118 presidia il pannello di visualizzazione del registro nell'app)
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms su `campione-live.jsonl`, 205 campioni reali commessi) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
@@ -282,7 +282,9 @@ e le soglie di quota sono adattabili al disco locale con `MANUTENZIONE_QUOTA_STO
 (commutazione: commenta le `TURSO_*` in `.env`, riavvia `bun dev`, verifica il rapporto,
 ripristina). Dal **I117** ogni ciclo di manutenzione — riuscito o fallito — lascia una riga nel
 registro `RegistroManutenzione` (5ª tabella, cap FIFO a 100 righe): la prova DURATURA che il cron
-è davvero passato, indipendente dalla breve retention dei log Vercel — si verifica con
+è davvero passato, indipendente dalla breve retention dei log Vercel — dal **I118** si legge
+direttamente nell'app nel pannello **Impostazioni → Dati → Registro manutenzione** (riepilogo
+storage/quota/integrità + righe con innesco, esito, durata e dettaglio), oppure con
 `GET /api/manutenzione` → campo `ultimeEsecuzioni`, e nei runtime logs la riga compatta
 `[manutenzione-cron]` porta i numeri del rapporto, non solo lo status code (docs/10 §5 P8).
 
@@ -334,7 +336,7 @@ src/
 │   ├── region-alt-panel.tsx         # I53: panoramica della SECONDA regione (solo con 2ª chiave)
 │   ├── section-boundary.tsx         # I76: error boundary per sezione
 │   ├── event-log.tsx                # Registro eventi (timeline, filtri I77, export, svuota)
-│   ├── settings-dialog.tsx          # Impostazioni su 4 tab (connessione/avvisi/dati/aspetto I78)
+│   ├── settings-dialog.tsx          # Impostazioni su 4 tab (connessione/avvisi/dati/aspetto I78) + registro manutenzione (I118)
 │   ├── theme-toggle.tsx             # I78: toggle tema chiaro/scuro
 │   ├── print-report.tsx             # I75: report settimanale stampabile
 │   ├── pwa-register.tsx             # I52: registrazione Service Worker
@@ -364,7 +366,7 @@ src/
 prisma/schema.prisma                 # UsagePoint + UsageEventRecord + DownsampledPoint (I68) + ModelUsagePoint (I82) + RegistroManutenzione (I117)
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
-tests/                               # Suite bun: lib/ (46 file) + components/ (9 componenti) = 520 test / 1743 asserzioni
+tests/                               # Suite bun: lib/ (46 file) + components/ (10 componenti) = 532 test / 1804 asserzioni
 docs/          # Questa documentazione (01–10)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)

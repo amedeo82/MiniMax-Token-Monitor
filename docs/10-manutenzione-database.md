@@ -62,7 +62,7 @@ Cinque pezzi, tutti già coperti da test (§8):
 | Pezzo | Ruolo |
 |---|---|
 | `src/lib/manutenzione-db.ts` | Unità pura (pattern I106/I107: il client arriva come parametro, nessun import del singleton): misura storage, statistiche per tabella, integrità, politica di ritenuta da ambiente con clamp, valutazione quota, proiezione scritture, pulizia con `dryRun`, VACUUM con degrado onesto, orchestratore `eseguiManutenzioneDb`, formato `formattaBytes` it-IT deterministico — dal I117 anche il REGISTRO delle esecuzioni (`registraEsecuzione`/`leggiUltimeEsecuzioni`, P8) |
-| `GET /api/manutenzione` | **Solo lettura, senza chiave** (stesso perimetro di `/api/persistenza`): rapporto completo — storage, quota (livello ok/attenzione/critica), integrità, statistiche con velocità 24 h, proiezione mensile scritture, politica attiva. Zero scritture dimostrato dalla suite. Dal I117 include anche `ultimeEsecuzioni` (il registro, P8) |
+| `GET /api/manutenzione` | **Solo lettura, senza chiave** (stesso perimetro di `/api/persistenza`): rapporto completo — storage, quota (livello ok/attenzione/critica), integrità, statistiche con velocità 24 h, proiezione mensile scritture, politica attiva. Zero scritture dimostrato dalla suite. Dal I117 include anche `ultimeEsecuzioni` (il registro, P8); dal I118 è il dato consumato dal pannello **Impostazioni → Dati → Registro manutenzione** |
 | `POST /api/manutenzione` | Azioni protette dalla guardia I95 (`ADMIN_TOKEN` + rate limit): `{"azione":"pulizia"}` (DELETE ritenuta+cap, quota rivalutata a fine), `{"azione":"vacuum"}` (prima/dopo misurati, byte recuperati), `{"azione":"manutenzione"}` (ciclo completo, VACUUM automatico solo se la pulizia ha eliminato — dal I117 si registra in P8 con innesco «post») |
 | `GET /api/manutenzione/cron` + `vercel.json` | Cron notturno **02:30 UTC** (Vercel invia `Authorization: Bearer $CRON_SECRET`): ciclo completo con pulizia reale. Senza `CRON_SECRET` → **403 onesto** (un endpoint che cancella non può essere aperto al pubblico); Bearer sbagliato → 401 timing-safe. Dal I117 ogni ciclo si registra in P8 e stampa la riga compatta `[manutenzione-cron]` nei runtime logs |
 | `RegistroManutenzione` (tabella, I117) | La prova DURATURA dell'esecuzione del cron: una riga per ciclo (innesco, esito, durata, dettaglio compatto) scritta nel database — sopravvive alla breve retention dei log della piattaforma. Cap FIFO a 100 righe applicato alla scrittura; creata idempotentemente dal gate `preparaSchema` (IF NOT EXISTS: nessuna migrazione, i DB esistenti la guadagnano al primo avvio) |
@@ -205,12 +205,17 @@ stderr nei runtime logs — nessuna mascheratura.
 
 **Come si verifica**:
 
-1. `GET /api/manutenzione` → campo `ultimeEsecuzioni`: le ultime 10 righe, la più recente prima.
-   Un cron sano mostra una riga/giorno con `innesco: "cron"`, `esito: "ok"`, durate stabili.
-2. Runtime logs Vercel filtrati per `[manutenzione-cron]`: ora l'esito NON è solo lo status code —
+1. **Nell'app (I118)**: **Impostazioni → Dati → Registro manutenzione** — il pannello mostra il
+   riepilogo del rapporto corrente (storage, quota, integrità) e le ultime esecuzioni con badge
+   innesco (`cron`/`manuale`), esito colorato, durata e sintesi del dettaglio; è la stessa lettura
+   del punto 2, senza passare da curl. Un cron sano mostra una riga/giorno con `innesco: "cron"`,
+   `esito: "ok"`, durate stabili (stato vuoto onesto se il registro non ha ancora righe).
+2. `GET /api/manutenzione` → campo `ultimeEsecuzioni`: le ultime 10 righe, la più recente prima
+   (è l'API che alimenta il pannello I118 — utile da script e monitoraggi esterni).
+3. Runtime logs Vercel filtrati per `[manutenzione-cron]`: ora l'esito NON è solo lo status code —
    la riga compatta porta i NUMERI del rapporto (durata, bytes, quota, integrità, eliminati,
    vacuum, registro).
-3. Regole di lettura: **nessuna riga per 2+ notti** → il cron NON gira (deployment fallito,
+4. Regole di lettura: **nessuna riga per 2+ notti** → il cron NON gira (deployment fallito,
    schedule cambiata: verificare prima lo stato del deployment — il cron esegue l'ultimo
    deployment riuscito); **riga con `esito: "fallito"`** → il messaggio del motore è nel campo
    `dettaglio.errore`; **401/403 ripetuti nei log** → `CRON_SECRET` mancante o disallineata.
@@ -277,8 +282,9 @@ Checklist:
 
 - **Ogni giorno (automatico)**: il cron P1 gira alle 02:30 UTC; in Vercel → Deployments →
   Functions si vede l'invocazione e l'esito (un 401/403 ripetuto = `CRON_SECRET` mancante o
-  ruotato solo da una parte). Dal I117 (P8) l'esito DURATURO è nel registro:
-  `GET /api/manutenzione` → `ultimeEsecuzioni` deve mostrare la riga di stanotte
+  ruotato solo da una parte). Dal I117 (P8) l'esito DURATURO è nel registro; dal I118 si legge
+  direttamente nell'app (**Impostazioni → Dati → Registro manutenzione**, oppure
+  `GET /api/manutenzione` → `ultimeEsecuzioni`): la riga di stanotte deve esserci
   (`innesco: "cron"`, `esito: "ok"`); nei runtime logs la riga `[manutenzione-cron]` porta i
   numeri del rapporto, non solo lo status code.
 - **Ogni settimana**: leggere il rapporto GET — `quota.livello` deve stare «ok»,

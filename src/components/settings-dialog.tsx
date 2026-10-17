@@ -26,6 +26,7 @@ import {
   ClipboardPaste,
   BellRing,
   Database,
+  History,
   Palette,
   Sun,
 } from "lucide-react";
@@ -119,6 +120,111 @@ interface ErroreApi {
   error: { code: string; message: string };
 }
 
+/* ================= I118 — Registro manutenzione (pannello tab Dati) =================
+ * Visualizzazione NELL'APP del registro delle esecuzioni (I117): il dialog
+ * consuma GET /api/manutenzione (SOLO LETTURA, stesso perimetro di
+ * /api/persistenza) e rende il riepilogo del rapporto corrente (storage,
+ * quota, integrità) + le ultime esecuzioni del cron/manuale — la prova
+ * DURATURA che il cron è passato, ora anche senza passare da curl o dai
+ * runtime logs della piattaforma. */
+
+/** I118 — riga del registro (contratto `RigaRegistro` di manutenzione-db.ts). */
+interface RigaRegistro {
+  id: number;
+  /** Istante dell'esecuzione (ISO 8601). */
+  t: string;
+  /** Chi ha innescato il ciclo: "cron" | "post" (altri valori: resi grezzi). */
+  innesco: string;
+  /** Esito del ciclo: "ok" | "fallito". */
+  esito: string;
+  /** Durata in ms (null se non misurata). */
+  durataMs: number | null;
+  /** Dettaglio compatto JSON (bytes, quota, integrità, eliminati, vacuum | errore | { grezzo }). */
+  dettaglio: Record<string, unknown>;
+}
+
+/** I118 — risposta di GET /api/manutenzione: SOLO i campi consumati dal pannello. */
+interface RispostaManutenzione {
+  ok: true;
+  manutenzione: {
+    misura: { bytes: number };
+    quota: { livello: string };
+    integrita: { eseguito: boolean; ok: boolean };
+  };
+  ultimeEsecuzioni: RigaRegistro[];
+}
+
+/** I118 — specchio CLIENT di `formattaBytes` (manutenzione-db.ts è codice del
+ * server: importarlo da un componente trascinerebbe prisma nel bundle del
+ * browser). Stessa aritmetica 1024-based e stessa resa it-IT della fonte. */
+export function formattaBytesClient(n: number): string {
+  const valore = Math.max(0, Number(n) || 0);
+  const unita: Array<[string, number]> = [
+    ["B", 1],
+    ["KB", 1024],
+    ["MB", 1024 ** 2],
+    ["GB", 1024 ** 3],
+    ["TB", 1024 ** 4],
+  ];
+  let scelta = unita[0];
+  for (const u of unita) if (valore >= u[1]) scelta = u;
+  const q = valore / scelta[1];
+  const dec = scelta[0] === "B" ? 0 : q >= 100 ? 0 : q >= 10 ? 1 : 2;
+  return `${q.toFixed(dec).replace(".", ",")} ${scelta[0]}`;
+}
+
+/** I118 — durata leggibile: ms sotto il secondo, altrimenti secondi con la
+ * virgola it-IT; non misurata → «—» (onesto, mai uno 0 che non c'è). */
+export function formattaDurataRegistro(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms)) return "—";
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
+}
+
+/** I118 — istante in forma compatta it-IT «gg/mm hh:mm»; data invalida o vuota
+ * → testo grezzo (mai una data inventata: la lezione I111 vale anche qui). */
+export function formattaQuandoRegistro(t: string): string {
+  if (!t) return "—";
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return t;
+  return d.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+/** Lettore numerico sicuro del dettaglio (Record<string, unknown>): mai un
+ * crash su contenuti imprevisti — stesso spirito della lettura I117 lato server.
+ * null/undefined = campo NON applicabile (es. eliminati senza pulizia) → null:
+ * Number(null) sarebbe 0 e produrrebbe un falso «eliminati 0». */
+function numeroDettaglio(dettaglio: Record<string, unknown>, chiave: string): number | null {
+  const v = dettaglio[chiave];
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Lettore testuale sicuro del dettaglio. */
+function testoDettaglio(dettaglio: Record<string, unknown>, chiave: string): string | null {
+  const v = dettaglio[chiave];
+  return v === null || v === undefined ? null : String(v);
+}
+
+/** I118 — sintesi del dettaglio JSON: solo i campi PRESENTI nell'ordine del
+ * rapporto (bytes · quota · integrità · eliminati · vacuum); dettaglio vuoto
+ * o non interpretabile ({ grezzo }) → stringa vuota (la riga non si finge). */
+export function sintesiDettaglio(dettaglio: Record<string, unknown>): string {
+  const pezzi: string[] = [];
+  const bytes = numeroDettaglio(dettaglio, "bytes");
+  if (bytes !== null) pezzi.push(formattaBytesClient(bytes));
+  const quota = testoDettaglio(dettaglio, "quota");
+  if (quota !== null) pezzi.push(`quota ${quota}`);
+  const integrita = testoDettaglio(dettaglio, "integrita");
+  if (integrita !== null) pezzi.push(`integrità ${integrita}`);
+  const eliminati = numeroDettaglio(dettaglio, "eliminati");
+  if (eliminati !== null) pezzi.push(`eliminati ${eliminati.toLocaleString("it-IT")}`);
+  const vacuum = testoDettaglio(dettaglio, "vacuum");
+  if (vacuum !== null) pezzi.push(`vacuum ${vacuum}`);
+  return pezzi.join(" · ");
+}
+
 /** I78 — opzioni del tema (next-themes: class su <html>, default scuro). */
 const THEME_OPTIONS = [
   { value: "system", label: "Sistema (segue il dispositivo)" },
@@ -177,12 +283,43 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
     }
   }, []);
 
-  /* Caricamento all'APERTURA del dialogo (non al mount dell'app): la chiamata
-     parte in microtask come da passata I90 (regola react-hooks/set-state-in-effect). */
+  /* I118 — registro delle esecuzioni della manutenzione (tab Dati): LETTURA
+     del rapporto corrente + ultime esecuzioni del cron/manuale. Stesso
+     perimetro pubblico read-only di /api/persistenza (nessuna chiave, nessuna
+     scrittura — dimostrato dalla suite); i due pannelli hanno stati INDIPENDENTI:
+     un endpoint guasto non maschera l'altro. */
+  const [registro, setRegistro] = React.useState<RispostaManutenzione | null>(null);
+  const [caricamentoRegistro, setCaricamentoRegistro] = React.useState(false);
+  const [erroreRegistro, setErroreRegistro] = React.useState<string | null>(null);
+
+  const caricaRegistro = React.useCallback(async () => {
+    setCaricamentoRegistro(true);
+    setErroreRegistro(null);
+    try {
+      const res = await fetch("/api/manutenzione", { cache: "no-store" });
+      const body = (await res.json()) as RispostaManutenzione | ErroreApi;
+      if (!res.ok || !body.ok) {
+        throw new Error(("error" in body && body.error?.message) || `HTTP ${res.status}`);
+      }
+      setRegistro(body);
+    } catch (e) {
+      setRegistro(null);
+      setErroreRegistro(e instanceof Error ? e.message : "Registro non disponibile.");
+    } finally {
+      setCaricamentoRegistro(false);
+    }
+  }, []);
+
+  /* Caricamento all'APERTURA del dialogo (non al mount dell'app): le chiamate
+     partono in microtask come da passata I90 (regola react-hooks/set-state-in-effect).
+     I118: anche il registro parte all'apertura, in parallelo alla persistenza. */
   React.useEffect(() => {
     if (!open) return;
-    queueMicrotask(() => void caricaStatoPersistenza());
-  }, [open, caricaStatoPersistenza]);
+    queueMicrotask(() => {
+      void caricaStatoPersistenza();
+      void caricaRegistro();
+    });
+  }, [open, caricaStatoPersistenza, caricaRegistro]);
 
   /* I90 — il reset del modulo a ogni apertura usa l'aggiustamento di stato in
      fase di render (pattern React «adjusting state when a prop changes») al
@@ -627,6 +764,7 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                     size="sm"
                     onClick={() => void caricaStatoPersistenza()}
                     disabled={caricamentoPersistenza}
+                    aria-label="Aggiorna persistenza"
                     className="h-7 px-2 text-[11px] text-zinc-400 hover:bg-white/5! hover:text-zinc-200!"
                   >
                     {caricamentoPersistenza ? "Verifica…" : "Aggiorna"}
@@ -683,6 +821,116 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                       Il database si sceglie dalle variabili d&apos;ambiente del server (locale = SQLite,
                       cloud = Turso): questa verifica mostra solo modalità, host e conteggi — le
                       credenziali restano nell&apos;ambiente e non arrivano mai al browser.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-500">Verifica in corso…</p>
+                )}
+              </div>
+
+              <Separator className="bg-white/[0.06]" />
+
+              {/* ---------------- I118 — Registro manutenzione ---------------- */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+                    <History className="size-3.5 text-zinc-400" />
+                    Registro manutenzione
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void caricaRegistro()}
+                    disabled={caricamentoRegistro}
+                    aria-label="Aggiorna registro"
+                    className="h-7 px-2 text-[11px] text-zinc-400 hover:bg-white/5! hover:text-zinc-200!"
+                  >
+                    {caricamentoRegistro ? "Verifica…" : "Aggiorna"}
+                  </Button>
+                </div>
+                {erroreRegistro ? (
+                  <p className="text-[11px] font-medium text-rose-400">
+                    Registro non disponibile: {erroreRegistro}
+                  </p>
+                ) : registro ? (
+                  <div className="space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
+                    {/* Riepilogo del rapporto corrente (GET read-only: misura, quota, integrità). */}
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-zinc-500">Storage attuale</span>
+                      <span className="font-mono text-zinc-300">
+                        {formattaBytesClient(registro.manutenzione.misura.bytes)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-zinc-500">Quota / integrità</span>
+                      <span className="text-zinc-300">
+                        {registro.manutenzione.quota.livello} ·{" "}
+                        {registro.manutenzione.integrita.eseguito
+                          ? registro.manutenzione.integrita.ok
+                            ? "ok"
+                            : "ko"
+                          : "omessa"}
+                      </span>
+                    </div>
+                    <Separator className="bg-white/[0.06]" />
+                    {registro.ultimeEsecuzioni.length === 0 ? (
+                      <p className="text-[11px] text-zinc-500">
+                        Nessuna esecuzione registrata: il cron popola il registro a ogni run notturno
+                        (02:30 UTC) e l&apos;azione «manutenzione» a ogni uso manuale.
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {registro.ultimeEsecuzioni.map((r) => {
+                          const sintesi = sintesiDettaglio(r.dettaglio);
+                          const errore = testoDettaglio(r.dettaglio, "errore");
+                          return (
+                            <div
+                              key={r.id}
+                              className="space-y-0.5 border-b border-white/[0.04] pb-1.5 last:border-b-0 last:pb-0"
+                            >
+                              <div className="flex items-center justify-between gap-2 text-[11px]">
+                                <span className="flex min-w-0 items-center gap-1.5">
+                                  <span className="shrink-0 rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 font-medium text-zinc-300">
+                                    {r.innesco === "post" ? "manuale" : r.innesco}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      r.esito === "ok"
+                                        ? "text-emerald-400"
+                                        : r.esito === "fallito"
+                                          ? "font-medium text-rose-400"
+                                          : "text-zinc-300",
+                                    )}
+                                  >
+                                    {r.esito}
+                                  </span>
+                                  <span className="truncate text-zinc-500">
+                                    {formattaDurataRegistro(r.durataMs)}
+                                  </span>
+                                </span>
+                                <span className="shrink-0 font-mono text-zinc-400">
+                                  {formattaQuandoRegistro(r.t)}
+                                </span>
+                              </div>
+                              {sintesi ? (
+                                <p className="pl-0.5 text-[10px] leading-relaxed text-zinc-500">{sintesi}</p>
+                              ) : null}
+                              {errore ? (
+                                <p className="pl-0.5 text-[10px] leading-relaxed text-rose-400/90">{errore}</p>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/* Nota onesta (stesso spirito di I117): cap FIFO alla scrittura, best-effort,
+                    azioni parziali fuori dal registro — il pannello MOSTRA, non promette. */}
+                    <p className="pt-1 text-[10px] leading-relaxed text-zinc-600">
+                      Il registro conserva le ultime 100 esecuzioni (cap FIFO, scritto dal cron e
+                      dall&apos;azione «manutenzione» — le azioni parziali pulizia/vacuum non si
+                      registrano). La scrittura è best-effort: se il database rifiuta l&apos;INSERT la
+                      riga manca, ma l&apos;esito resta nei runtime logs della piattaforma
+                      ([manutenzione-cron]).
                     </p>
                   </div>
                 ) : (

@@ -37,14 +37,41 @@ const STATO_TURSO = {
   generatoIl: new Date().toISOString(),
 };
 
+/* I118 — dall'apertura del dialogo il fetch parte verso DUE endpoint in
+   parallelo: il mock instrada per URL (fixture dedicate per ciascuno), così
+   i due pannelli del tab Dati sono indipendenti anche nei test. */
+const RISPOSTA_MANUTENZIONE = {
+  ok: true,
+  modalita: "turso",
+  manutenzione: {
+    misura: { bytes: 151552 },
+    quota: { livello: "ok" },
+    integrita: { eseguito: true, ok: true },
+  },
+  ultimeEsecuzioni: [
+    {
+      id: 2,
+      t: "2026-10-17T02:30:04.000Z",
+      innesco: "cron",
+      esito: "ok",
+      durataMs: 2117,
+      dettaglio: { bytes: 151552, quota: "ok", integrita: "ok", eliminati: 0, vacuum: "omesso" },
+    },
+  ],
+  generatoIl: new Date().toISOString(),
+};
+
 let risposta: unknown = STATO_TURSO;
+let rispostaManutenzione: unknown = RISPOSTA_MANUTENZIONE;
 let statoHttp = 200;
 const chiamate: string[] = [];
 
 function mockFetch() {
   globalThis.fetch = (async (input: unknown) => {
-    chiamate.push(String(input));
-    return new Response(JSON.stringify(risposta), {
+    const url = String(input);
+    chiamate.push(url);
+    const corpo = url.includes("/api/manutenzione") ? rispostaManutenzione : risposta;
+    return new Response(JSON.stringify(corpo), {
       status: statoHttp,
       headers: { "content-type": "application/json" },
     });
@@ -80,6 +107,7 @@ async function apriTabDati() {
 beforeEach(() => {
   cleanup();
   risposta = STATO_TURSO;
+  rispostaManutenzione = RISPOSTA_MANUTENZIONE;
   statoHttp = 200;
   chiamate.length = 0;
   mockFetch();
@@ -138,11 +166,15 @@ describe("I107 componenti: pannello Persistenza (tab Dati)", () => {
 
   test("la verifica parte all'apertura del dialogo e «Aggiorna» rifà la richiesta", async () => {
     mount();
-    await waitFor(() => expect(chiamate).toEqual(["/api/persistenza"]));
+    /* I118 — all'apertura partono ENTRAMBI i fetch (persistenza + manutenzione,
+       in parallelo): ogni endpoint è chiamato una volta. */
+    await waitFor(() => expect(chiamate.filter((c) => c === "/api/persistenza")).toHaveLength(1));
     await apriTabDati();
-    fireEvent.click(screen.getByRole("button", { name: "Aggiorna" }));
-    await waitFor(() => expect(chiamate).toHaveLength(2));
-    expect(chiamate.every((c) => c === "/api/persistenza")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Aggiorna persistenza" }));
+    await waitFor(() => expect(chiamate.filter((c) => c === "/api/persistenza")).toHaveLength(2));
+    /* Il bottone del registro NON rifà la richiesta di persistenza e viceversa:
+       due aria-label distinti, due pannelli indipendenti. */
+    expect(chiamate.filter((c) => c === "/api/manutenzione")).toHaveLength(1);
   });
 
   test("il pannello dichiara che le credenziali restano nell'ambiente (nota di sicurezza)", async () => {

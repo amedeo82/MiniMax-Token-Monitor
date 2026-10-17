@@ -580,7 +580,7 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "520 test / 1743 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I105", "README.md", "532 test / 1804 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I105", "README.md", "01–10", "indice documentazione README completo (docs/10 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -834,6 +834,16 @@ const CHECKS = [
   check.simbolo("I117", "tests/lib/api-manutenzione.test.ts", "RegistroManutenzione", "contratti route: cron e POST «manutenzione» si registrano (innesco cron/post nei parametri), azioni parziali NO, GET espone ultimeEsecuzioni"),
   check.file("I117", "scripts/verifiche/verifica-i117-registro-reale.ts", "e2e motore reale su file temporaneo: roundtrip registra/leggi, cap FIFO che riporta ESATTAMENTE a REGISTRO_CAP, ordine id DESC (lezione I111 estesa alla lettura: la colonna DATETIME può tornare come Date dal driver)"),
   check.simbolo("I117", "docs/10-manutenzione-database.md", "P8 — Registro delle esecuzioni", "procedura P8 documentata: come verificare il cron a distanza di settimane (GET /api/manutenzione → ultimeEsecuzioni; console.log [manutenzione-cron] nei runtime logs)"),
+
+  /* --- I118 — pannello «Registro manutenzione»: la visualizzazione nell'app --- */
+  check.simbolo("I118", "src/components/settings-dialog.tsx", "Registro manutenzione", "pannello nel tab Dati (sotto Persistenza server): la visualizzazione NELL'APP del registro delle esecuzioni — la prova duratura del cron leggibile senza curl né runtime logs"),
+  check.simbolo("I118", "src/components/settings-dialog.tsx", "ultimeEsecuzioni", "il pannello consuma GET /api/manutenzione (SOLO LETTURA, stesso perimetro pubblico di /api/persistenza) e rende le righe del registro: innesco, esito, durata, istante, dettaglio"),
+  check.simbolo("I118", "src/components/settings-dialog.tsx", "formattaBytesClient", "specchio CLIENT di formattaBytes (manutenzione-db.ts è codice server: importarlo trascinerebbe prisma nel bundle del browser)"),
+  check.simbolo("I118", "src/components/settings-dialog.tsx", "Nessuna esecuzione registrata", "stato vuoto ONESTO con la spiegazione di chi popola il registro (cron notturno + azione «manutenzione») — nessuna riga finta"),
+  check.simbolo("I118", "src/components/settings-dialog.tsx", "aria-label=\"Aggiorna registro\"", "due bottoni «Aggiorna» disambiguati per gli screen reader (persistenza vs registro) — pannelli con stati INDIPENDENTI"),
+  check.simbolo("I118", "tests/components/settings-persistenza.test.tsx", "api/manutenzione", "mock instradato per URL: all'apertura del dialogo convivono DUE fetch (persistenza + manutenzione) con fixture dedicate"),
+  check.file("I118", "tests/components/settings-registro.test.tsx", "test di componente dedicato: righe renderizzate, errore del motore nella riga fallita, registro vuoto onesto, errore API senza mascherare l'altro pannello, «Aggiorna registro» indipendente + helper puri verificati"),
+  check.simbolo("I118", "docs/10-manutenzione-database.md", "I118", "docs/10 aggiornato: la visualizzazione nell'app è la prima via di verifica del registro (P8)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",
