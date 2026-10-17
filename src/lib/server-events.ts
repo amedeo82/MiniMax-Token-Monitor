@@ -14,9 +14,12 @@
  *
  * Nessun dato sensibile transita qui: solo timestamp, tipo, messaggio e
  * percentuale residua dell'evento.
+ * I120 — le scritture allegano `x-admin-token` quando l'utente ha salvato il
+ * token admin nel browser (guardia I95 del server: altrimenti nessun header).
  */
 
 import type { UsageEvent } from "./usage-events";
+import { headerAdmin } from "./admin-token";
 import { parseServerListResponse } from "./server-response";
 
 export interface ServerEventRow {
@@ -86,7 +89,7 @@ export function pushEventsToServer(
   try {
     void fetch("/api/events", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headerAdmin() },
       body: JSON.stringify({ events: list }),
       keepalive: true,
     })
@@ -131,7 +134,7 @@ export async function fetchServerEvents(limit = 2000, kind?: string): Promise<Se
 export async function clearServerEvents(): Promise<number | null> {
   if (typeof window === "undefined") return null;
   try {
-    const res = await fetch("/api/events", { method: "DELETE" });
+    const res = await fetch("/api/events", { method: "DELETE", headers: headerAdmin() });
     if (!res.ok) return null;
     const json = (await res.json()) as { ok: boolean; deleted: number };
     return json.ok ? json.deleted : null;

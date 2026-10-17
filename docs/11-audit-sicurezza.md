@@ -70,7 +70,7 @@ guastare.
 | Area | Gravità | Esito |
 |------|---------|-------|
 | Credenziali Turso nella storia git (`dd03d16`) | **CRITICO** (mitigato: repo privato) | azione utente: **rotazione token** (§5.1) |
-| `ADMIN_TOKEN`/`CRON_SECRET` da verificare nell'env di produzione | **ALTO** (se assenti) | azione utente su Vercel (§5.2) |
+| `ADMIN_TOKEN`/`CRON_SECRET` da verificare nell'env di produzione | **ALTO** (se assenti) | **I120**: supporto client implementato (header + sonda); resta l'azione operativa su Vercel (§5.2) |
 | Log query Prisma (con parametri) in produzione | **MEDIO** | **FIXATO in I119** (§5.3) |
 | Fingerprinting `X-Powered-By` | **MEDIO** | **FIXATO in I119** (§5.4) |
 | `Caddyfile` dev: proxy a porta localhost da query param | **BASSO** (dev-only) | commento di avvertimento (§5.5) |
@@ -193,18 +193,39 @@ T22); l'audit di I110 introdusse il check `nonTracciato` che impedisce la ricadu
    o BFG per rimuovere il blob + force push coordinato: in un repo privato monoutente il
    beneficio è marginale rispetto alla rotazione.
 
-### 5.2 [ALTO → AZIONE UTENTE] Variabili di guardia nell'ambiente di produzione
+### 5.2 [ALTO → MITIGATO CON I120, AZIONE OPERATIVA RESIDUA] Variabili di guardia nell'ambiente di produzione
 
 Il design I95 è onesto: **senza `ADMIN_TOKEN` impostato, le scritture degli archivi restano
 aperte** (limitate dal rate limit) — scelta voluta per l'uso locale, che in produzione
 esporrebbe a *data poisoning* (punti/eventi finti) e `DELETE` d'archivio da chiunque.
-Il codice non può verificare l'env remota, quindi l'azione è operativa:
 
-1. Vercel → progetto → Settings → Environment Variables (ambito **Production**):
-   `ADMIN_TOKEN` (valore lungo casuale), `CRON_SECRET` (per il cron I111/I117),
-   `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`;
-2. redeploy; verifica empirica: `curl -i -X POST https://<url>/api/events -d '{}'`
-   deve rispondere **401** (non 400/200).
+**Aggiornamento I120 — il blocker è rimosso.** Alla chiusura dell'audit impostare
+`ADMIN_TOKEN` avrebbe UCCISO la replica in silenzio: il WRITER dei dati è il browser
+(replica fire-and-forget di storico/eventi/per-modello) e le sue 6 scritture non allegavano
+alcun header, con errori taciuti per design. Il I120 porta il token nel browser (stesso
+modello della chiave MiniMax): nuovo `lib/admin-token.ts` (storage `mm-dash-admin-token-v1`,
+header `x-admin-token` allegato alle 6 scritture SOLO quando salvato, SSR-safe), sezione
+«Sicurezza scritture» nel dialog Impostazioni → Dati con **sonda di identità** —
+POST `/api/manutenzione` con azione inesistente: la guardia gira PRIMA del parsing del body,
+quindi la sonda NON scrive nulla e distingue 401 (token rifiutato) da 400 (accettato) /
+429 (accettato, budget esaurito). Contratto presidiato da 23 test nuovi.
+
+**Azione operativa residua (solo configurazione, più codice da scrivere):**
+
+1. generare un valore lungo casuale (es. `openssl rand -hex 32`);
+2. Vercel → progetto → Settings → Environment Variables (ambito **Production**):
+   `ADMIN_TOKEN` = quel valore; verificare `CRON_SECRET` (per il cron I111/I117 — il run
+   del 17/10 con `esito=ok` lo dà per impostato), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`;
+3. redeploy;
+4. nel browser: dashboard → Impostazioni → Dati → «Sicurezza scritture» → incollare lo
+   stesso valore → «Salva token» → «Verifica col server» → messaggio verde;
+5. verifica empirica aggiuntiva da terminale:
+   `curl -i -X POST https://<url>/api/manutenzione -H "Content-Type: application/json" -d '{"azione":"__x__"}'`
+   deve dare **401** SENZA header e **400** con `-H "x-admin-token: <valore>"`.
+
+Nota onesta: il token nel localStorage protegge le SCRITTURE ma è visibile a chi ha accesso
+fisico/al profilo del browser — stesso perimetro di rischio già accettato per la chiave
+MiniMax (design single-user, docs/09 §Utenti).
 
 ### 5.3 [MEDIO → FIXATO] Log query Prisma in produzione
 

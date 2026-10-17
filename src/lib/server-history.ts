@@ -9,10 +9,13 @@
  *   storico sopravvive a cache svuotate e dura nel tempo (fino a 10.000 punti lato server).
  *
  * La chiave API non transita mai qui: si inviano solo timestamp e percentuali residue.
+ * I120 — le scritture allegano `x-admin-token` quando l'utente ha salvato il
+ * token admin nel browser (guardia I95 del server: altrimenti nessun header).
  */
 
 import type { HistoryPoint } from "@/components/history-chart";
 import type { HourStats } from "@/lib/downsample";
+import { headerAdmin } from "@/lib/admin-token";
 import { parseServerListResponse } from "@/lib/server-response";
 
 export interface ServerPoint {
@@ -80,7 +83,7 @@ export function pushPointToServer(
   try {
     void fetch("/api/history", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headerAdmin() },
       body: JSON.stringify({
         points: [{ t: point.t, interval: point.interval, weekly: point.weekly, source: meta.source, region: meta.region }],
       }),
@@ -148,7 +151,7 @@ export async function fetchServerHourly(
 export async function clearServerHistory(): Promise<number | null> {
   if (typeof window === "undefined") return null;
   try {
-    const res = await fetch("/api/history", { method: "DELETE" });
+    const res = await fetch("/api/history", { method: "DELETE", headers: headerAdmin() });
     if (!res.ok) return null;
     const json = (await res.json()) as { ok: boolean; deleted: number };
     return json.ok ? json.deleted : null;

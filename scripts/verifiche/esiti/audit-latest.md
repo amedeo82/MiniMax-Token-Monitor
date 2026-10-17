@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-17T13:18:32.556Z
+# Audit implementazioni — 2026-10-17T13:53:05.434Z
 
-- Verifiche totali: **590** · PASS: **590** · FAIL: **0**
+- Verifiche totali: **600** · PASS: **600** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -594,6 +594,16 @@
 | I119 | la disattivazione dell'header è presidiata dal test di configurazione (non solo dalla memoria) (tests/lib/header-sicurezza.test.ts) | simbolo | PASS | — |
 | I119 | avvertimento SSRF sul blocco @transform_port_query (?XTransformPort= porta localhost arbitraria): accettabile SOLO in rete fidata di sviluppo — in self-hosting pubblico va rimosso (produzione Vercel non usa Caddy) (Caddyfile) | simbolo | PASS | — |
 | I119 | report dell'audit sicurezza completo: metodologia (ricognizione, caccia ai segreti, injection, auth/authz, DoS, crypto, dipendenze, configurazioni), 16 voci di analisi con gravità, remediation applicate (poweredByHeader, log Prisma, Caddyfile), rischi RESIDUI con azioni utente (rotazione token Turso della storia git dd03d16, ADMIN_TOKEN/CRON_SECRET su Vercel, CSP enforcing futuro) | file | PASS | — |
+| I120 | token admin client: storage mm-dash-admin-token-v1 (come la chiave MiniMax, mai nel codice/log), headerAdmin SSR-safe, sonda di identità classificata (401 rifiutato / 400-429 accettato) — chiude docs/11 §5.2: impostare ADMIN_TOKEN sul server NON rompe più la replica browser→server | file | PASS | — |
+| I120 | header PURA da token ({} se assente: scritture identiche a prima del I120) (src/lib/admin-token.ts) | simbolo | PASS | — |
+| I120 | classificazione PURA dell'esito della sonda (401 PRIMA del rate limit → 429 implica identità accettata) (src/lib/admin-token.ts) | simbolo | PASS | — |
+| I120 | replica storico: header admin su POST e DELETE (src/lib/server-history.ts) | simbolo | PASS | — |
+| I120 | replica eventi: header admin su POST e DELETE (src/lib/server-events.ts) | simbolo | PASS | — |
+| I120 | replica per-modello: header admin su POST e DELETE (src/lib/model-history.ts) | simbolo | PASS | — |
+| I120 | sezione nel tab Dati: campo password con mostra/nascondi, salva/rimuovi IMMEDIATI (fuori dal «Salva» del dialogo), sonda col server (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I120 | la sonda usa un'azione inesistente: il body è rifiutato con 400 DOPO la guardia — nessuna scrittura sul database (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I120 | contratto di rete: le 6 scritture degli archivi allegano l'header SOLO con token salvato, invariate senza (tests/lib/admin-token-scritture.test.ts) | simbolo | PASS | — |
+| I120 | test di componente della sezione: campo dal localStorage, salvataggio immediato, mostra/nascondi, sonda 400/401 con header e body verificati, rimozione | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (590 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (600 pass, 0 fail, 0 scoperte)

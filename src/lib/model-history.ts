@@ -18,9 +18,12 @@
  * replicato fire-and-forget su `/api/history/models` (tabella `ModelUsagePoint`,
  * lib I42); all'avvio lo storico server viene riscaricato e fuso con il locale.
  * La chiave API non transita mai: solo timestamp, nomi modello e percentuali.
+ * I120 — le scritture allegano `x-admin-token` quando l'utente ha salvato il
+ * token admin nel browser (guardia I95 del server: altrimenti nessun header).
  */
 
 import type { HistoryPoint } from "@/components/history-chart";
+import { headerAdmin } from "./admin-token";
 import { persistJson } from "./persist-json";
 
 /** Un punto grezzo dello storico per-modello (valori nullable). */
@@ -236,7 +239,7 @@ export function pushModelPointsToServer(
   try {
     void fetch("/api/history/models", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headerAdmin() },
       body: JSON.stringify({
         points: points.map((p) => ({
           t: p.t,
@@ -261,7 +264,7 @@ export async function clearServerModelHistory(model?: string): Promise<number | 
   if (typeof window === "undefined") return null;
   try {
     const qs = model ? `?model=${encodeURIComponent(model)}` : "";
-    const res = await fetch(`/api/history/models${qs}`, { method: "DELETE" });
+    const res = await fetch(`/api/history/models${qs}`, { method: "DELETE", headers: headerAdmin() });
     if (!res.ok) return null;
     const json = (await res.json()) as { ok: boolean; deleted: number };
     return json.ok ? json.deleted : null;

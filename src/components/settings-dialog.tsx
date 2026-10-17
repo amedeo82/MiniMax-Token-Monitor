@@ -33,6 +33,13 @@ import {
 import { cn } from "@/lib/utils";
 import { REGION_LABELS, regioneAlt, Region } from "@/lib/minimax";
 import type { AlertThresholds, WindowThresholdKey } from "@/lib/usage-events";
+import {
+  cancellaTokenAdmin,
+  esitoSondaAdmin,
+  headerAdmin,
+  leggiTokenAdmin,
+  salvaTokenAdmin,
+} from "@/lib/admin-token";
 import { Textarea } from "@/components/ui/textarea";
 
 export interface DashboardSettings {
@@ -292,6 +299,20 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   const [caricamentoRegistro, setCaricamentoRegistro] = React.useState(false);
   const [erroreRegistro, setErroreRegistro] = React.useState<string | null>(null);
 
+  /* I120 — token admin per le scritture protette dalla guardia I95: vive SOLO
+     nel localStorage del browser (mm-dash-admin-token-v1, come la chiave
+     MiniMax) e viene allegato alle repliche di storico/eventi/modelli. La
+     «Verifica» sonda il server con POST /api/manutenzione e azione inesistente:
+     la guardia gira PRIMA del parsing del body → 401 = rifiutato, 400 =
+     accettato (o guardia spenta), 429 = accettato ma budget esaurito. La sonda
+     non scrive nulla sul database ed è indipendente dal «Salva» del dialogo.
+     L'inizializzatore LAZY legge il token già al primo render (SSR-safe: la
+     lettura è guardata); il blocco di reset lo riallinea a ogni apertura. */
+  const [tokenAdmin, setTokenAdmin] = React.useState(() => leggiTokenAdmin() ?? "");
+  const [mostraToken, setMostraToken] = React.useState(false);
+  const [esitoToken, setEsitoToken] = React.useState<{ ok: boolean; messaggio: string } | null>(null);
+  const [verificaInCorso, setVerificaInCorso] = React.useState(false);
+
   const caricaRegistro = React.useCallback(async () => {
     setCaricamentoRegistro(true);
     setErroreRegistro(null);
@@ -342,6 +363,9 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       setShowKey(false);
       setJsonText("");
       setJsonError(null);
+      setTokenAdmin(leggiTokenAdmin() ?? "");
+      setMostraToken(false);
+      setEsitoToken(null);
       setActiveTab("connection");
     }
   }
@@ -386,6 +410,50 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
   /** I28 — aggiorna una soglia della matrice per finestra. */
   const setWindowThreshold = (key: WindowThresholdKey, part: "warn" | "crit", value: number) => {
     setThresholds((prev) => ({ ...prev, [key]: { ...prev[key], [part]: value } }));
+  };
+
+  /* I120 — il token ha effetto IMMEDIATO (fuori dal «Salva impostazioni»): è un
+     segreto operativo, non una preferenza della dashboard. Stringa vuota = rimozione. */
+  const handleSalvaToken = () => {
+    salvaTokenAdmin(tokenAdmin);
+    const t = tokenAdmin.trim();
+    setTokenAdmin(t);
+    setEsitoToken(
+      t
+        ? { ok: true, messaggio: "Token salvato nel browser: verrà allegato alle scritture degli archivi." }
+        : { ok: true, messaggio: "Token rimosso dal browser." },
+    );
+  };
+
+  const handleRimuoviToken = () => {
+    cancellaTokenAdmin();
+    setTokenAdmin("");
+    setEsitoToken({ ok: true, messaggio: "Token rimosso dal browser." });
+  };
+
+  /* I120 — sonda di identità: POST /api/manutenzione con azione inesistente.
+     Nessuna scrittura (il body è rifiutato con 400 dopo la guardia I95); la
+     sonda serve solo a distinguere 401 (token rifiutato) da 400 (identità
+     accettata) — 429 significa identità accettata ma budget esaurito. */
+  const handleVerificaToken = async () => {
+    setVerificaInCorso(true);
+    setEsitoToken(null);
+    salvaTokenAdmin(tokenAdmin); // la prova usa il valore mostrato, non uno stantio
+    try {
+      const res = await fetch("/api/manutenzione", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headerAdmin() },
+        body: JSON.stringify({ azione: "__sonda_identita_i120__" }),
+      });
+      setEsitoToken(esitoSondaAdmin(res.status));
+    } catch {
+      setEsitoToken({
+        ok: false,
+        messaggio: "Server non raggiungibile: la verifica non è conclusiva, riprova.",
+      });
+    } finally {
+      setVerificaInCorso(false);
+    }
   };
 
   const handleSave = () => {
@@ -936,6 +1004,84 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                 ) : (
                   <p className="text-[11px] text-zinc-500">Verifica in corso…</p>
                 )}
+              </div>
+
+              <Separator className="bg-white/[0.06]" />
+
+              {/* ---------------- I120 — Sicurezza scritture (ADMIN_TOKEN) ---------------- */}
+              <div className="space-y-2">
+                <Label htmlFor="admin-token" className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+                  <ShieldCheck className="size-3.5 text-zinc-400" />
+                  Sicurezza scritture
+                </Label>
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  Se il server ha la variabile <span className="font-mono text-zinc-400">ADMIN_TOKEN</span>, ogni
+                  scrittura sugli archivi deve presentare quel token. Inseriscilo qui: resta nel localStorage
+                  del browser (come la chiave API — mai nel codice, mai nei log) e viene allegato
+                  automaticamente alle repliche di storico, eventi e punti per-modello.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="admin-token"
+                    type={mostraToken ? "text" : "password"}
+                    value={tokenAdmin}
+                    onChange={(e) => setTokenAdmin(e.target.value)}
+                    placeholder="vuoto = nessun token inviato"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="border-white/10 bg-white/[0.05] font-mono text-[11px] text-zinc-100 placeholder:text-zinc-600"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMostraToken((v) => !v)}
+                    aria-label={mostraToken ? "Nascondi token" : "Mostra token"}
+                    className="h-8 shrink-0 px-2 text-zinc-400 hover:bg-white/5! hover:text-zinc-200!"
+                  >
+                    {mostraToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSalvaToken}
+                    className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
+                  >
+                    <ShieldCheck className="size-3.5" />
+                    Salva token
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleVerificaToken()}
+                    disabled={verificaInCorso}
+                    className="h-8 gap-1.5 border-white/10 bg-white/[0.04] text-xs hover:bg-white/[0.08]!"
+                  >
+                    {verificaInCorso ? "Verifica…" : "Verifica col server"}
+                  </Button>
+                  {tokenAdmin.trim() ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRimuoviToken}
+                      className="h-8 px-2 text-[11px] text-zinc-400 hover:bg-white/5! hover:text-zinc-200!"
+                    >
+                      Rimuovi
+                    </Button>
+                  ) : null}
+                </div>
+                {esitoToken ? (
+                  <p className={cn("text-[11px] font-medium", esitoToken.ok ? "text-emerald-400" : "text-rose-400")}>
+                    {esitoToken.messaggio}
+                  </p>
+                ) : null}
+                <p className="text-[10px] leading-relaxed text-zinc-600">
+                  «Verifica col server» invia un&apos;azione di manutenzione inesistente: il server la rifiuta
+                  senza toccare il database — serve solo a confermare l&apos;identità (401 = token rifiutato,
+                  400 = accettato). Il salvataggio è immediato e indipendente dal pulsante «Salva
+                  impostazioni».
+                </p>
               </div>
 
               <Separator className="bg-white/[0.06]" />
