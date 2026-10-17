@@ -13,7 +13,7 @@
  *
  * Tre livelli di verifica:
  * 1. END-TO-END con motore reale: preparaSchema su un file SQLite vuoto → le
- *    4 tabelle esistono, una create() per UsagePoint e per DownsampledPoint
+ *    5 tabelle esistono, una create() per UsagePoint e per DownsampledPoint
  *    (la tabella del report utente: «The table main.DownsampledPoint does not
  *    exist») va a buon fine, count coerente; la SECONDA preparaSchema è un
  *    no-op (idempotenza, nessun errore, dati intatti);
@@ -37,7 +37,7 @@ import { describe, test, expect } from "bun:test";
 import { preparaSchema, SCHEMA_PERSISTENZA } from "@/lib/schema-persistenza";
 
 describe("I107-fix3 — schema incorporato (bootstrap DDL)", () => {
-  test("end-to-end motore reale (processo figlio, immune dai mock): file vuoto → 4 tabelle create, scritture ok, seconda passata no-op", () => {
+  test("end-to-end motore reale (processo figlio, immune dai mock): file vuoto → 5 tabelle create, scritture ok, seconda passata no-op", () => {
     // Lezione CI run #22/#23: il PrismaClient reale non può essere costruito
     // in-process senza correre il rischio (dipendente da versione/ordine) di
     // ricevere il mock process-wide di db.test.ts — la verifica gira nel

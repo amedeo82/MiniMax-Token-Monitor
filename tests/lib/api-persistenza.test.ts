@@ -129,10 +129,11 @@ describe("I107 — GET /api/persistenza (diagnostica, solo lettura)", () => {
     const body = (await res.json()) as Record<string, unknown>;
     expect(body["ok"]).toBe(true);
     expect(body["modalita"]).toBe("locale");
-    // I107-fix3 — il gate del bootstrap è arrivato PRIMA dei conteggi: le 4
+    // I107-fix3 — il gate del bootstrap è arrivato PRIMA dei conteggi: le
     // CREATE TABLE idempotenti sono state richieste al client (cache WeakMap:
-    // i GET successivi in questa suite non le ripetono).
-    expect(ddlEseguiti.filter((s) => s.startsWith("CREATE TABLE IF NOT EXISTS"))).toHaveLength(4);
+    // i GET successivi in questa suite non le ripetono). Dal I117 sono CINQUE:
+    // le 4 di dominio + RegistroManutenzione (registro del cron di manutenzione).
+    expect(ddlEseguiti.filter((s) => s.startsWith("CREATE TABLE IF NOT EXISTS"))).toHaveLength(5);
     // I107-fix: DATABASE_URL assente → default ASSOLUTO risolto dal CWD
     // (prima del fix il display mostrava «db/custom.db» ma il client, senza
     // URL esplicito — allora datasourceUrl, oggi la config dell'adapter I115 —

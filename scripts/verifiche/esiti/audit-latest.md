@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-16T22:12:29.194Z
+# Audit implementazioni — 2026-10-17T10:20:15.006Z
 
-- Verifiche totali: **563** · PASS: **563** · FAIL: **0**
+- Verifiche totali: **575** · PASS: **575** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -514,7 +514,7 @@
 | I107 | I107-fix2: con VERCEL=1 il default NON va nel CWD read-only ma in tmpdir()/db/custom.db (report utente: «Error code 14: Unable to open the database file» — SQLITE_CANTOPEN su Vercel, filesystem read-only) (src/lib/modalita-persistenza.ts) | simbolo | PASS | — |
 | I107 | I107-fix2: la factory prepara la directory padre degli URL file: ASSOLUTI (SQLite NON crea le cartelle: clone fresco senza db/ e Vercel senza env esplodevano al primo $queryRaw; i percorsi relativi restano a Prisma) (src/lib/db-factory.ts) | simbolo | PASS | — |
 | I107 | I107-fix2: nel ramo locale il pannello dichiara l'effimero del file su serverless (ogni istanza parte vuota — la durata richiede TURSO_DATABASE_URL) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
-| I107 | schema INCORPORATO nel codice: DDL idempotente delle 4 tabelle + preparaSchema (gate con cache WeakMap) | file | PASS | — |
+| I107 | schema INCORPORATO nel codice: DDL idempotente delle 5 tabelle + preparaSchema (gate con cache WeakMap) | file | PASS | — |
 | I107 | DDL idempotente: riavvii, hot-reload e istanze concorrenti non si disturbano (no-op su tabelle esistenti) (src/lib/schema-persistenza.ts) | simbolo | PASS | — |
 | I107 | il DDL incorporato copre le 4 tabelle dello schema Prisma (l'esattezza è presidiata dal test anti-drift su prisma migrate diff) (src/lib/schema-persistenza.ts) | simbolo | PASS | — |
 | I107 | I107-fix3: ENTRAMBE le branche (nativa e adapter) garantiscono lo schema all'avvio — un DB fresco (file /tmp su Vercel, Turso appena creato) funziona senza db:push né db-push-turso.mjs (src/lib/db-factory.ts) | simbolo | PASS | — |
@@ -567,6 +567,18 @@
 | I116 | build rigenera SEMPRE il client prima di next build (prisma 7 ha rimosso l'auto-generate del postinstall della dipendenza: su Vercel il node_modules ripristinato dalla build cache portava un .prisma/client stantio dell'era prisma 6 — richiedeva @prisma/client/runtime/library.js, eliminato in v7 — e la raccolta configurazione delle route falliva; riprodotto localmente con lo STESSO errore «Failed to load external module @prisma/client-<hash>: Cannot find module …/runtime/library.js» e fix verificato dallo stesso stato avvelenato: exit 0) (package.json) | simbolo | PASS | — |
 | I116 | postinstall rigenera il client a ogni install (v7 non lo fa più in automatico: fresh clone e ambienti freddi hanno il client pronto per dev/test senza passi manuali) (package.json) | simbolo | PASS | — |
 | I116 | CI conserva lo step esplicito di generazione (difesa in profondità: il client è fresco prima di tsc/test anche se postinstall venisse saltato) (.github/workflows/ci.yml) | simbolo | PASS | — |
+| I117 | 5ª tabella nello schema: il registro delle esecuzioni (cron notturno + azione POST «manutenzione») — la prova DURATURA che il cron è passato, indipendente dalla breve retention dei log Vercel (l'esattezza del DDL è presidiata dal test anti-drift su prisma migrate diff) (prisma/schema.prisma) | simbolo | PASS | — |
+| I117 | DDL della 5ª tabella incorporato nel gate I107-fix3 (IF NOT EXISTS: bootstrap idempotente anche sui DB esistenti — nessuna migrazione) (src/lib/schema-persistenza.ts) | simbolo | PASS | — |
+| I117 | scrittura del registro BEST-EFFORT per contratto: non lancia mai — un problema del registro non maschera l'esito reale della manutenzione (risultato dichiarato registrato/errore) (src/lib/manutenzione-db.ts) | simbolo | PASS | — |
+| I117 | lettura robusta: righe malformate SALTATE (mai presentate come dati validi), dettaglio JSON parsato o { grezzo }, LIMIT parametrizzato e clampato (src/lib/manutenzione-db.ts) | simbolo | PASS | — |
+| I117 | cap FIFO del registro applicato ALLA SCRITTURA: il registro non può crescere senza limite (100 righe ≈ oltre 3 mesi di run notturni) (src/lib/manutenzione-db.ts) | simbolo | PASS | — |
+| I117 | il cron registra OGNI ciclo — riuscito E fallito (best-effort: se il DB rifiuta anche l'INSERT la riga manca onestamente e resta il console.error) (src/app/api/manutenzione/cron/route.ts) | simbolo | PASS | — |
+| I117 | riga compatta nei runtime logs a ogni ciclo (esito, durata, bytes, quota, integrità, eliminati, vacuum, registro): nei log Vercel l'esito non è più solo lo status code (src/app/api/manutenzione/cron/route.ts) | simbolo | PASS | — |
+| I117 | il GET read-only espone «ultimeEsecuzioni»: verifica del cron interrogabile in qualsiasi momento (solo SELECT — resta read-only, dimostrato dalla suite) (src/app/api/manutenzione/route.ts) | simbolo | PASS | — |
+| I117 | suite lib: INSERT parametrizzato, mai un lancio, cap FIFO alla scrittura, mappa robusta + e2e motore reale in processo figlio (verifica-i117-registro-reale.ts) (tests/lib/database-manutenzione.test.ts) | simbolo | PASS | — |
+| I117 | contratti route: cron e POST «manutenzione» si registrano (innesco cron/post nei parametri), azioni parziali NO, GET espone ultimeEsecuzioni (tests/lib/api-manutenzione.test.ts) | simbolo | PASS | — |
+| I117 | e2e motore reale su file temporaneo: roundtrip registra/leggi, cap FIFO che riporta ESATTAMENTE a REGISTRO_CAP, ordine id DESC (lezione I111 estesa alla lettura: la colonna DATETIME può tornare come Date dal driver) | file | PASS | — |
+| I117 | procedura P8 documentata: come verificare il cron a distanza di settimane (GET /api/manutenzione → ultimeEsecuzioni; console.log [manutenzione-cron] nei runtime logs) (docs/10-manutenzione-database.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (563 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (575 pass, 0 fail, 0 scoperte)

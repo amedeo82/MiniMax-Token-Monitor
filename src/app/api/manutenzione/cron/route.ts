@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { preparaSchema } from "@/lib/schema-persistenza";
 import { tokenUguale } from "@/lib/api-protezione";
-import { eseguiManutenzioneDb, politicaRitenutaDaEnv } from "@/lib/manutenzione-db";
+import {
+  dettaglioManutenzione,
+  eseguiManutenzioneDb,
+  politicaRitenutaDaEnv,
+  registraEsecuzione,
+} from "@/lib/manutenzione-db";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +34,17 @@ export const dynamic = "force-dynamic";
  *
  * Fallimenti → 500 con il messaggio del motore: mai mascherati (il rapporto
  * della manutenzione degrada onesto, es. VACUUM rifiutato dal server).
+ *
+ * I117 — REGISTRO DELLE ESECUZIONI (tabella RegistroManutenzione): ogni ciclo
+ * — RIUSCITO o FALLITO — lascia una riga nel database con innesco, esito,
+ * durata e dettaglio compatto. È la prova DURATURA dell'esecuzione che i log
+ * Vercel NON possono dare (retention breve, solo esito HTTP senza contenuto):
+ * dopo il run di stanotte si verifica con GET /api/manutenzione (campo
+ * «ultimeEsecuzioni») anche a distanza di settimane. La scrittura è
+ * BEST-EFFORT (registraEsecuzione non lancia mai): un problema del registro
+ * non maschera l'esito reale, che resta nella risposta e in console.log —
+ * RIGA COMPATTA ad ogni ciclo (`[manutenzione-cron] …`): nei runtime logs
+ * l'esito NON è solo lo status code ma anche i numeri del rapporto.
  */
 
 /** MANUTENZIONE_AUTO_PULIZIA="0" disarma SOLO la cancellazione, non la verifica. */
@@ -45,6 +61,8 @@ function bearerDi(req: NextRequest): string | null {
 }
 
 export async function GET(req: NextRequest) {
+  /* I117 — la durata registrata copre gate + ciclo + registrazione. */
+  const avvioCron = Date.now();
   const atteso = process.env.CRON_SECRET?.trim();
   if (!atteso) {
     return NextResponse.json(
@@ -69,20 +87,54 @@ export async function GET(req: NextRequest) {
 
   try {
     await preparaSchema(db);
+    const avvio = Date.now();
     const rapporto = await eseguiManutenzioneDb(db, {
       pulizia: puliziaAutomatica(),
       vacuum: "auto",
       politica: politicaRitenutaDaEnv(),
     });
+    const durataMs = Date.now() - avvio;
+    /* I117 — esito registrato nel database (best-effort) + riga compatta nei
+       runtime logs: la verifica non dipende più dalla retention Vercel. */
+    const registrazione = await registraEsecuzione(db, {
+      innesco: "cron",
+      esito: "ok",
+      durataMs,
+      dettaglio: dettaglioManutenzione(rapporto, { puliziaAutomatica: puliziaAutomatica() }),
+    });
+    if (!registrazione.registrato) {
+      console.error("[manutenzione-cron] registro non aggiornato:", registrazione.errore);
+    }
+    console.log(
+      `[manutenzione-cron] esito=ok durata=${durataMs}ms bytes=${rapporto.misura.bytes} quota=${rapporto.quota.livello} integrita=${rapporto.integrita.eseguito ? (rapporto.integrita.ok ? "ok" : "ko") : "omessa"} eliminati=${rapporto.pulizia?.totale ?? 0} vacuum=${rapporto.vacuum ? (rapporto.vacuum.eseguito ? "eseguito" : "rifiutato") : "omesso"} registro=${registrazione.registrato ? "si" : "no"}`,
+    );
     return NextResponse.json({
       ok: true,
       azione: "manutenzione-programmata",
       puliziaAutomatica: puliziaAutomatica(),
       manutenzione: rapporto,
+      registro: registrazione,
       generatoIl: rapporto.generatoIl,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Manutenzione programmata fallita.";
+    const durataMs = Date.now() - avvioCron;
+    /* I117 — anche il FALLITO lascia traccia (best-effort: se il DB è rotto
+       tanto da rifiutare anche l'INSERT, la riga manca ONESTAMENTE e resta
+       il console.error — nessuna mascheratura del 500 originale). */
+    try {
+      const registrazione = await registraEsecuzione(db, {
+        innesco: "cron",
+        esito: "fallito",
+        durataMs,
+        dettaglio: { errore: message.slice(0, 500) },
+      });
+      console.error(
+        `[manutenzione-cron] esito=fallito durata=${durataMs}ms errore=${message} registro=${registrazione.registrato ? "si" : "no"}`,
+      );
+    } catch {
+      console.error(`[manutenzione-cron] esito=fallito durata=${durataMs}ms errore=${message} registro=no`);
+    }
     return NextResponse.json(
       { ok: false, error: { code: "db_write", message } },
       { status: 500 },

@@ -5,7 +5,8 @@
  * «latest» in CI chiave i mock diversamente dal 1.3.14 locale, anche via
  * percorso assoluto).
  *
- * Scenario: preparaSchema su un file SQLite vuoto → le 4 tabelle esistono, una
+ * Scenario: preparaSchema su un file SQLite vuoto → le 5 tabelle esistono (le
+ * 4 di dominio + RegistroManutenzione I117), una
  * create() per UsagePoint e per DownsampledPoint (la tabella del report utente
  * «The table main.DownsampledPoint does not exist») va a buon fine, count
  * coerente; la SECONDA preparaSchema è un no-op (idempotenza, dati intatti).

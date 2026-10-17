@@ -1,6 +1,9 @@
 /**
  * I111 — Contratti di /api/manutenzione (GET report read-only + POST azioni
  * protette I95) e /api/manutenzione/cron (GET con Bearer CRON_SECRET).
+ * I117 — il GET espone «ultimeEsecuzioni» (registro della manutenzione) e il
+ * ciclo completo (cron + POST «manutenzione») si REGISTRA: il mock cattura
+ * anche i PARAMETRI delle $executeRaw per asserire innesco/esito.
  *
  * Il mock di "@/lib/db" (pattern I99) è un CLIENT CON SUPERFICIE SQL COMPLETA
  * (bisogno della lib manutenzione-db: $queryRaw per PRAGMA/COUNT, $executeRaw
@@ -19,7 +22,10 @@ import { describe, test, expect, beforeEach, afterAll } from "bun:test";
 
 const reg = {
   query: [] as string[],
+  queryParams: [] as unknown[][],
   exec: [] as string[],
+  /* I117 — i PARAMETRI delle $executeRaw (innesco, esito, durata, dettaglio). */
+  execParams: [] as unknown[][],
   unsafe: [] as string[],
 };
 /* Cumulativo per l'intera sessione del file: il gate DDL è cached per client
@@ -31,18 +37,20 @@ let eliminatiPerDelete = 3;
 let vacuumFallisce = false;
 
 const mockDb = {
-  async $queryRaw(q: TemplateStringsArray): Promise<unknown[]> {
+  async $queryRaw(q: TemplateStringsArray, ...vals: unknown[]): Promise<unknown[]> {
     const sql = q.join("");
     reg.query.push(sql);
+    reg.queryParams.push(vals);
     if (sql.includes("page_count")) return [{ page_count: 64 }];
     if (sql.includes("page_size")) return [{ page_size: 4096 }];
     if (sql.includes("freelist_count")) return [{ freelist_count: 4 }];
     if (sql.includes("quick_check")) return [{ quick_check: "ok" }];
     return [{ v: 0 }];
   },
-  async $executeRaw(q: TemplateStringsArray): Promise<number> {
+  async $executeRaw(q: TemplateStringsArray, ...vals: unknown[]): Promise<number> {
     const sql = q.join("");
     reg.exec.push(sql);
+    reg.execParams.push(vals);
     return eliminatiPerDelete;
   },
   async $executeRawUnsafe(sql: string): Promise<number> {
@@ -101,7 +109,9 @@ afterAll(() => {
 beforeEach(() => {
   ripulisciProtezione();
   reg.query = [];
+  reg.queryParams = [];
   reg.exec = [];
+  reg.execParams = [];
   reg.unsafe = [];
   eliminatiPerDelete = 3;
   vacuumFallisce = false;
@@ -137,6 +147,9 @@ describe("I111 — GET /api/manutenzione (solo lettura)", () => {
     // read-only: nessuna pulizia né VACUUM nel rapporto del GET
     expect(m["pulizia"]).toBeNull();
     expect(m["vacuum"]).toBeNull();
+    // I117 — il GET espone il registro delle esecuzioni (con il finto le righe
+    // senza id sono MALFORMATE: saltate, mai presentate come dati validi)
+    expect(body["ultimeEsecuzioni"]).toEqual([]);
   });
 
   test("il GET NON scrive nulla: zero $executeRaw, $executeRawUnsafe solo DDL del gate (mai VACUUM/DELETE)", async () => {
@@ -150,6 +163,8 @@ describe("I111 — GET /api/manutenzione (solo lettura)", () => {
     expect(unsafeTotale.some((s) => s.includes("VACUUM"))).toBe(false);
     expect(unsafeTotale.some((s) => s.toUpperCase().startsWith("DELETE"))).toBe(false);
     expect(unsafeTotale.every((s) => s.startsWith("CREATE"))).toBe(true);
+    // I117 — il registro è letto con una SELECT ($queryRaw), mai con scritture.
+    expect(reg.query.some((s) => s.includes('FROM "RegistroManutenzione"'))).toBe(true);
   });
 });
 
@@ -191,6 +206,8 @@ describe("I111 — POST /api/manutenzione (azioni protette)", () => {
     expect(deleteSql.filter((s) => s.startsWith('DELETE FROM "UsageEventRecord"'))).toHaveLength(2);
     expect(deleteSql.filter((s) => s.startsWith('DELETE FROM "ModelUsagePoint"'))).toHaveLength(2);
     expect(reg.unsafe.some((s) => s === "VACUUM")).toBe(false); // «pulizia» non fa VACUUM
+    // I117 — le azioni PARZIALI non si registrano (interattive, visibili al chiamante)
+    expect(reg.exec.some((s) => s.includes("RegistroManutenzione"))).toBe(false);
   });
 
   test("azione «vacuum»: prima/dopo misurati, recuperati dichiarati, riepilogo it-IT", async () => {
@@ -204,6 +221,8 @@ describe("I111 — POST /api/manutenzione (azioni protette)", () => {
     expect(body["recuperati"]).toBe(0);
     expect(body["riepilogo"]).toContain("VACUUM eseguito");
     expect(reg.unsafe).toContain("VACUUM");
+    // I117 — anche «vacuum» è un'azione parziale: nessuna riga nel registro
+    expect(reg.exec.some((s) => s.includes("RegistroManutenzione"))).toBe(false);
   });
 
   test("azione «manutenzione»: ciclo completo — con eliminazioni il VACUUM parte in auto", async () => {
@@ -215,6 +234,13 @@ describe("I111 — POST /api/manutenzione (azioni protette)", () => {
     expect((m["vacuum"] as Record<string, unknown>)["eseguito"]).toBe(true);
     expect(m["bytesPrimaVacuum"]).toBeDefined();
     expect(m["bytesDopoVacuum"]).toBeDefined();
+    // I117 — il ciclo completo MANUALE entra nel registro con innesco "post"
+    expect((body["registro"] as Record<string, unknown>)["registrato"]).toBe(true);
+    const inserimenti = reg.exec.filter((s) => s.includes('INSERT INTO "RegistroManutenzione"'));
+    expect(inserimenti).toHaveLength(1);
+    const params = reg.execParams[reg.exec.indexOf(inserimenti[0] as string)] ?? [];
+    expect(params).toContain("post");
+    expect(params).toContain("ok");
   });
 
   test("VACUUM rifiutato dal motore → 200 con errore ONESTO nel rapporto (mai mascherato)", async () => {
@@ -266,6 +292,15 @@ describe("I111 — GET /api/manutenzione/cron (Bearer CRON_SECRET)", () => {
     const m = body["manutenzione"] as Record<string, unknown>;
     expect((m["pulizia"] as Record<string, unknown>)["eseguita"]).toBe(true);
     expect(reg.exec.filter((s) => s.startsWith("DELETE")).length).toBe(7);
+    // I117 — l'esito del ciclo entra nel REGISTRO (INSERT con innesco "cron")
+    // e l'esito della registrazione torna nella risposta; il COUNT del cap
+    // restituisce 0 col finto → NESSUNA DELETE oltre le 7 dei dati
+    expect((body["registro"] as Record<string, unknown>)["registrato"]).toBe(true);
+    const inserimenti = reg.exec.filter((s) => s.includes('INSERT INTO "RegistroManutenzione"'));
+    expect(inserimenti).toHaveLength(1);
+    const params = reg.execParams[reg.exec.indexOf(inserimenti[0] as string)] ?? [];
+    expect(params).toContain("cron");
+    expect(params).toContain("ok");
   });
 
   test("MANUTENZIONE_AUTO_PULIZIA=\"0\" disarma SOLO la cancellazione: verifica di salute intatta", async () => {
@@ -276,7 +311,9 @@ describe("I111 — GET /api/manutenzione/cron (Bearer CRON_SECRET)", () => {
     expect(body["puliziaAutomatica"]).toBe(false);
     const m = body["manutenzione"] as Record<string, unknown>;
     expect(m["pulizia"]).toBeNull();
-    expect(reg.exec).toHaveLength(0); // nessuna DELETE
+    // I117 — nessuna DELETE sui dati; il ciclo comunque SI REGISTRA (INSERT)
+    expect(reg.exec.filter((s) => s.startsWith("DELETE"))).toHaveLength(0);
+    expect(reg.exec.filter((s) => s.includes('INSERT INTO "RegistroManutenzione"'))).toHaveLength(1);
     expect((m["misura"] as Record<string, unknown>)["bytes"]).toBe(64 * 4096); // misura comunque
   });
 });

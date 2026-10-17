@@ -29,14 +29,18 @@
  */
 import { describe, test, expect } from "bun:test";
 import {
+  dettaglioManutenzione,
   eseguiManutenzioneDb,
   eseguiPuliziaRitenuta,
   eseguiVacuum,
   formattaBytes,
+  leggiUltimeEsecuzioni,
   LIMITI_TURSO_FREE,
   misuraDimensioneDb,
   politicaRitenutaDaEnv,
   proiezioneScrittureMese,
+  REGISTRO_CAP,
+  registraEsecuzione,
   RETENZIONE_DEFAULT,
   SOGLIA_OMISSIONE_INTEGRITA_BYTES,
   soglieQuotaDaEnv,
@@ -300,5 +304,175 @@ describe("I111 — motore reale (processo figlio, immune dai mock): pulizia, PRA
       );
     }
     expect(out).toContain("I111-MOTORE-REALE: PASS");
+  }, 120_000);
+});
+
+/* ------------------------------------------------------------------ */
+/* 3-bis. Registro delle esecuzioni (I117)                             */
+/* ------------------------------------------------------------------ */
+
+/** Client dedicato al registro: cattura parametri INSERT/DELETE, risponde a
+    COUNT e SELECT con dati configurabili. */
+function clientRegistro(
+  opzioni: {
+    insertFallisce?: boolean;
+    conteggio?: number;
+    pruneFallisce?: boolean;
+    righe?: Array<Record<string, unknown>>;
+  } = {},
+) {
+  const reg = {
+    insert: [] as unknown[][],
+    delete: [] as string[],
+    deleteParams: [] as unknown[][],
+    select: [] as string[],
+    selectParams: [] as unknown[][],
+  };
+  const c = {
+    $queryRaw: async (q: TemplateStringsArray, ...vals: unknown[]): Promise<unknown[]> => {
+      const sql = q.join("");
+      reg.select.push(sql);
+      reg.selectParams.push(vals);
+      if (sql.includes("COUNT(*)")) return [{ v: opzioni.conteggio ?? 0 }];
+      if (sql.includes('FROM "RegistroManutenzione"')) return opzioni.righe ?? [];
+      return [];
+    },
+    $executeRaw: async (q: TemplateStringsArray, ...vals: unknown[]): Promise<number> => {
+      const sql = q.join("");
+      if (sql.includes("INSERT INTO")) {
+        if (opzioni.insertFallisce) throw new Error("INSERT rifiutato dal motore");
+        reg.insert.push(vals);
+        return 1;
+      }
+      if (sql.startsWith("DELETE")) {
+        if (opzioni.pruneFallisce) throw new Error("DELETE del cap rifiutata");
+        reg.delete.push(sql);
+        reg.deleteParams.push(vals);
+        return 1;
+      }
+      return 0;
+    },
+    $executeRawUnsafe: async () => 0,
+  };
+  return { c, reg };
+}
+
+describe("I117 — registro delle esecuzioni (registra/leggi, cap FIFO alla scrittura, dettaglio)", () => {
+  test("registraEsecuzione: INSERT parametrizzato con t ISO, innesco, esito, durata e dettaglio JSON", async () => {
+    const { c, reg } = clientRegistro();
+    const esito = await registraEsecuzione(c, {
+      innesco: "cron",
+      esito: "ok",
+      durataMs: 123,
+      dettaglio: { bytes: 4096, quota: "ok" },
+      ora: Date.UTC(2026, 9, 17, 2, 30, 0),
+    });
+    expect(esito).toEqual({ registrato: true });
+    expect(reg.insert).toHaveLength(1);
+    const [t, innesco, esitoCiclo, durata, dettaglio] = reg.insert[0] as unknown[];
+    expect(t).toBe("2026-10-17T02:30:00.000Z");
+    expect(innesco).toBe("cron");
+    expect(esitoCiclo).toBe("ok");
+    expect(durata).toBe(123);
+    expect(JSON.parse(String(dettaglio))).toEqual({ bytes: 4096, quota: "ok" });
+    // durata assente → NULL (colonna nullable), dettaglio assente → {}
+    const vuota = clientRegistro();
+    await registraEsecuzione(vuota.c, { innesco: "post", esito: "fallito" });
+    const [, , , durataNull, dettaglioVuoto] = vuota.reg.insert[0] as unknown[];
+    expect(durataNull).toBeNull();
+    expect(JSON.parse(String(dettaglioVuoto))).toEqual({});
+  });
+
+  test("registraEsecuzione: INSERT rifiutato → { registrato: false, errore } — MAI un lancio", async () => {
+    const { c } = clientRegistro({ insertFallisce: true });
+    const esito = await registraEsecuzione(c, { innesco: "cron", esito: "fallito" });
+    expect(esito.registrato).toBe(false);
+    expect(esito.errore).toMatch(/rifiutato/);
+  });
+
+  test("cap FIFO ALLA SCRITTURA: COUNT > cap → DELETE delle più vecchie; COUNT ≤ cap → nessuna DELETE", async () => {
+    const sopra = clientRegistro({ conteggio: REGISTRO_CAP + 5 });
+    await registraEsecuzione(sopra.c, { innesco: "cron", esito: "ok" });
+    expect(sopra.reg.delete).toHaveLength(1);
+    expect(sopra.reg.delete[0]).toContain('FROM "RegistroManutenzione"');
+    expect(sopra.reg.delete[0]).toContain('ORDER BY "id" DESC');
+    expect(sopra.reg.deleteParams[0]?.[0]).toBe(REGISTRO_CAP); // LIMIT parametrizzato col cap
+
+    const alLimite = clientRegistro({ conteggio: REGISTRO_CAP });
+    await registraEsecuzione(alLimite.c, { innesco: "cron", esito: "ok" });
+    expect(alLimite.reg.delete).toHaveLength(0);
+  });
+
+  test("cap del registro rifiutato dal motore → registrato: true comunque (l'INSERT è riuscito; errore segnalato, non mascherato)", async () => {
+    const originale = console.error;
+    console.error = () => {};
+    try {
+      const { c, reg } = clientRegistro({ conteggio: REGISTRO_CAP + 1, pruneFallisce: true });
+      const esito = await registraEsecuzione(c, { innesco: "cron", esito: "ok" });
+      expect(esito.registrato).toBe(true);
+      expect(esito.errore).toBeUndefined();
+      expect(reg.delete).toHaveLength(0); // tentata ma rifiutata: riprova alla prossima esecuzione
+    } finally {
+      console.error = originale;
+    }
+  });
+
+  test("leggiUltimeEsecuzioni: mappa robusta — righe malformate SALTATE, dettaglio JSON parsato, non-JSON → { grezzo }, LIMIT clampato", async () => {
+    const righe = [
+      { id: 2, t: "2026-10-17T02:30:00.000Z", innesco: "cron", esito: "ok", durataMs: 120, dettaglio: '{"bytes":4096,"quota":"ok"}' },
+      { v: 0 }, // malformata (mock, contenuto inatteso): saltata
+      { id: 1, t: "2026-10-16T02:30:00.000Z", innesco: "post", esito: "fallito", durataMs: null, dettaglio: "non-json{" },
+    ];
+    const { c, reg } = clientRegistro({ righe });
+    const estratte = await leggiUltimeEsecuzioni(c);
+    expect(estratte).toHaveLength(2);
+    expect(estratte[0]?.id).toBe(2);
+    expect(estratte[0]?.t).toBe("2026-10-17T02:30:00.000Z");
+    expect(estratte[0]?.dettaglio).toEqual({ bytes: 4096, quota: "ok" });
+    expect(estratte[1]?.esito).toBe("fallito");
+    expect(estratte[1]?.durataMs).toBeNull();
+    expect(estratte[1]?.dettaglio).toEqual({ grezzo: "non-json{" });
+    // clamp: 999 → 50 (massimo), 0 → 1 (minimo); il limite è SEMPRE parametrizzato
+    await leggiUltimeEsecuzioni(c, 999);
+    expect(reg.selectParams.at(-1)?.[0]).toBe(50);
+    await leggiUltimeEsecuzioni(c, 0);
+    expect(reg.selectParams.at(-1)?.[0]).toBe(1);
+  });
+
+  test("dettaglioManutenzione: SOLO numeri ed esiti del motore, puliziaAutomatica solo se dichiarata", async () => {
+    const { c } = clientFinto();
+    const rapporto = await eseguiManutenzioneDb(c, { pulizia: true, vacuum: "auto" });
+    const conOpzione = dettaglioManutenzione(rapporto, { puliziaAutomatica: true });
+    expect(conOpzione).toEqual({
+      bytes: 64 * 4096,
+      quota: "ok",
+      integrita: "ok",
+      eliminati: 0,
+      vacuum: "omesso", // pulizia senza eliminazioni → nessun VACUUM in auto
+      puliziaAutomatica: true,
+    });
+    expect("puliziaAutomatica" in dettaglioManutenzione(rapporto)).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* 3-ter. Registro su motore reale (processo figlio, immune dai mock)  */
+/* ------------------------------------------------------------------ */
+
+describe("I117 — registro delle esecuzioni su motore reale (processo figlio): roundtrip, cap FIFO, ordine", () => {
+  test("end-to-end: INSERT/SELECT reali sulla tabella del registro, cap che riporta ESATTAMENTE a REGISTRO_CAP", () => {
+    /* Stesso partitore di I107-fix3/I111: il motore reale gira in un processo
+       figlio SENZA mock ("@prisma/client" è sempre quello reale); il padre
+       asserisce exit 0 + verdetto marcato e, in fallimento, RIPORTA l'output
+       del figlio: dice SEMPRE perché. */
+    const proc = Bun.spawnSync(
+      [process.execPath, "scripts/verifiche/verifica-i117-registro-reale.ts"],
+      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
+    );
+    const out = `${proc.stdout.toString()}\n${proc.stderr.toString()}`.trim();
+    if (proc.exitCode !== 0) {
+      throw new Error(`verifica-i117-registro-reale.ts fallita (exit ${proc.exitCode}):\n${out}`);
+    }
+    expect(out).toContain("I117-REGISTRO-REALE: PASS");
   }, 120_000);
 });

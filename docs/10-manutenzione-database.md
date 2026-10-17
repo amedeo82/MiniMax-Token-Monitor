@@ -57,14 +57,15 @@ Fatti operativi rilevanti (stessa fonte «Usage & Billing»):
 
 ## 3. Come è fatta nel progetto
 
-Quattro pezzi, tutti già coperti da test (§8):
+Cinque pezzi, tutti già coperti da test (§8):
 
 | Pezzo | Ruolo |
 |---|---|
-| `src/lib/manutenzione-db.ts` | Unità pura (pattern I106/I107: il client arriva come parametro, nessun import del singleton): misura storage, statistiche per tabella, integrità, politica di ritenuta da ambiente con clamp, valutazione quota, proiezione scritture, pulizia con `dryRun`, VACUUM con degrado onesto, orchestratore `eseguiManutenzioneDb`, formato `formattaBytes` it-IT deterministico |
-| `GET /api/manutenzione` | **Solo lettura, senza chiave** (stesso perimetro di `/api/persistenza`): rapporto completo — storage, quota (livello ok/attenzione/critica), integrità, statistiche con velocità 24 h, proiezione mensile scritture, politica attiva. Zero scritture dimostrato dalla suite |
-| `POST /api/manutenzione` | Azioni protette dalla guardia I95 (`ADMIN_TOKEN` + rate limit): `{"azione":"pulizia"}` (DELETE ritenuta+cap, quota rivalutata a fine), `{"azione":"vacuum"}` (prima/dopo misurati, byte recuperati), `{"azione":"manutenzione"}` (ciclo completo, VACUUM automatico solo se la pulizia ha eliminato) |
-| `GET /api/manutenzione/cron` + `vercel.json` | Cron notturno **02:30 UTC** (Vercel invia `Authorization: Bearer $CRON_SECRET`): ciclo completo con pulizia reale. Senza `CRON_SECRET` → **403 onesto** (un endpoint che cancella non può essere aperto al pubblico); Bearer sbagliato → 401 timing-safe |
+| `src/lib/manutenzione-db.ts` | Unità pura (pattern I106/I107: il client arriva come parametro, nessun import del singleton): misura storage, statistiche per tabella, integrità, politica di ritenuta da ambiente con clamp, valutazione quota, proiezione scritture, pulizia con `dryRun`, VACUUM con degrado onesto, orchestratore `eseguiManutenzioneDb`, formato `formattaBytes` it-IT deterministico — dal I117 anche il REGISTRO delle esecuzioni (`registraEsecuzione`/`leggiUltimeEsecuzioni`, P8) |
+| `GET /api/manutenzione` | **Solo lettura, senza chiave** (stesso perimetro di `/api/persistenza`): rapporto completo — storage, quota (livello ok/attenzione/critica), integrità, statistiche con velocità 24 h, proiezione mensile scritture, politica attiva. Zero scritture dimostrato dalla suite. Dal I117 include anche `ultimeEsecuzioni` (il registro, P8) |
+| `POST /api/manutenzione` | Azioni protette dalla guardia I95 (`ADMIN_TOKEN` + rate limit): `{"azione":"pulizia"}` (DELETE ritenuta+cap, quota rivalutata a fine), `{"azione":"vacuum"}` (prima/dopo misurati, byte recuperati), `{"azione":"manutenzione"}` (ciclo completo, VACUUM automatico solo se la pulizia ha eliminato — dal I117 si registra in P8 con innesco «post») |
+| `GET /api/manutenzione/cron` + `vercel.json` | Cron notturno **02:30 UTC** (Vercel invia `Authorization: Bearer $CRON_SECRET`): ciclo completo con pulizia reale. Senza `CRON_SECRET` → **403 onesto** (un endpoint che cancella non può essere aperto al pubblico); Bearer sbagliato → 401 timing-safe. Dal I117 ogni ciclo si registra in P8 e stampa la riga compatta `[manutenzione-cron]` nei runtime logs |
+| `RegistroManutenzione` (tabella, I117) | La prova DURATURA dell'esecuzione del cron: una riga per ciclo (innesco, esito, durata, dettaglio compatto) scritta nel database — sopravvive alla breve retention dei log della piattaforma. Cap FIFO a 100 righe applicato alla scrittura; creata idempotentemente dal gate `preparaSchema` (IF NOT EXISTS: nessuna migrazione, i DB esistenti la guadagnano al primo avvio) |
 
 Vincoli trasversali: il gate `preparaSchema(db)` (I107-fix4) precede ogni misura/scrittura; SQL
 sempre parametrizzato; nomi di tabella SEMPRE literal (un identificatore interpolato in un tagged
@@ -92,6 +93,13 @@ recente (cutoff ms). Tutti i confronti temporali della lib sono quindi **duali**
 Probe di riferimento: `scripts/verifiche/probe-i111-datetime.ts` (dimostra le due codifiche e il
 confronto corretto). Ogni tabella è omogenea in produzione (scritta da UN solo percorso), ma la
 condizione duale copre anche il caso misto (import/backfill), coperto dalla suite e2e.
+
+**I117 — la lezione vale anche in LETTURA**: la tabella `RegistroManutenzione` è scritta come
+TEXT ISO, ma il driver può restituire la colonna `DATETIME` come oggetto `Date` (deserializzazione
+della raw query sul tipo dichiarato): la lettura del registro normalizza sempre
+(`Date → toISOString()`, stringa → invariata) — visto empiricamente nell'e2e
+`verifica-i117-registro-reale.ts` alla prima stesura. Il registro NON subisce confronti temporali
+(l'ordine è l'id `AUTOINCREMENT`), quindi il problema dei cutoff misti non lo riguarda.
 
 ## 5. Le procedure
 
@@ -179,10 +187,39 @@ Come girare la manutenzione SUL FILE LOCALE: dal I110 il `.env` del progetto con
 due righe `TURSO_*` in `.env`, riavviare `bun dev`, verificare che il rapporto riporti
 `"modalita": "locale"` e ripristinare le righe a fine operazione (passi nel runbook §7).
 Alternativa senza toccare `.env`: gli script e2e a motore reale
-(`scripts/verifiche/verifica-i111-motore-reale.ts`) eseguono il ciclo completo di manutenzione
-su un file temporaneo locale. Backup del locale: il file È l'unità di backup — copia di
-`db/custom.db` a server fermo (nessun processo in scrittura); per il cloud restano il
-point-in-time restore e l'export documentati in §7.
+(`scripts/verifiche/verifica-i111-motore-reale.ts`, `verifica-i117-registro-reale.ts`) eseguono il
+ciclo completo di manutenzione (e il roundtrip del registro) su un file temporaneo locale. Backup
+del locale: il file È l'unità di backup — copia di `db/custom.db` a server fermo (nessun processo
+in scrittura); per il cloud restano il point-in-time restore e l'export documentati in §7.
+
+### P8 — Registro delle esecuzioni (verificare il cron a distanza di settimane, I117)
+
+**Il problema**: Vercel mostra l'esito del cron SOLO nei runtime logs, con retention BREVE e solo
+come status code (non il contenuto del rapporto) — «il cron è passato e ha fatto bene?» non era
+interrogabile dopo pochi giorni. **La soluzione**: la tabella `RegistroManutenzione` (§3) riceve
+una riga per OGNI ciclo — riuscito E fallito — con `innesco` (`cron`/`post`), `esito`, `durataMs`
+e un dettaglio compatto JSON (bytes, livello quota, integrità, righe eliminate, vacuum). La
+scrittura è BEST-EFFORT (`registraEsecuzione` non lancia mai): se il database è rotto tanto da
+rifiutare anche l'INSERT, la riga manca ONESTAMENTE e resta la riga `[manutenzione-cron]` su
+stderr nei runtime logs — nessuna mascheratura.
+
+**Come si verifica**:
+
+1. `GET /api/manutenzione` → campo `ultimeEsecuzioni`: le ultime 10 righe, la più recente prima.
+   Un cron sano mostra una riga/giorno con `innesco: "cron"`, `esito: "ok"`, durate stabili.
+2. Runtime logs Vercel filtrati per `[manutenzione-cron]`: ora l'esito NON è solo lo status code —
+   la riga compatta porta i NUMERI del rapporto (durata, bytes, quota, integrità, eliminati,
+   vacuum, registro).
+3. Regole di lettura: **nessuna riga per 2+ notti** → il cron NON gira (deployment fallito,
+   schedule cambiata: verificare prima lo stato del deployment — il cron esegue l'ultimo
+   deployment riuscito); **riga con `esito: "fallito"`** → il messaggio del motore è nel campo
+   `dettaglio.errore`; **401/403 ripetuti nei log** → `CRON_SECRET` mancante o disallineata.
+
+**Limiti onesti**: cap FIFO a `REGISTRO_CAP = 100` righe applicato ALLA SCITTURA (costante, non
+configurabile a ambiente: ≈ oltre 3 mesi di run notturni, il registro non può crescere senza
+limite); le azioni PARZIALI del POST (`pulizia`, `vacuum`) NON si registrano — sono interattive e
+direttamente visibili al chiamante; il registro non compare nel pannello «Persistenza» né nelle
+statistiche della manutenzione (dato interno: non deve distorcere la proiezione delle scritture).
 
 ## 6. Configurazione (env, default e clamp)
 
@@ -240,9 +277,13 @@ Checklist:
 
 - **Ogni giorno (automatico)**: il cron P1 gira alle 02:30 UTC; in Vercel → Deployments →
   Functions si vede l'invocazione e l'esito (un 401/403 ripetuto = `CRON_SECRET` mancante o
-  ruotato solo da una parte).
+  ruotato solo da una parte). Dal I117 (P8) l'esito DURATURO è nel registro:
+  `GET /api/manutenzione` → `ultimeEsecuzioni` deve mostrare la riga di stanotte
+  (`innesco: "cron"`, `esito: "ok"`); nei runtime logs la riga `[manutenzione-cron]` porta i
+  numeri del rapporto, non solo lo status code.
 - **Ogni settimana**: leggere il rapporto GET — `quota.livello` deve stare «ok»,
-  `integrita.esito` = `ok`, `proiezione.stimateMese` sotto il 10% del limite mensile.
+  `integrita.esito` = `ok`, `proiezione.stimateMese` sotto il 10% del limite mensile; e
+  scorrere `ultimeEsecuzioni` (P8): durate stabili, nessun `esito: "fallito"` insolito.
 - **Su database locale (P7)**: `quota.livello` si valuta col limite impostato
   (`MANUTENZIONE_QUOTA_STORAGE_BYTES`, §6); il VACUUM sul motore nativo recupera davvero i byte
   (P4) — dopo cancellazioni consistenti vale fare il POST «vacuum» sul locale.
@@ -257,20 +298,27 @@ Checklist:
 
 ## 8. Verifiche (cosa dimostra la suite)
 
-- `tests/lib/database-manutenzione.test.ts` (14 test): funzioni pure (soglie, clamp, proiezione,
+- `tests/lib/database-manutenzione.test.ts` (21 test): funzioni pure (soglie, clamp, proiezione,
   formato it-IT deterministico senza dipendere dai dati ICU — lezione I107), semantica su client
   finto (dryRun = zero DELETE; DELETE di ritenuta+cap con i cutoff giusti; VACUUM riuscito e
   rifiutato con errore onesto; orchestratore con VACUUM auto/mai/sempre), e **motore reale** su
   file temporaneo (pattern I107-fix3): ritenuta che elimina davvero le righe vecchie di ENTRAMBE
   le codifiche (INTEGER del motore + TEXT dell'SQL raw), cap FIFO che conserva le più recenti,
-  PRAGMA misurabili, quick_check ok, ciclo completo end-to-end e idempotenza.
+  PRAGMA misurabili, quick_check ok, ciclo completo end-to-end e idempotenza. Dal I117 anche il
+  REGISTRO (P8): INSERT parametrizzato con t/innesco/esito/durata/dettaglio, mai un lancio,
+  cap FIFO alla scrittura, lettura robusta (righe malformate saltate, `Date` normalizzate) e
+  **e2e motore reale in processo figlio** (`verifica-i117-registro-reale.ts`): roundtrip
+  registra/leggi con ordine id DESC e cap che riporta ESATTAMENTE a `REGISTRO_CAP`.
 - `tests/lib/api-manutenzione.test.ts` (12 test): contratto del GET (rapporto completo e prova
   dimostrabile di assenza scritture: zero `$executeRaw`, `$executeRawUnsafe` solo DDL del gate —
-  mai VACUUM/DELETE), POST con zod (400 su corpo/azione invalidi), guard I95 (401 senza header
+  mai VACUUM/DELETE — e dal I117 lettura del registro in `$queryRaw` con esposizione di
+  `ultimeEsecuzioni`), POST con zod (400 su corpo/azione invalidi), guard I95 (401 senza header
   quando `ADMIN_TOKEN` è attivo), le tre azioni (DELETE per tabella, VACUUM prima/dopo con
   `recuperati`, ciclo completo), degrado onesto del VACUUM rifiutato; cron con 403 onesto senza
   `CRON_SECRET`, 401 con Bearer sbagliato (token mai restituito), 200 con pulizia automatica e
-  kill-switch `MANUTENZIONE_AUTO_PULIZIA="0"` che disarma solo la cancellazione.
+  kill-switch `MANUTENZIONE_AUTO_PULIZIA="0"` che disarma solo la cancellazione. Dal I117:
+  cron e POST «manutenzione» si registrano (innesco `cron`/`post` verificato nei parametri
+  dell'INSERT), le azioni parziali no.
 
 ## 9. Stime e onestà dei limiti
 

@@ -664,6 +664,161 @@ export async function eseguiManutenzioneDb(
 }
 
 /* ------------------------------------------------------------------ */
+/* Registro delle esecuzioni (I117: la prova duratura del cron)        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cap FIFO del registro: quante esecuzioni conservare. Il registro è quasi
+ * DIARIO (una riga a notte per il cron, più le azioni manuali): 100 righe
+ * coprono oltre 3 mesi di storia — oltre, le righe più vecchie vengono
+ * eliminate ALLA SCRITTURA (mai crescita senza limite, stessa filosofia dei
+ * cap FIFO della ritenuta P3).
+ */
+export const REGISTRO_CAP = 100;
+
+/** Massimo di righe restituibili da leggiUltimeEsecuzioni (clamp). */
+const REGISTRO_LETTURA_MAX = 50;
+
+export interface RigaRegistro {
+  id: number;
+  /** Momento dell'esecuzione (ISO 8601, come scritto dalla lib). */
+  t: string;
+  /** Chi ha innescato il ciclo: "cron" | "post". */
+  innesco: string;
+  /** Esito del ciclo: "ok" | "fallito". */
+  esito: string;
+  /** Durata del ciclo in ms (null se non misurata). */
+  durataMs: number | null;
+  /** Dettaglio compatto (JSON parsato; contenuto non-JSON → { grezzo }). */
+  dettaglio: Record<string, unknown>;
+}
+
+export interface EsitoRegistrazione {
+  registrato: boolean;
+  /** Presente quando la scrittura NON è riuscita: mai mascherato. */
+  errore?: string;
+}
+
+export interface NuovaEsecuzione {
+  /** Chi ha innescato il ciclo: "cron" (notturno) | "post" (manuale). */
+  innesco: "cron" | "post";
+  /** Esito del ciclo: "ok" | "fallito". */
+  esito: "ok" | "fallito";
+  durataMs?: number | null;
+  dettaglio?: Record<string, unknown>;
+  /** Momento da registrare (default: ora) — parametro dei test. */
+  ora?: number;
+}
+
+/**
+ * Registra UNA esecuzione della manutenzione (cron notturno o azione POST
+ * «manutenzione»). BEST-EFFORT per contratto: NON lancia mai — un problema
+ * del registro non deve mascherare né degradare l'esito reale della
+ * manutenzione (che resta nella risposta HTTP); il risultato dichiara
+ * onestamente registrato/errore e la route lo riporta a log. SQL SEMPRE
+ * parametrizzato; `t` in ISO TEXT (questa tabella NON subisce confronti
+ * temporali: l'ordine è l'id AUTOINCREMENT — il problema delle due codifiche
+ * I111 non la riguarda). Cap FIFO applicato ALLA SCRITTURA.
+ */
+export async function registraEsecuzione(
+  client: object,
+  dati: NuovaEsecuzione,
+): Promise<EsitoRegistrazione> {
+  const c = superficieSql(client);
+  if (!c) return { registrato: false, errore: "Client senza superficie SQL: registro non aggiornabile." };
+  const t = new Date(dati.ora ?? Date.now()).toISOString();
+  const durataMs =
+    dati.durataMs === undefined || dati.durataMs === null ? null : Math.max(0, Math.round(dati.durataMs));
+  const dettaglio = JSON.stringify(dati.dettaglio ?? {});
+  try {
+    await c.$executeRaw`INSERT INTO "RegistroManutenzione" ("t", "innesco", "esito", "durataMs", "dettaglio") VALUES (${t}, ${dati.innesco}, ${dati.esito}, ${durataMs}, ${dettaglio})`;
+  } catch (e) {
+    return { registrato: false, errore: e instanceof Error ? e.message : String(e) };
+  }
+  // Cap FIFO alla scrittura: oltre REGISTRO_CAP sopravvivono le più recenti
+  // (stesso ordine FIFO dei cap P3; eventi solo per id qui: la t è diagnostica).
+  try {
+    const conteggio = (await c.$queryRaw`SELECT COUNT(*) AS v FROM "RegistroManutenzione"`) as Array<{
+      v: number | bigint;
+    }>;
+    if (Number(conteggio[0]?.v ?? 0) > REGISTRO_CAP) {
+      await c.$executeRaw`DELETE FROM "RegistroManutenzione" WHERE "id" NOT IN (SELECT "id" FROM "RegistroManutenzione" ORDER BY "id" DESC LIMIT ${REGISTRO_CAP})`;
+    }
+  } catch (e) {
+    // L'INSERT è riuscito (registrato: true): il cap può riprovarci alla
+    // prossima esecuzione — l'errore è segnalato su stderr, non mascherato.
+    console.error("[manutenzione-db] cap del registro non applicato:", e instanceof Error ? e.message : e);
+  }
+  return { registrato: true };
+}
+
+/**
+ * Le ultime `quanti` esecuzioni registrate (la più recente prima), esposte
+ * dal GET read-only /api/manutenzione: la verifica del cron che NON dipende
+ * dalla breve retention dei log della piattaforma. Righe malformate (id non
+ * numerico: mock, contenuti inattesi) sono SALTATE — mai presentate come
+ * dati validi; `dettaglio` non-JSON arriva come { grezzo }.
+ */
+export async function leggiUltimeEsecuzioni(client: object, quanti = 10): Promise<RigaRegistro[]> {
+  const c = superficieSql(client);
+  if (!c) throw new Error("Client senza superficie SQL: registro non leggibile.");
+  const limite = Math.min(REGISTRO_LETTURA_MAX, Math.max(1, Math.floor(quanti)));
+  const righe = (await c.$queryRaw`SELECT "id", "t", "innesco", "esito", "durataMs", "dettaglio" FROM "RegistroManutenzione" ORDER BY "id" DESC LIMIT ${limite}`) as Array<Record<string, unknown>>;
+  const estratte: RigaRegistro[] = [];
+  for (const r of righe) {
+    const id = Number(r["id"]);
+    if (!Number.isFinite(id)) continue; // riga malformata: saltata, non mascherata
+    const grezzo = typeof r["dettaglio"] === "string" ? (r["dettaglio"] as string) : "";
+    let dettaglio: Record<string, unknown> = { grezzo };
+    if (grezzo) {
+      try {
+        const parsato = JSON.parse(grezzo) as unknown;
+        if (parsato && typeof parsato === "object" && !Array.isArray(parsato)) {
+          dettaglio = parsato as Record<string, unknown>;
+        }
+      } catch {
+        // resta { grezzo }: onesto anche sul contenuto imprevisto
+      }
+    }
+    const durata = r["durataMs"] === null || r["durataMs"] === undefined ? null : Number(r["durataMs"]);
+    /* Lezione I111 estesa ALLA LETTURA (visto nell'e2e motore reale): anche
+       scritta come TEXT ISO, la colonna DATETIME può tornare dal driver come
+       oggetto Date (deserializzazione della raw query sul tipo dichiarato) —
+       normalizzare SEMPRE: Date → toISOString(), stringa → invariata. */
+    const tGrezzo: unknown = r["t"];
+    const t = tGrezzo instanceof Date ? tGrezzo.toISOString() : String(tGrezzo ?? "");
+    estratte.push({
+      id,
+      t,
+      innesco: String(r["innesco"] ?? ""),
+      esito: String(r["esito"] ?? ""),
+      durataMs: durata !== null && Number.isFinite(durata) ? durata : null,
+      dettaglio,
+    });
+  }
+  return estratte;
+}
+
+/**
+ * Dettaglio compatto del rapporto per il registro: SOLO numeri ed esiti del
+ * motore (mai URL, token o variabili d'ambiente — stessa regola delle route).
+ * Consumato dal cron (I117) e dall'azione POST «manutenzione».
+ */
+export function dettaglioManutenzione(
+  rapporto: RapportoManutenzione,
+  opzioni: { puliziaAutomatica?: boolean } = {},
+): Record<string, unknown> {
+  return {
+    bytes: rapporto.misura.bytes,
+    quota: rapporto.quota.livello,
+    integrita: rapporto.integrita.eseguito ? (rapporto.integrita.ok ? "ok" : "ko") : "omessa",
+    eliminati: rapporto.pulizia ? rapporto.pulizia.totale : null,
+    vacuum: rapporto.vacuum ? (rapporto.vacuum.eseguito ? "eseguito" : "rifiutato") : "omesso",
+    ...(opzioni.puliziaAutomatica === undefined ? {} : { puliziaAutomatica: opzioni.puliziaAutomatica }),
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Formattazione (it-IT, per UI e rapporti testuali)                   */
 /* ------------------------------------------------------------------ */
 

@@ -10,7 +10,7 @@
  * `main.DownsampledPoint` does not exist in the current database» (report
  * utente) e con esso ogni scrittura server (storico, eventi).
  *
- * Soluzione: il DDL delle 4 tabelle è incorporato qui sotto (esatto per
+ * Soluzione: il DDL delle 5 tabelle è incorporato qui sotto (esatto per
  * costruzione: generato con `prisma migrate diff --from-empty` sullo schema
  * Prisma, reso idempotente con IF NOT EXISTS) e applicato ALL'AVVIO del
  * client, su ENTRAMBE le branche (SQLite nativo e adapter libsql/Turso — lo
@@ -48,7 +48,7 @@
  * è un no-op).
  */
 
-/** DDL delle 4 tabelle + indici, reso idempotente (fonte: `prisma migrate diff`). */
+/** DDL delle 5 tabelle + indici, reso idempotente (fonte: `prisma migrate diff`). */
 export const SCHEMA_PERSISTENZA: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS "UsagePoint" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -93,6 +93,19 @@ export const SCHEMA_PERSISTENZA: readonly string[] = [
     "percent" REAL NOT NULL,
     "source" TEXT NOT NULL DEFAULT 'api',
     "region" TEXT NOT NULL DEFAULT 'eu',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+)`,
+  /* I117 — registro delle esecuzioni della manutenzione: la prova duratura del
+     cron notturno indipendente dalla retention dei log Vercel. Scritta SOLO
+     dalla lib manutenzione-db (registraEsecuzione), cap FIFO ALLA SCRITTURA
+     (REGISTRO_CAP), nessun indice oltre la PK (letture per id DESC). */
+  `CREATE TABLE IF NOT EXISTS "RegistroManutenzione" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "t" DATETIME NOT NULL,
+    "innesco" TEXT NOT NULL,
+    "esito" TEXT NOT NULL,
+    "durataMs" INTEGER,
+    "dettaglio" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "UsagePoint_t_key" ON "UsagePoint"("t")`,

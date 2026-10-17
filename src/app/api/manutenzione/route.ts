@@ -5,12 +5,15 @@ import { bloccoScrittura } from "@/lib/api-protezione";
 import { preparaSchema } from "@/lib/schema-persistenza";
 import { modalitaPersistenza } from "@/lib/modalita-persistenza";
 import {
+  dettaglioManutenzione,
   eseguiManutenzioneDb,
   eseguiPuliziaRitenuta,
   eseguiVacuum,
   formattaBytes,
+  leggiUltimeEsecuzioni,
   misuraDimensioneDb,
   politicaRitenutaDaEnv,
+  registraEsecuzione,
   soglieQuotaDaEnv,
   valutazioneQuotaStorage,
 } from "@/lib/manutenzione-db";
@@ -27,6 +30,9 @@ export const dynamic = "force-dynamic";
  * velocità delle ultime 24 h, integrità (PRAGMA quick_check, omessa oltre la
  * soglia), valutazione della quota (livello ok/attenzione/critica), proiezione
  * mensile delle scritture e politica di ritenuta attiva (giorni/caps).
+ * I117 — include anche «ultimeEsecuzioni»: le ultime righe del registro della
+ * manutenzione (cron notturno + azioni manuali) — la prova DURATURA che il
+ * cron è realmente passato, indipendente dalla breve retention dei log Vercel.
  *
  * POST (protetto dalla guardia I95: ADMIN_TOKEN + rate limit scritture):
  * { "azione": "pulizia" | "vacuum" | "manutenzione" }
@@ -53,10 +59,14 @@ export async function GET() {
     await preparaSchema(db);
     // vacuum "mai" + nessuna pulizia: il GET NON scrive nulla sul database.
     const rapporto = await eseguiManutenzioneDb(db, { vacuum: "mai" });
+    /* I117 — lettura del registro (SOLO SELECT, resta read-only): le ultime
+       esecuzioni della manutenzione, la più recente prima. */
+    const ultimeEsecuzioni = await leggiUltimeEsecuzioni(db);
     return NextResponse.json({
       ok: true,
       modalita: modalitaPersistenza(),
       manutenzione: rapporto,
+      ultimeEsecuzioni,
       generatoIl: rapporto.generatoIl,
     });
   } catch (e) {
@@ -98,6 +108,8 @@ export async function POST(req: NextRequest) {
     );
   }
   const { azione } = parsed.data;
+  /* I117 — la durata registrata per l'azione «manutenzione» copre gate + ciclo. */
+  const avvioAzione = Date.now();
 
   try {
     await preparaSchema(db);
@@ -132,7 +144,27 @@ export async function POST(req: NextRequest) {
     }
     // azione === "manutenzione": ciclo completo (pulizia reale + VACUUM auto).
     const rapporto = await eseguiManutenzioneDb(db, { pulizia: true, vacuum: "auto" });
-    return NextResponse.json({ ok: true, azione, manutenzione: rapporto, generatoIl: rapporto.generatoIl });
+    /* I117 — anche il ciclo MANUALE entra nel registro (innesco "post"):
+       la storia del registro distingue le esecuzioni programmate da quelle
+       dell'operatore. Le azioni parziali (pulizia/vacuum) NON si registrano:
+       sono interattive e direttamente visibili al chiamante. */
+    const durataMs = Date.now() - avvioAzione;
+    const registrazione = await registraEsecuzione(db, {
+      innesco: "post",
+      esito: "ok",
+      durataMs,
+      dettaglio: dettaglioManutenzione(rapporto),
+    });
+    if (!registrazione.registrato) {
+      console.error("[manutenzione] registro non aggiornato:", registrazione.errore);
+    }
+    return NextResponse.json({
+      ok: true,
+      azione,
+      manutenzione: rapporto,
+      registro: registrazione,
+      generatoIl: rapporto.generatoIl,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Errore di manutenzione sul database.";
     return NextResponse.json(

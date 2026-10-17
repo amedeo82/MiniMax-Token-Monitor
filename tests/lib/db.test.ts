@@ -58,6 +58,21 @@ mock.module("@prisma/client", () => ({
       costruttoriClient.push(opzioni);
     }
   },
+  /* I117 — superficie COMPLETA del mock (lezione I110: chi mocka un modulo
+     deve fornire il mirror completo della superficie usata in suite). La
+     route /api/history/models carica src/lib/server-model-history.ts, che
+     importa { Prisma }: bun applica il PRIMO mock per specificatore a TUTTO
+     il processo, e un mock parziale esplode con «Export named 'Prisma' not
+     found» in ogni file che carichi la route DOPO questo — IN BASE ALL'ORDINE
+     DEI FILE (non garantito né alfabetico né stabile tra ambienti: lezione
+     I111-fix2). Gli stub qui sotto servono solo a non esplodere: le route
+     testate altrove mockano anche il client, la forma dell'SQL non è mai
+     osservata; la produzione continua a usare il Prisma reale. */
+  Prisma: {
+    sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
+    join: (parts: unknown[], separatore?: string) => ({ parts, separatore }),
+    empty: { vuoto: true },
+  },
 }));
 
 mock.module("@prisma/adapter-libsql", () => ({

@@ -147,3 +147,29 @@ model ModelUsagePoint {
   @@index([model])
   @@index([t])
 }
+
+/**
+ * I117 — Registro delle ESECUZIONI della manutenzione (cron notturno + azione
+ * POST «manutenzione»): la prova DURATURA che il cron di Vercel è realmente
+ * passato e con quale esito, indipendente dalla breve retention dei log della
+ * piattaforma. Scritto SOLO da registraEsecuzione() (SQL raw parametrizzato,
+ * `t` in ISO TEXT — mai confronti temporali su questa tabella: l'ordine è
+ * l'id AUTOINCREMENT). Cap FIFO a REGISTRO_CAP righe applicato ALLA
+ * SCRITTURA: il registro non può crescere senza limite. Non compare nel
+ * pannello «Persistenza» (dato interno, non di dominio) né nelle statistiche
+ * della manutenzione (non deve distorcere la proiezione delle scritture).
+ */
+model RegistroManutenzione {
+  id        Int      @id @default(autoincrement())
+  /** Momento dell'esecuzione (ISO 8601, scritto dalla lib). */
+  t         DateTime
+  /** Chi ha innescato il ciclo: "cron" (notturno) | "post" (manuale). */
+  innesco   String
+  /** Esito del ciclo: "ok" | "fallito". */
+  esito     String
+  /** Durata del ciclo in ms (null se non misurata). */
+  durataMs  Int?
+  /** Dettaglio compatto (JSON): bytes, quota, integrità, eliminati, vacuum, errore. */
+  dettaglio String
+  createdAt DateTime @default(now())
+}
