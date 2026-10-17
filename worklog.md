@@ -1467,3 +1467,21 @@ Stage Summary:
 - Cap FIFO a 100 righe alla scrittura: il registro è auto-limitato per costruzione; scrittura best-effort che non maschera mai l'esito reale della manutenzione
 - Bomba d'ordine pre-esistente nel mock disinnescata deterministicamente (suite indipendente dall'ordine dei file); lezione I111 estesa alla lettura (Date dal driver normalizzata)
 - Rimanente: allineare bun locale a 1.4.x (minore); braces in attesa di fix upstream 3.0.4; azioni Vercel lato utente invariate (CRON_SECRET, env TURSO_*); dalla prossima notte il registro si popola da solo — verifica con GET /api/manutenzione
+
+---
+Task ID: 64
+Agent: main (Super Z)
+Task: Riconciliazione sessione parallela — la stessa consegna I117 era stata implementata E pushata da un'altra sessione (commit 022e018, ore 10:23 UTC, CI SUCCESS) mentre la presente implementava il duplicato locale 27d545d; adottato lo stato remoto, scartato il duplicato, protocollo riverificato in ambiente
+
+Work Log:
+- Il push del commit locale I117 (27d545d, 17 file +818) è stato RIFIUTATO (non fast-forward): origin/main conteneva già 0a08d04 (normalizzazione file mode, messaggio UUID, 19 file zero-diff) e 022e018 (I117 di un'altra sessione, stesso bisogno utente, design affine: tabella RegistroManutenzione con innesco cron|post + dettaglio JSON compatto, registraEsecuzione best-effort per contratto, cap 100 applicato alla scrittura, leggiUltimeEsecuzioni clamp 1–50, e2e dedicato verifica-i117-registro-reale.ts con cap FIFO REALE 102 scritture→100, +12 check audit → 575/575, suite 520/520)
+- 022e018 include in più un FIX deterministico di una bomba d'ordine PRE-ESISTENTE (mock parziale di @prisma/client in db.test.ts — mancava l'export Prisma consumato da server-model-history: la suite falliva GIÀ a HEAD in locale con ordine sfavorevole, mascherata in CI): il remoto è strittamente SOPRIORA
+- VERIFICA prima dell'adozione: CI su 022e018 = SUCCESS (ci-status.sh, token mai stampato)
+- ADOZIONE: git reset --hard origin/main (il duplicato locale 27d545d scartato — stesso esito funzionale, nessun contenuto unico perso: voce granulare per colonne vs dettaglio JSON sono due forme equivalenti della stessa informazione; le lezioni empiriche qui raccolte — clamp del cap beccato dall'e2e, TS2737 BigInt — restano in questo log)
+- PROTOCOLLO RIVERIFICATO IN AMBIENTE sullo stato adottato: tsc 0, lint 0 (exit REALE), suite 520/520 (1743 asserzioni), audit 575/575 PASS 0 scoperte, build VERDE (exit 0)
+- Nessun push necessario: lo stato adottato È il remoto (albero pulito, locale = origin/main)
+
+Stage Summary:
+- I117 conclusa e CONSOLIDATA: la traccia duratura del cron vive in RegistroManutenzione (innesco, esito, durataMs, dettaglio JSON con bytes/quota/integrità/eliminati/vacuum), il GET /api/manutenzione espone ultimeEsecuzioni, ogni run stampa [manutenzione-cron] nei runtime logs; cap 100 alla scrittura; e2e dedicato a motore reale
+- Lezione di sessione (rischio infrastrutturale già annotato in Task 55): PIÙ SESSIONI possono lavorare in parallelo sullo stesso repo — prima di pushare sempre fetch + confronto; se il remoto ha già la stessa consegna con CI verde, si adotta il remoto senza forzare nulla (mai force push)
+- Azione utente residua: dopo il deploy Vercel di 022e018, `curl -s https://<url>/api/manutenzione | jq '.ultimeEsecuzioni'` (o il pannello) mostra le esecuzioni notturne registrate — la verifica del cron non dipende più dai runtime logs
