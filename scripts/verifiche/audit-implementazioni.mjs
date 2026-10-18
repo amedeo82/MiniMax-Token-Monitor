@@ -581,6 +581,8 @@ const CHECKS = [
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
   check.simbolo("I105", "README.md", "567 test / 1939 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I123", "README.md", "Suite test automatica\\*\\*: 567 test / 1939 asserzioni", "contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896"),
+  check.simbolo("I123", "README.md", "test-567_pass", "badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560"),
   check.simbolo("I105", "README.md", "01–11", "indice documentazione README completo (docs/11 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -874,6 +876,20 @@ const CHECKS = [
   check.simbolo("I122", "tests/lib/database-manutenzione.test.ts", "I122", "semantica su client finto: dryRun ZERO DELETE, backup PRIMA del DELETE, DELETE parametrizzato su source=demo, cap/troncato, client senza superficie SQL → errore"),
   check.simbolo("I122", "tests/lib/api-manutenzione.test.ts", "rimuovi-demo", "contratto route: dryRun 200 senza scritture, reale con DELETE parametrizzato + backup, dryRun non-booleano → 400"),
   check.simbolo("I122", "scripts/verifiche/verifica-i111-motore-reale.ts", "eseguiRimozioneDemo", "e2e motore reale in processo figlio: dryRun non cancella, reale con backup completo, restano SOLO i punti reali, idempotenza"),
+  /* --- I123 — cleanup esplicito nei test di componente (bomba d'ordine beccata dopo la riconciliazione git) --- */
+  check.simbolo("I123", "tests/components/quota-ring.test.tsx", "cleanup\\(\\)", "cleanup esplicito tra i test (pattern I79) anche nell'ultimo file che ne era rimasto privo: il residuo «—» dei render dei file precedenti rompeva getByText(\"—\") (I81 N/D) a seconda dell'ordine di discovery di bun"),
+  {
+    item: "I123",
+    what: "PRESIDIO anti-ordine: OGNI file di test in tests/components/* usa la cleanup esplicita — il document happy-dom è condiviso in-process e la auto-cleanup di testing-library non è attiva in bun (il pattern I79 diventa obbligatorio e verificato)",
+    kind: "presidio",
+    run: () => {
+      const dir = join(ROOT, "tests", "components");
+      if (!existsSync(dir)) return "directory tests/components assente";
+      const files = readdirSync(dir).filter((f) => f.endsWith(".test.tsx"));
+      const mancanti = files.filter((f) => !readFileSync(join(dir, f), "utf8").includes("cleanup()"));
+      return mancanti.length === 0 ? null : `file di test componenti SENZA cleanup(): ${mancanti.join(", ")}`;
+    },
+  },
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

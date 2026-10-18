@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-17T15:36:07.878Z
+# Audit implementazioni — 2026-10-18T16:16:36.998Z
 
-- Verifiche totali: **609** · PASS: **609** · FAIL: **0**
+- Verifiche totali: **613** · PASS: **613** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -361,6 +361,8 @@
 | I105 | badge audit allineato al numero reale dei check — contatore dinamico | simbolo | PASS | — |
 | I105 | contatore audit §Qualità allineato — contatore dinamico | simbolo | PASS | — |
 | I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
+| I123 | contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896 (README.md) | simbolo | PASS | — |
+| I123 | badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560 (README.md) | simbolo | PASS | — |
 | I105 | indice documentazione README completo (docs/11 incluso) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | docs/09 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
@@ -613,6 +615,10 @@
 | I122 | semantica su client finto: dryRun ZERO DELETE, backup PRIMA del DELETE, DELETE parametrizzato su source=demo, cap/troncato, client senza superficie SQL → errore (tests/lib/database-manutenzione.test.ts) | simbolo | PASS | — |
 | I122 | contratto route: dryRun 200 senza scritture, reale con DELETE parametrizzato + backup, dryRun non-booleano → 400 (tests/lib/api-manutenzione.test.ts) | simbolo | PASS | — |
 | I122 | e2e motore reale in processo figlio: dryRun non cancella, reale con backup completo, restano SOLO i punti reali, idempotenza (scripts/verifiche/verifica-i111-motore-reale.ts) | simbolo | PASS | — |
+| I123 | cleanup esplicito tra i test (pattern I79) anche nell'ultimo file che ne era rimasto privo: il residuo «—» dei render dei file precedenti rompeva getByText("—") (I81 N/D) a seconda dell'ordine di discovery di bun (tests/components/quota-ring.test.tsx) | simbolo | PASS | — |
+| I123 | PRESIDIO anti-ordine: OGNI file di test in tests/components/* usa la cleanup esplicita — il document happy-dom è condiviso in-process e la auto-cleanup di testing-library non è attiva in bun (il pattern I79 diventa obbligatorio e verificato) | presidio | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (609 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (613 pass, 0 fail, 0 scoperte)
+
+Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-18T16-16-36.md

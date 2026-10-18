@@ -5,11 +5,21 @@
  * percentuale (stroke-dashoffset), gradiente con l'id richiesto.
  */
 import "./setup-dom";
-import { describe, test, expect } from "bun:test";
-import { render, screen } from "@testing-library/react";
+import { describe, test, expect, beforeEach } from "bun:test";
+import { render, screen, cleanup } from "@testing-library/react";
 import { QuotaRing, MiniBar } from "@/components/quota-ring";
 
 describe("I81 componenti: QuotaRing", () => {
+  // I123 — cleanup esplicito tra i test (pattern I79 di nav-boundary/event-log):
+  // senza, i render si accumulano nel document condiviso di happy-dom e a seconda
+  // dell'ordine di discovery «getByText("—")» (I81, N/D) trova il residuo «—» dei
+  // render dell'ultimo test dei file che ci precedono (es. RegionAltPanel) oltre
+  // al proprio — beccato in suite quando il discovery ordina quota-ring DOPO di
+  // loro. Il file, primo della tornata I81, era l'unico rimasto senza cleanup.
+  beforeEach(() => {
+    cleanup();
+  });
+
   test("mostra la percentuale arrotondata e la label", () => {
     render(<QuotaRing value={37.4} color="warn" label="Finestra 5h" gradientId="g1" />);
     expect(screen.getByText("37%")).toBeDefined();
