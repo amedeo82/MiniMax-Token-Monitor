@@ -1,4 +1,4 @@
-# Audit implementazioni — 2026-10-19T16:10:39.782Z
+# Audit implementazioni — 2026-10-19T16:26:38.140Z
 
 - Verifiche totali: **630** · PASS: **630** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
@@ -618,9 +618,9 @@
 | I122 | e2e motore reale in processo figlio: dryRun non cancella, reale con backup completo, restano SOLO i punti reali, idempotenza (scripts/verifiche/verifica-i111-motore-reale.ts) | simbolo | PASS | — |
 | I123 | cleanup esplicito tra i test (pattern I79) anche nell'ultimo file che ne era rimasto privo: il residuo «—» dei render dei file precedenti rompeva getByText("—") (I81 N/D) a seconda dell'ordine di discovery di bun (tests/components/quota-ring.test.tsx) | simbolo | PASS | — |
 | I123 | PRESIDIO anti-ordine: OGNI file di test in tests/components/* usa la cleanup esplicita — il document happy-dom è condiviso in-process e la auto-cleanup di testing-library non è attiva in bun (il pattern I79 diventa obbligatorio e verificato) | presidio | PASS | — |
-| I124 | segmentazione a finestre ufficiali: blocchi 5h UTC (verdetto V8) per «interval», settimane lunedì 00:00 UTC per «weekly»; il ciclo si chiude al reset ufficiale anche senza campioni successivi (le finestre proseguono il conteggio lato MiniMax) (src/lib/cycles.ts) | simbolo | PASS | — |
+| I124 | segmentazione a finestre ufficiali: blocchi orari fissi UTC 00/05/10/15/20 semantica cron (verdetto V8) per «interval», settimane lunedì 00:00 UTC per «weekly»; il ciclo si chiude al reset ufficiale anche senza campioni successivi (le finestre proseguono il conteggio lato MiniMax) (src/lib/cycles.ts) | simbolo | PASS | — |
 | I124 | esclusione dei punti demo dalle analisi (proposal (a) del task 69); i punti senza marca legacy restano inclusi e documentati (src/lib/cycles.ts) | simbolo | PASS | — |
-| I124 | allineamento ai blocchi fissi 00/05/10/15/20 UTC (conferma produzione 19/10: 17% alle 16:59 Roma → 96% alle 17:04 Roma, confine 15:00 UTC esatto) (src/lib/cycles.ts) | simbolo | PASS | — |
+| I124 | allineamento ai blocchi orari fissi 00/05/10/15/20 UTC di ogni giorno con fineFinestra5h (discriminatori di produzione: confine 15:00 UTC del 19/10 e reset 20:00 UTC del venerdì 16/10 — la griglia epoch è refutata e presidianta nei test) (src/lib/cycles.ts) | simbolo | PASS | — |
 | I124 | allineamento settimane a lunedì 00:00 UTC (finestra a livello di piano; conferma produzione 46% domenica 18/10 → 92% lunedì 19/10) (src/lib/cycles.ts) | simbolo | PASS | — |
 | I124 | la serie d'analisi del pannello esclude i punti demo prima di OGNI analisi (cicli, per giorno, heatmap, calendario, distribuzione, oggi vs media) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I124 | cicli «interval» di general a finestre ufficiali; gli altri modelli restano sull'euristica (cadenza breve non verificata per modello — inventare un allineamento produrrebbe cicli sbagliati plausibili) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
@@ -638,4 +638,4 @@
 
 Verdetto: **PASS** (630 pass, 0 fail, 0 scoperte)
 
-Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-19T16-10-39.md
+Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-19T16-26-38.md

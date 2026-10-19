@@ -286,7 +286,7 @@ dai punti demo nel buffer locale del browser.
 
 | Finestra | Allineamento | Fonte della verità |
 |----------|--------------|--------------------|
-| `interval` del modello **general** | Blocchi fissi 5h **UTC**: 00/05/10/15/20 | Verdetto V8 (205 campioni, `docs/05`) + conferma di produzione 19/10/2026: residuo 17% alle 16:59:28 Roma → 96% alle 17:04:29 Roma, confine 15:00 UTC attraversato esattamente |
+| `interval` del modello **general** | Blocchi fissi a ORARIO **UTC** {00,05,10,15,20} di OGNI giorno (semantica cron «ogni 5 ore»: l'ultimo blocco 20:00→mezzanotta dura 4h reali) | Verdetto V8 (205 campioni, `docs/05`, offset 0 ms) + conferme di produzione: confine 15:00 UTC del 19/10 (17% alle 16:59:28 Roma → 96% alle 17:04:29 Roma) e reset delle 20:00 UTC di VENERDÌ 16/10 (21:49→22:03 Roma) — la coppia refuta la griglia periodica `floor(t/5h)` ancorata all'epoca, che deriva di 4h al giorno e nei giorni non allineati (non ≡ 0 mod 5) sposta i confini (sul 16/10 avrebbe detto 21:00; sul 18/10 14:00 al posto di 15:00) |
 | `weekly` (tutti i modelli) | Settimane da **lunedì 00:00 UTC** | Triangolazione `weekly_start_time`/`weekly_end_time` (§2) + conferma di produzione 18→19/10/2026: settimanale 46% domenica → 92% lunedì dopo il reset di lun 00:00 UTC (= 02:00 Roma in CEST) |
 | `interval` degli **altri modelli** | Nessuno (euristica dei salti invariata) | La finestra breve varia per modello (5h general, 24h video allineata a mezzanotte UTC) senza una cadenza verificata per ciascuno: inventare un allineamento produrrebbe cicli sbagliati ma plausibili |
 

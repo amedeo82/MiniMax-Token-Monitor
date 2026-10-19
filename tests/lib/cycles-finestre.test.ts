@@ -18,8 +18,8 @@ import {
   detectCyclesFinestre,
   senzaDemo,
   inizioFinestra5h,
+  fineFinestra5h,
   inizioSettimanaUtc,
-  FINESTRA_5H_MS,
   SETTIMANA_MS,
   summarizeCycles,
   sprecoPerCiclo,
@@ -33,16 +33,49 @@ const mk = (t: number, interval: number, weekly = 90, source?: string): HistoryP
 const BLOCCO_15UTC = Date.UTC(2026, 9, 19, 15, 0, 0); // 17:00 Roma — confine osservato
 const P16_59 = Date.UTC(2026, 9, 19, 14, 59, 28); // 16:59:28 Roma → interval 17%
 const P17_04 = Date.UTC(2026, 9, 19, 15, 4, 29); // 17:04:29 Roma → interval 96%
+const H = 3_600_000;
 
-describe("cycles-finestre: inizioFinestra5h", () => {
-  test("allinea al blocco UTC che contiene il timestamp (caso produzione 19/10)", () => {
-    expect(inizioFinestra5h(P16_59)).toBe(BLOCCO_15UTC - FINESTRA_5H_MS); // blocco 10:00 UTC
+/** Verdetto V8: i blocchi sono a ORARIO UTC fisso {00,05,10,15,20} di OGNI giorno
+ *  (cron oraria ogni 5 ore). Discriminatore storico: venerdì 16/10 reset osservato
+ *  a 20:00 UTC (21:49→22:03 Roma) — una griglia epoch floor(t/5h) avrebbe dato 21:00. */
+const VENERDI_16 = Date.UTC(2026, 9, 16, 0, 0, 0);
+const DOMENICA_18 = Date.UTC(2026, 9, 18, 0, 0, 0);
+
+const bloccoDi = (giorno: number, oraUtc: number) => giorno + oraUtc * H;
+
+describe("cycles-finestre: inizioFinestra5h / fineFinestra5h", () => {
+  test("produzione 19/10: allinea ai blocchi 10:00 e 15:00 UTC", () => {
+    expect(inizioFinestra5h(P16_59)).toBe(BLOCCO_15UTC - 5 * H); // blocco 10:00 UTC
     expect(inizioFinestra5h(P17_04)).toBe(BLOCCO_15UTC); // blocco 15:00 UTC
+    expect(fineFinestra5h(P16_59)).toBe(BLOCCO_15UTC);
+    expect(fineFinestra5h(P17_04)).toBe(BLOCCO_15UTC + 5 * H);
   });
 
-  test("un confine esatto è sé stesso (floor stabile) e epoch 0 → blocco 0", () => {
+  test("DISCRIMINATORE V8: venerdì 16/10 il confine è 20:00 UTC (non 21:00 come la griglia epoch)", () => {
+    /* Osservato in produzione: 21:49→22:03 Roma = 19:49→20:03 UTC, salto +20
+       al blocco 20:00. La griglia floor(t/5h) ancorata all'epoca deriva di 4h
+       al giorno e su un venerdì mette il confine a 21:00 — REFUTATA. */
+    expect(inizioFinestra5h(VENERDI_16 + 19 * H + 49 * 60_000)).toBe(bloccoDi(VENERDI_16, 15));
+    expect(fineFinestra5h(VENERDI_16 + 19 * H + 49 * 60_000)).toBe(bloccoDi(VENERDI_16, 20));
+    expect(inizioFinestra5h(VENERDI_16 + 20 * H + 3 * 60_000)).toBe(bloccoDi(VENERDI_16, 20));
+  });
+
+  test("domenica 18/10: i confini restano 00/05/10/15/20 UTC (griglia epoch avrebbe dato 14:00)", () => {
+    /* Caso reale: campioni 17:28–17:55 Roma = 15:28–15:55 UTC → finestra 15–20 UTC. */
+    expect(inizioFinestra5h(DOMENICA_18 + 15 * H + 28 * 60_000)).toBe(bloccoDi(DOMENICA_18, 15));
+    expect(fineFinestra5h(DOMENICA_18 + 15 * H + 28 * 60_000)).toBe(bloccoDi(DOMENICA_18, 20));
+  });
+
+  test("l'ultimo blocco (20:00 → mezzanotta) dura 4h reali: la fine è il giorno dopo a 00:00 UTC", () => {
+    expect(inizioFinestra5h(VENERDI_16 + 21 * H)).toBe(bloccoDi(VENERDI_16, 20));
+    expect(fineFinestra5h(VENERDI_16 + 21 * H)).toBe(VENERDI_16 + 24 * H);
+    expect(inizioFinestra5h(VENERDI_16 + 23 * H + 59 * 60_000)).toBe(bloccoDi(VENERDI_16, 20));
+  });
+
+  test("un confine esatto è sé stesso e epoch 0 → blocco 00:00", () => {
     expect(inizioFinestra5h(BLOCCO_15UTC)).toBe(BLOCCO_15UTC);
     expect(inizioFinestra5h(0)).toBe(0);
+    expect(fineFinestra5h(0)).toBe(5 * H);
   });
 });
 
@@ -75,7 +108,7 @@ describe("cycles-finestre: senzaDemo", () => {
 
 describe("cycles-finestre: detectCyclesFinestre (interval)", () => {
   test("produzione 19/10: 17% alle 16:59 → 96% alle 17:04 = DUE cicli al confine 15:00 UTC", () => {
-    const blocco10 = BLOCCO_15UTC - FINESTRA_5H_MS;
+    const blocco10 = BLOCCO_15UTC - 5 * H;
     const serie = [
       mk(blocco10 + 4_900_000, 38), // pomeriggio del blocco 10:00 UTC
       mk(P16_59, 17),
@@ -96,18 +129,18 @@ describe("cycles-finestre: detectCyclesFinestre (interval)", () => {
 
   test("il ciclo si chiude al reset ufficiale ANCHE senza campioni successivi", () => {
     const serie = [mk(BLOCCO_15UTC + 60_000, 50), mk(BLOCCO_15UTC + 120_000, 30)];
-    const now = BLOCCO_15UTC + FINESTRA_5H_MS + 3_600_000; // ore dopo il reset, zero campioni
+    const now = BLOCCO_15UTC + 5 * H + 3_600_000; // ore dopo il reset, zero campioni
     const c = detectCyclesFinestre(serie, "interval", now);
     expect(c).toHaveLength(1);
     expect(c[0].ongoing).toBe(false); // prima di I124 l'ultimo tratto restava «in corso» per sempre
-    expect(c[0].windowEndT).toBe(BLOCCO_15UTC + FINESTRA_5H_MS);
+    expect(c[0].windowEndT).toBe(BLOCCO_15UTC + 5 * H);
   });
 
   test("le finestre SENZA campioni non producono cicli (buchi di campionamento)", () => {
-    const w1 = BLOCCO_15UTC - 2 * FINESTRA_5H_MS; // blocco 05:00 UTC
+    const w1 = BLOCCO_15UTC - 2 * 5 * H; // blocco 05:00 UTC
     const w3 = BLOCCO_15UTC; // blocco 15:00 UTC — il blocco 10:00 resta VUOTO
     const serie = [mk(w1 + 60_000, 80), mk(w1 + 120_000, 70), mk(w3 + 60_000, 95), mk(w3 + 120_000, 90)];
-    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + FINESTRA_5H_MS - 1);
+    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + 5 * H - 1);
     expect(c).toHaveLength(2);
     expect(c[0].windowStartT).toBe(w1);
     expect(c[1].windowStartT).toBe(w3);
@@ -115,25 +148,25 @@ describe("cycles-finestre: detectCyclesFinestre (interval)", () => {
 
   test("i punti demo sono esclusi: nessun ciclo falso, nessun consumo finto", () => {
     const serie = [
-      mk(BLOCCO_15UTC - FINESTRA_5H_MS + 60_000, 40, 90, "demo"),
+      mk(BLOCCO_15UTC - 5 * H + 60_000, 40, 90, "demo"),
       mk(BLOCCO_15UTC + 60_000, 96),
       mk(BLOCCO_15UTC + 120_000, 90),
     ];
-    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + FINESTRA_5H_MS - 1);
+    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + 5 * H - 1);
     expect(c).toHaveLength(1);
     expect(c[0].startValue).toBe(96);
   });
 
   test("i punti senza marca (legacy pre-I124) restano inclusi", () => {
     const serie = [mk(BLOCCO_15UTC + 60_000, 96), mk(BLOCCO_15UTC + 120_000, 80)];
-    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + FINESTRA_5H_MS - 1);
+    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + 5 * H - 1);
     expect(c).toHaveLength(1);
     expect(c[0].consumed).toBe(16);
   });
 
   test("consumo e ritmo restano OSSERVATI (primo→ultimo campione della finestra)", () => {
     const serie = [mk(BLOCCO_15UTC + 60_000, 96), mk(BLOCCO_15UTC + 3_660_000, 76)];
-    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + FINESTRA_5H_MS - 1);
+    const c = detectCyclesFinestre(serie, "interval", BLOCCO_15UTC + 5 * H - 1);
     expect(c[0].durationMs).toBe(3_600_000);
     expect(c[0].consumed).toBe(20);
     expect(c[0].ratePerHour).toBeCloseTo(20, 6);
@@ -145,7 +178,7 @@ describe("cycles-finestre: detectCyclesFinestre (interval)", () => {
   });
 
   test("integrazione summarizeCycles/sprecoPerCiclo sui cicli a finestre", () => {
-    const blocco10 = BLOCCO_15UTC - FINESTRA_5H_MS;
+    const blocco10 = BLOCCO_15UTC - 5 * H;
     const serie = [
       mk(blocco10 + 60_000, 60),
       mk(blocco10 + 120_000, 20), // finestra conclusa: spreco osservato = endValue 20

@@ -148,24 +148,53 @@ export function detectCycles(history: HistoryPoint[], win: WindowKey): Cycle[] {
 /* I124 — Finestre ufficiali e segmentazione a finestre                */
 /* ------------------------------------------------------------------ */
 
-/** Durata della finestra breve (5 ore) e della settimanale. */
-export const FINESTRA_5H_MS = 5 * 3_600_000;
+/** Durata della finestra settimanale. */
 export const SETTIMANA_MS = 7 * 24 * 3_600_000;
 
 /** Offset (ms) del lunedì 00:00 UTC dall'epoca Unix: l'epoch 0 è giovedì 00 UTC. */
 const OFFSET_LUNEDI_MS = 4 * 24 * 3_600_000;
 
+/** Giorno UTC in ms e orari dei blocchi (cron oraria ogni 5: 00/05/10/15/20). */
+const GIORNO_MS = 24 * 3_600_000;
+const BLOCCHI_UTC_H = [0, 5, 10, 15, 20];
+
 /**
- * Inizio della finestra di 5 ore (blocco fisso UTC) che contiene `t`.
+ * Inizio della finestra breve che contiene `t`: blocchi fissi a ORARIO UTC
+ * {00,05,10,15,20} di OGNI giorno (semantica cron, verdetto V8 con offset
+ * 0 ms su 205 campioni). NON è una griglia periodica `floor(t/5h)` ancorata
+ * all'epoca: quella deriva di 4h al giorno e coincide con i blocchi reali
+ * solo nei giorni in cui (giorni da epoch) ≡ 0 mod 5 — beccato il 19/10
+ * (lunedì, allineata per caso) incrociando la simulazione su produzione con
+ * il reset osservato venerdì 16/10 alle 20:00 UTC (21:49→22:03 Roma): un
+ * venerdì la griglia epoch avrebbe preveduto 21:00, non 20:00.
  *
- * La cadenza statica a blocchi 00/05/10/15/20 UTC è il verdetto V8 (205
- * campioni, docs/02) e resta confermata dai dati di produzione (es.
- * 19/10/2026: residuo 17% alle 16:59 Roma e 96% alle 17:04 Roma — confine
- * 15:00 UTC attraversato ESATTAMENTE). In tensione con la FAQ ufficiale
- * («rolling»): se MiniMax cambiasse semantica, la cadenza va rivista qui.
+ * Con la semantica cron l'ultimo blocco (20:00 → mezzanotta) dura 4h reali:
+ * la «finestra di 5 ore» è la durata NOMINALE dei blocchi pieni, non una
+ * promessa uniforme — la fine esatta va letta con `fineFinestra5h`.
  */
 export function inizioFinestra5h(t: number): number {
-  return Math.floor(t / FINESTRA_5H_MS) * FINESTRA_5H_MS;
+  const giorno = Math.floor(t / GIORNO_MS) * GIORNO_MS;
+  const h = (t - giorno) / 3_600_000;
+  let blocco = 0;
+  for (const b of BLOCCHI_UTC_H) {
+    if (b <= h) blocco = b;
+    else break;
+  }
+  return giorno + blocco * 3_600_000;
+}
+
+/**
+ * Fine della finestra breve che contiene `t` = MOMENTO DEL RESET: il confine
+ * di blocco successivo (00/05/10/15/20 UTC; dopo il blocco delle 20:00 la
+ * fine è la mezzanotta successiva — blocco di 4h reali).
+ */
+export function fineFinestra5h(t: number): number {
+  const giorno = Math.floor(t / GIORNO_MS) * GIORNO_MS;
+  const h = (t - giorno) / 3_600_000;
+  for (const b of BLOCCHI_UTC_H) {
+    if (b > h) return giorno + b * 3_600_000;
+  }
+  return giorno + GIORNO_MS; // h ≥ 20: mezzanotta successiva
 }
 
 /**
@@ -192,7 +221,8 @@ export function senzaDemo(history: HistoryPoint[]): HistoryPoint[] {
 
 /**
  * I124 — Segmentazione a FINESTRE UFFICIALI: ogni finestra con almeno un
- * rilevamento è un ciclo («interval» → blocchi 5h UTC; «weekly» → settimane
+ * rilevamento è un ciclo («interval» → blocchi orari fissi UTC 00/05/10/15/20,
+ * semantica cron — l'ultimo blocco 20:00→mezzanotta dura 4h reali; «weekly» → settimane
  * da lunedì 00:00 UTC, valide per QUALUNQUE modello: la finestra settimanale
  * è a livello di piano). Sostituisce l'euristica dei salti (detectCycles)
  * dove la cadenza è nota: il reset non è più «osservato» ma DEDOTTO dal
@@ -223,7 +253,11 @@ export function detectCyclesFinestre(
   if (serie.length === 0) return [];
 
   const inizio = win === "interval" ? inizioFinestra5h : inizioSettimanaUtc;
-  const periodo = win === "interval" ? FINESTRA_5H_MS : SETTIMANA_MS;
+  /* La fine della finestra NON è sempre inizio + periodo: per la 5h i blocchi
+     sono ancorati all'orario UTC (l'ultimo, 20:00→mezzanotta, dura 4h reali);
+     per la settimanale inizio + 7 giorni resta esatto. La fine si deriva dal
+     PRIMO punto del ciclo (tutti i punti del ciclo condividono la finestra). */
+  const fineDi = win === "interval" ? fineFinestra5h : (t: number) => inizioSettimanaUtc(t) + SETTIMANA_MS;
 
   const cycles: Cycle[] = [];
   let startIdx = 0;
@@ -231,12 +265,12 @@ export function detectCyclesFinestre(
   for (let i = 1; i < serie.length; i++) {
     const k = inizio(serie[i].t);
     if (k !== chiave) {
-      cycles.push(buildCycleFinestra(serie, startIdx, i - 1, win, chiave, periodo, now));
+      cycles.push(buildCycleFinestra(serie, startIdx, i - 1, win, chiave, fineDi(serie[startIdx].t), now));
       startIdx = i;
       chiave = k;
     }
   }
-  cycles.push(buildCycleFinestra(serie, startIdx, serie.length - 1, win, chiave, periodo, now));
+  cycles.push(buildCycleFinestra(serie, startIdx, serie.length - 1, win, chiave, fineDi(serie[startIdx].t), now));
 
   return cycles.map((c, i) => ({ ...c, index: i + 1 }));
 }
@@ -248,16 +282,15 @@ function buildCycleFinestra(
   to: number,
   win: WindowKey,
   inizioFinestra: number,
-  periodoMs: number,
+  fineFinestra: number,
   now: number,
 ): Cycle {
   const base = buildCycle(history, from, to, win, false);
-  const windowEndT = inizioFinestra + periodoMs;
   return {
     ...base,
-    ongoing: windowEndT > now,
+    ongoing: fineFinestra > now,
     windowStartT: inizioFinestra,
-    windowEndT,
+    windowEndT: fineFinestra,
   };
 }
 
