@@ -1,4 +1,4 @@
-# Audit implementazioni — 2026-10-19T16:04:24.806Z
+# Audit implementazioni — 2026-10-19T16:10:39.782Z
 
 - Verifiche totali: **630** · PASS: **630** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
@@ -638,4 +638,4 @@
 
 Verdetto: **PASS** (630 pass, 0 fail, 0 scoperte)
 
-Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-19T16-04-24.md
+Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-19T16-10-39.md
