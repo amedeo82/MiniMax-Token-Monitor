@@ -17,6 +17,7 @@ import { describe, test, expect, beforeEach, afterAll } from "bun:test";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "next-themes";
 import { SettingsDialog, DEFAULT_SETTINGS } from "@/components/settings-dialog";
+import { CHIAVE_STORICO, CHIAVE_STORICO_MODELLI } from "@/lib/storage-chiavi";
 
 /* ------------------------------------------------------------------ */
 /* Fixture e mock del fetch globale                                     */
@@ -181,5 +182,59 @@ describe("I107 componenti: pannello Persistenza (tab Dati)", () => {
     mount();
     await apriTabDati();
     await waitFor(() => expect(screen.getByText(/credenziali restano nell/)).toBeDefined());
+  });
+});
+
+describe("I124 componenti: storico locale (tab Dati)", () => {
+  test("la card esiste e «Svuota storico locale» con conferma rimuove le chiavi e ricarica", async () => {
+    localStorage.setItem(CHIAVE_STORICO, JSON.stringify([{ t: 1, interval: 50, weekly: 60 }]));
+    localStorage.setItem(CHIAVE_STORICO_MODELLI, JSON.stringify([{ t: 1, model: "general", interval: 50, weekly: 60 }]));
+    const conferme: string[] = [];
+    const ricaricamenti: number[] = [];
+    const confirmOriginale = window.confirm;
+    const reloadOriginale = window.location.reload.bind(window.location);
+    window.confirm = (msg?: string) => {
+      conferme.push(String(msg));
+      return true;
+    };
+    (window.location as unknown as { reload: () => void }).reload = () => ricaricamenti.push(1);
+    try {
+      mount();
+      await apriTabDati();
+      expect(screen.getByText("Storico locale (browser)")).toBeDefined();
+      fireEvent.click(screen.getByRole("button", { name: "Svuota lo storico locale del browser" }));
+      expect(conferme).toHaveLength(1);
+      expect(conferme[0]).toContain("server NON vengono toccati");
+      expect(localStorage.getItem(CHIAVE_STORICO)).toBeNull();
+      expect(localStorage.getItem(CHIAVE_STORICO_MODELLI)).toBeNull();
+      expect(ricaricamenti).toHaveLength(1);
+    } finally {
+      window.confirm = confirmOriginale;
+      (window.location as unknown as { reload: () => void }).reload = reloadOriginale;
+      localStorage.removeItem(CHIAVE_STORICO);
+      localStorage.removeItem(CHIAVE_STORICO_MODELLI);
+    }
+  });
+
+  test("conferma negata: nessuna chiave rimossa, nessun ricaricamento", async () => {
+    localStorage.setItem(CHIAVE_STORICO, JSON.stringify([{ t: 1, interval: 50, weekly: 60 }]));
+    const confirmOriginale = window.confirm;
+    const reloadOriginale = window.location.reload.bind(window.location);
+    let ricaricamenti = 0;
+    window.confirm = () => false;
+    (window.location as unknown as { reload: () => void }).reload = () => {
+      ricaricamenti += 1;
+    };
+    try {
+      mount();
+      await apriTabDati();
+      fireEvent.click(screen.getByRole("button", { name: "Svuota lo storico locale del browser" }));
+      expect(localStorage.getItem(CHIAVE_STORICO)).not.toBeNull();
+      expect(ricaricamenti).toBe(0);
+    } finally {
+      window.confirm = confirmOriginale;
+      (window.location as unknown as { reload: () => void }).reload = reloadOriginale;
+      localStorage.removeItem(CHIAVE_STORICO);
+    }
   });
 });

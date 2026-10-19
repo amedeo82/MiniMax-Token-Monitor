@@ -47,7 +47,9 @@ export interface ServerHistoryResult {
   points: ServerPoint[];
 }
 
-/** Converte i punti server (valori nullable) in HistoryPoint per la UI. */
+/** Converte i punti server (valori nullable) in HistoryPoint per la UI.
+ *  I124 — la `source` del server (api/demo/import) passa al punto: le analisi
+ *  escludono i demo (senzaDemo in cycles.ts). */
 export function serverPointsToHistory(points: ServerPoint[]): HistoryPoint[] {
   return points
     .filter((p) => p.interval !== null || p.weekly !== null)
@@ -55,6 +57,7 @@ export function serverPointsToHistory(points: ServerPoint[]): HistoryPoint[] {
       t: p.t,
       interval: p.interval ?? 100,
       weekly: p.weekly ?? 100,
+      source: p.source,
     }));
 }
 

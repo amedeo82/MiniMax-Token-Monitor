@@ -19,7 +19,8 @@
 
 import * as React from "react";
 import {
-  detectCycles,
+  detectCyclesFinestre,
+  senzaDemo,
   summarizeCycles,
   sprecoPerCiclo,
   weekdayConsumption,
@@ -118,21 +119,28 @@ function TabellaCicli({ win, summary, waste }: { win: WindowKey; summary: CycleS
 }
 
 export function PrintReport({ history, win, demo = false }: PrintReportProps) {
-  const trend = React.useMemo<TrendStats>(() => computeTrend(history, win), [history, win]);
-  const ewma = React.useMemo<EwmaProjection | null>(() => ewmaProjection(history, win), [history, win]);
+  /* I124 — fuori dalla modalità demo i punti demo sono esclusi da TUTTE le
+   * sezioni del report (cicli a finestre ufficiali, per giorno, calendario);
+   * in demo mode il report è lui stesso una dimostrazione: serie demo non
+   * filtrata, altrimenti sarebbe vuota. Cicli: segmentazione a FINESTRE
+   * UFFICIALI (blocchi 5h UTC / settimane lunedì 00 UTC — il report riassume
+   * lo storico flat di «general»). */
+  const serie = React.useMemo(() => (demo ? history : senzaDemo(history)), [demo, history]);
+  const trend = React.useMemo<TrendStats>(() => computeTrend(serie, win), [serie, win]);
+  const ewma = React.useMemo<EwmaProjection | null>(() => ewmaProjection(serie, win), [serie, win]);
 
-  const cicli5h = React.useMemo(() => summarizeCycles(detectCycles(history, "interval")), [history]);
-  const cicliWeekly = React.useMemo(() => summarizeCycles(detectCycles(history, "weekly")), [history]);
-  const spreco5h = React.useMemo(() => sprecoPerCiclo(detectCycles(history, "interval")), [history]);
-  const sprecoWeekly = React.useMemo(() => sprecoPerCiclo(detectCycles(history, "weekly")), [history]);
-  const perGiorno = React.useMemo<WeekdayStat[]>(() => weekdayConsumption(history, win), [history, win]);
-  const calendario = React.useMemo<CalendarGrid>(() => consumoGiornaliero(history, win, 12), [history, win]);
+  const cicli5h = React.useMemo(() => summarizeCycles(detectCyclesFinestre(serie, "interval")), [serie]);
+  const cicliWeekly = React.useMemo(() => summarizeCycles(detectCyclesFinestre(serie, "weekly")), [serie]);
+  const spreco5h = React.useMemo(() => sprecoPerCiclo(detectCyclesFinestre(serie, "interval")), [serie]);
+  const sprecoWeekly = React.useMemo(() => sprecoPerCiclo(detectCyclesFinestre(serie, "weekly")), [serie]);
+  const perGiorno = React.useMemo<WeekdayStat[]>(() => weekdayConsumption(serie, win), [serie, win]);
+  const calendario = React.useMemo<CalendarGrid>(() => consumoGiornaliero(serie, win, 12), [serie, win]);
 
   const arco =
-    history.length > 0
-      ? `${formatDateTimeRome(history[0].t)} → ${formatDateTimeRome(history[history.length - 1].t)}`
+    serie.length > 0
+      ? `${formatDateTimeRome(serie[0].t)} → ${formatDateTimeRome(serie[serie.length - 1].t)}`
       : "nessun dato";
-  const ultimo = history.length > 0 ? history[history.length - 1] : null;
+  const ultimo = serie.length > 0 ? serie[serie.length - 1] : null;
   const winLabel = win === "interval" ? "finestra 5 ore" : "finestra settimanale";
 
   return (
@@ -145,7 +153,7 @@ export function PrintReport({ history, win, demo = false }: PrintReportProps) {
           <h1 className="text-lg font-black tracking-tight">MiniMax Token Monitor — Report settimanale</h1>
           <p className="mt-1 text-xs text-zinc-700">
             Generato il {formatFullRome(Date.now())} · dati {demo ? "DEMO (simulati)" : "API reali"} ·
-            arco osservato: {arco} · {history.length} rilevamenti
+            arco osservato: {arco} · {serie.length} rilevamenti
           </p>
         </div>
 

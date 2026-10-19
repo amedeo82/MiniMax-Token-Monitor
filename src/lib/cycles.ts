@@ -69,6 +69,19 @@ export interface Cycle {
   points: number;
   /** true = ciclo ancora in corso (nessun reset successivo osservato). */
   ongoing: boolean;
+  /**
+   * I124 — inizio ufficiale della finestra (blocchi UTC per la 5h, lunedì
+   * 00:00 UTC per la settimanale). Assente nei cicli dell'euristica
+   * (detectCycles, modelli senza cadenza verificata).
+   */
+  windowStartT?: number;
+  /**
+   * I124 — fine ufficiale della finestra = MOMENTO DEL RESET: il ciclo si
+   * chiude a questo confine anche se dopo l'ultimo campione non ne è arrivato
+   * nessuno (le finestre proseguono il conteggio lato MiniMax a prescindere
+   * dal campionamento). Assente nei cicli euristici.
+   */
+  windowEndT?: number;
 }
 
 function valueOf(p: HistoryPoint, win: WindowKey): number {
@@ -129,6 +142,123 @@ export function detectCycles(history: HistoryPoint[], win: WindowKey): Cycle[] {
   cycles.push(buildCycle(history, startIdx, history.length - 1, win, true));
 
   return cycles.map((c, i) => ({ ...c, index: i + 1 }));
+}
+
+/* ------------------------------------------------------------------ */
+/* I124 — Finestre ufficiali e segmentazione a finestre                */
+/* ------------------------------------------------------------------ */
+
+/** Durata della finestra breve (5 ore) e della settimanale. */
+export const FINESTRA_5H_MS = 5 * 3_600_000;
+export const SETTIMANA_MS = 7 * 24 * 3_600_000;
+
+/** Offset (ms) del lunedì 00:00 UTC dall'epoca Unix: l'epoch 0 è giovedì 00 UTC. */
+const OFFSET_LUNEDI_MS = 4 * 24 * 3_600_000;
+
+/**
+ * Inizio della finestra di 5 ore (blocco fisso UTC) che contiene `t`.
+ *
+ * La cadenza statica a blocchi 00/05/10/15/20 UTC è il verdetto V8 (205
+ * campioni, docs/02) e resta confermata dai dati di produzione (es.
+ * 19/10/2026: residuo 17% alle 16:59 Roma e 96% alle 17:04 Roma — confine
+ * 15:00 UTC attraversato ESATTAMENTE). In tensione con la FAQ ufficiale
+ * («rolling»): se MiniMax cambiasse semantica, la cadenza va rivista qui.
+ */
+export function inizioFinestra5h(t: number): number {
+  return Math.floor(t / FINESTRA_5H_MS) * FINESTRA_5H_MS;
+}
+
+/**
+ * Inizio della finestra settimanale (lunedì 00:00 UTC) che contiene `t`.
+ * La finestra è a LIVELLO DI PIANO, condivisa da tutti i modelli (docs/02,
+ * triangolazione weekly_start/end_time; conferma 18→19/10/2026: settimanale
+ * 46% domenica → 92% lunedì dopo il reset di lunedì 00:00 UTC = 02:00 Roma).
+ */
+export function inizioSettimanaUtc(t: number): number {
+  return Math.floor((t - OFFSET_LUNEDI_MS) / SETTIMANA_MS) * SETTIMANA_MS + OFFSET_LUNEDI_MS;
+}
+
+/**
+ * I124 — Esclude i punti demo dall'analisi (proposal (a) del task 69): i tick
+ * demo replicati nello storico fuso generano falsi reset (12/12 marker di
+ * produzione dimostrati falsi in task 69). I punti SENZA marca (legacy
+ * pre-I124) restano inclusi: non sono discriminabili a posteriori — la pulizia
+ * dello storico locale è delegata a «Svuota storico locale» (Impostazioni →
+ * Persistenza, I124).
+ */
+export function senzaDemo(history: HistoryPoint[]): HistoryPoint[] {
+  return history.filter((p) => p.source !== "demo");
+}
+
+/**
+ * I124 — Segmentazione a FINESTRE UFFICIALI: ogni finestra con almeno un
+ * rilevamento è un ciclo («interval» → blocchi 5h UTC; «weekly» → settimane
+ * da lunedì 00:00 UTC, valide per QUALUNQUE modello: la finestra settimanale
+ * è a livello di piano). Sostituisce l'euristica dei salti (detectCycles)
+ * dove la cadenza è nota: il reset non è più «osservato» ma DEDOTTO dal
+ * confine di finestra, quindi:
+ *
+ * - un ciclo si chiude al suo reset ufficiale anche se dopo l'ultimo campione
+ *   non ne è arrivato nessuno (progetto chiuso / quota esaurita): le finestre
+ *   proseguono il conteggio e i reset lato MiniMax a prescindere dal
+ *   campionamento — prima, con dati fermi, l'ultimo tratto restava «in corso»
+ *   per giorni (il ciclo «2 giorni 1 ora» riportato dall'utente il 19/10);
+ * - le finestre SENZA rilevamenti non producono cicli: nessun consumo è
+ *   osservabile (non vengono inventate righe vuote);
+ * - `ongoing` significa «la finestra non è ancora terminata»: con dati fermi
+ *   oltre l'ultimo confine NESSUN ciclo risulta in corso.
+ *
+ * Le metriche restano OSSERVATE (primo→ultimo campione della finestra): con
+ * campionamento sparso durata e ritmo sono limiti inferiori onesti. Il primo
+ * ciclo della serie può essere parziale (storico iniziato a finestra in corso).
+ *
+ * `now` iniettabile per test deterministici.
+ */
+export function detectCyclesFinestre(
+  history: HistoryPoint[],
+  win: WindowKey,
+  now: number = Date.now(),
+): Cycle[] {
+  const serie = senzaDemo(history);
+  if (serie.length === 0) return [];
+
+  const inizio = win === "interval" ? inizioFinestra5h : inizioSettimanaUtc;
+  const periodo = win === "interval" ? FINESTRA_5H_MS : SETTIMANA_MS;
+
+  const cycles: Cycle[] = [];
+  let startIdx = 0;
+  let chiave = inizio(serie[0].t);
+  for (let i = 1; i < serie.length; i++) {
+    const k = inizio(serie[i].t);
+    if (k !== chiave) {
+      cycles.push(buildCycleFinestra(serie, startIdx, i - 1, win, chiave, periodo, now));
+      startIdx = i;
+      chiave = k;
+    }
+  }
+  cycles.push(buildCycleFinestra(serie, startIdx, serie.length - 1, win, chiave, periodo, now));
+
+  return cycles.map((c, i) => ({ ...c, index: i + 1 }));
+}
+
+/** buildCycle + metadati della finestra ufficiale e semantica «ongoing» I124. */
+function buildCycleFinestra(
+  history: HistoryPoint[],
+  from: number,
+  to: number,
+  win: WindowKey,
+  inizioFinestra: number,
+  periodoMs: number,
+  now: number,
+): Cycle {
+  const base = buildCycle(history, from, to, win, false);
+  const windowEndT = inizioFinestra + periodoMs;
+  return {
+    ...base,
+    ongoing: windowEndT > now,
+    windowStartT: inizioFinestra,
+    windowEndT,
+  };
 }
 
 /** Riepilogo statistico dei cicli (le medie considerano solo i cicli completati). */

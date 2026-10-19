@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-18T16:16:36.998Z
+# Audit implementazioni — 2026-10-19T16:04:24.806Z
 
-- Verifiche totali: **613** · PASS: **613** · FAIL: **0**
+- Verifiche totali: **630** · PASS: **630** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -20,7 +20,8 @@
 | I5 | QuotaRing (src/components/quota-ring.tsx) | simbolo | PASS | — |
 | I6 | orologio pagina (30 s da I96: il secondo vive nelle foglie useOrologio) (src/app/page.tsx) | simbolo | PASS | — |
 | I6 | ora server dedotta (src/lib/minimax.ts) | simbolo | PASS | — |
-| I7 | chiave storico locale (src/app/page.tsx) | simbolo | PASS | — |
+| I7 | chiave storico locale (fonte unica I124, prima inline in page.tsx) (src/lib/storage-chiavi.ts) | simbolo | PASS | — |
+| I124 | page.tsx consuma la chiave dalla fonte unica (nessuna duplicazione della stringa) (src/app/page.tsx) | simbolo | PASS | — |
 | I7 | HistoryChart (memoizzato da I96) (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I7 | computeTrend (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I8 | SettingsDialog (src/components/settings-dialog.tsx) | simbolo | PASS | — |
@@ -617,8 +618,24 @@
 | I122 | e2e motore reale in processo figlio: dryRun non cancella, reale con backup completo, restano SOLO i punti reali, idempotenza (scripts/verifiche/verifica-i111-motore-reale.ts) | simbolo | PASS | — |
 | I123 | cleanup esplicito tra i test (pattern I79) anche nell'ultimo file che ne era rimasto privo: il residuo «—» dei render dei file precedenti rompeva getByText("—") (I81 N/D) a seconda dell'ordine di discovery di bun (tests/components/quota-ring.test.tsx) | simbolo | PASS | — |
 | I123 | PRESIDIO anti-ordine: OGNI file di test in tests/components/* usa la cleanup esplicita — il document happy-dom è condiviso in-process e la auto-cleanup di testing-library non è attiva in bun (il pattern I79 diventa obbligatorio e verificato) | presidio | PASS | — |
+| I124 | segmentazione a finestre ufficiali: blocchi 5h UTC (verdetto V8) per «interval», settimane lunedì 00:00 UTC per «weekly»; il ciclo si chiude al reset ufficiale anche senza campioni successivi (le finestre proseguono il conteggio lato MiniMax) (src/lib/cycles.ts) | simbolo | PASS | — |
+| I124 | esclusione dei punti demo dalle analisi (proposal (a) del task 69); i punti senza marca legacy restano inclusi e documentati (src/lib/cycles.ts) | simbolo | PASS | — |
+| I124 | allineamento ai blocchi fissi 00/05/10/15/20 UTC (conferma produzione 19/10: 17% alle 16:59 Roma → 96% alle 17:04 Roma, confine 15:00 UTC esatto) (src/lib/cycles.ts) | simbolo | PASS | — |
+| I124 | allineamento settimane a lunedì 00:00 UTC (finestra a livello di piano; conferma produzione 46% domenica 18/10 → 92% lunedì 19/10) (src/lib/cycles.ts) | simbolo | PASS | — |
+| I124 | la serie d'analisi del pannello esclude i punti demo prima di OGNI analisi (cicli, per giorno, heatmap, calendario, distribuzione, oggi vs media) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I124 | cicli «interval» di general a finestre ufficiali; gli altri modelli restano sull'euristica (cadenza breve non verificata per modello — inventare un allineamento produrrebbe cicli sbagliati plausibili) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I124 | colonna «Reset finestra» in tabella: il momento ufficiale del reset di ogni ciclo (il PROSSIMO reset per quello in corso) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I124 | fasce e marker «reset» del grafico al confine di finestra ufficiale (momento vero del reset, anche dentro un buco di campionamento); fallback sull'intera serie in modalità demo (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I124 | il report stampabile esclude i punti demo fuori dalla modalità demo e segmenta i cicli a finestre ufficiali (src/components/print-report.tsx) | simbolo | PASS | — |
+| I124 | svuotamento dello storico locale (flat + per-modello) da fonte unica delle chiavi: la via per eliminare i punti demo legacy pre-I124, privi della marca source (src/lib/storage-chiavi.ts) | simbolo | PASS | — |
+| I124 | azione «Svuota storico locale» nel tab Dati: conferma esplicita con promessa esplicita (punti server NON toccati, riscaricati al prossimo avvio) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I124 | la marca d'origine dello snapshot segue il punto flat (localStorage + replica server) (src/app/page.tsx) | simbolo | PASS | — |
+| I124 | anche i backfill demo (flat e per-modello) sono marcati: da I124 nessun nuovo punto demo senza marca (src/lib/demo.ts) | simbolo | PASS | — |
+| I124 | la source dei punti server (api/demo/import) passa al HistoryPoint (src/lib/server-history.ts) | simbolo | PASS | — |
+| I124 | lo storico per-modello replica la marca d'origine lungo tutta la catena (ModelSample → ModelHistoryPoint → HistoryPoint) (src/lib/model-history.ts) | simbolo | PASS | — |
+| I124 | i casi di test replicano i dati reali di produzione (confine 15:00 UTC 17→96; settimanale 46→92 al lunedì 00 UTC; chiusura al reset senza campioni successivi) (tests/lib/cycles-finestre.test.ts) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (613 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (630 pass, 0 fail, 0 scoperte)
 
-Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-18T16-16-36.md
+Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-19T16-04-24.md

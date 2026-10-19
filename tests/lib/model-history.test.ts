@@ -21,6 +21,7 @@ describe("model-history: appendModelPoints", () => {
       [],
       {
         t: 1_000_000,
+        source: "api",
         models: [
           { name: "general", interval: 42.5, weekly: 88 },
           { name: "video", interval: 91, weekly: 10 },
@@ -36,7 +37,7 @@ describe("model-history: appendModelPoints", () => {
     const prev: ModelHistoryPoint[] = [{ t: 1, model: "general", interval: 50, weekly: null }];
     const { points, nuovi } = appendModelPoints(
       prev,
-      { t: 2, models: [{ name: "ghost", interval: null, weekly: null }] },
+      { t: 2, source: "api", models: [{ name: "ghost", interval: null, weekly: null }] },
     );
     expect(points).toBe(prev);
     expect(nuovi).toHaveLength(0);
@@ -48,7 +49,7 @@ describe("model-history: appendModelPoints", () => {
     ];
     const { points, nuovi } = appendModelPoints(
       prev,
-      { t: 1_000_000 + 19_000, models: [{ name: "general", interval: 39, weekly: 79 }] },
+      { t: 1_000_000 + 19_000, source: "api", models: [{ name: "general", interval: 39, weekly: 79 }] },
     );
     expect(points).toHaveLength(1);
     expect(points[0].interval).toBe(39);
@@ -61,7 +62,7 @@ describe("model-history: appendModelPoints", () => {
     ];
     const { points } = appendModelPoints(
       prev,
-      { t: 1_000_000 + S, models: [{ name: "general", interval: 39, weekly: 79 }] },
+      { t: 1_000_000 + S, source: "api", models: [{ name: "general", interval: 39, weekly: 79 }] },
     );
     expect(points).toHaveLength(2);
   });
@@ -72,7 +73,7 @@ describe("model-history: appendModelPoints", () => {
     ];
     const { points } = appendModelPoints(
       prev,
-      { t: 1_000_000 + 1000, models: [{ name: "video", interval: 95, weekly: 70 }] },
+      { t: 1_000_000 + 1000, source: "api", models: [{ name: "video", interval: 95, weekly: 70 }] },
     );
     expect(points).toHaveLength(2);
     expect(points[0].interval).toBe(40);
@@ -83,7 +84,7 @@ describe("model-history: appendModelPoints", () => {
     for (let i = 0; i < 12; i++) {
       points = appendModelPoints(
         points,
-        { t: (i + 1) * 60_000, models: [{ name: "general", interval: 100 - i, weekly: 90 }] },
+        { t: (i + 1) * 60_000, source: "api", models: [{ name: "general", interval: 100 - i, weekly: 90 }] },
         10,
       ).points;
     }
@@ -156,7 +157,7 @@ describe("model-history: modelRowsToPoints (long → wide)", () => {
       { model: "general", win: "weekly" as const, t: 10, percent: 88, source: "api", region: "eu" },
     ];
     expect(modelRowsToPoints(rows)).toEqual([
-      { t: 10, model: "general", interval: 42, weekly: 88 },
+      { t: 10, model: "general", interval: 42, weekly: 88, source: "api" }, // I124: la source segue il punto
     ]);
   });
 
@@ -165,7 +166,7 @@ describe("model-history: modelRowsToPoints (long → wide)", () => {
       { model: "video", win: "interval" as const, t: 20, percent: 91, source: "demo", region: "eu" },
     ];
     expect(modelRowsToPoints(rows)).toEqual([
-      { t: 20, model: "video", interval: 91, weekly: null },
+      { t: 20, model: "video", interval: 91, weekly: null, source: "demo" }, // I124: anche i demo sono marcati
     ]);
   });
 
@@ -176,5 +177,34 @@ describe("model-history: modelRowsToPoints (long → wide)", () => {
     ];
     const pts = modelRowsToPoints(rows);
     expect(pts.map((p) => p.t)).toEqual([30, 31]);
+  });
+});
+
+describe("I124 — marcatura source nello storico per-modello", () => {
+  test("appendModelPoints replica la source del campione sui punti", () => {
+    const { points } = appendModelPoints(
+      [],
+      { t: 1_000_000, source: "demo", models: [{ name: "general", interval: 42, weekly: 88 }] },
+    );
+    expect(points[0].source).toBe("demo");
+  });
+
+  test("modelRowsToPoints conserva la source delle righe LONG (stessa per (model, t))", () => {
+    const punti = modelRowsToPoints([
+      { model: "general", win: "interval", t: 5, percent: 42, source: "api", region: "eu" },
+      { model: "general", win: "weekly", t: 5, percent: 88, source: "api", region: "eu" },
+    ]);
+    expect(punti).toHaveLength(1);
+    expect(punti[0].source).toBe("api");
+  });
+
+  test("historyForModel propaga la source fino al HistoryPoint (fill compreso)", () => {
+    const storico: ModelHistoryPoint[] = [
+      { t: 1, model: "video", interval: 95, weekly: 70, source: "api" },
+      { t: 2, model: "video", interval: null, weekly: 68, source: "demo" },
+    ];
+    const flat = historyForModel(storico, "video");
+    expect(flat.map((p) => p.source)).toEqual(["api", "demo"]);
+    expect(flat[1]).toMatchObject({ interval: 95, weekly: 68 }); // forward-fill invariato
   });
 });

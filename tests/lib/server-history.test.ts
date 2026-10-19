@@ -46,8 +46,8 @@ describe("I99 — lib/server-history: conversioni pure", () => {
       { t: T + 2, interval: null, weekly: 55, source: "api", region: "eu" },
     ]);
     expect(out).toEqual([
-      { t: T, interval: 42, weekly: 100 },
-      { t: T + 2, interval: 100, weekly: 55 },
+      { t: T, interval: 42, weekly: 100, source: "api" }, // I124: la source segue il punto
+      { t: T + 2, interval: 100, weekly: 55, source: "api" },
     ]);
   });
 
@@ -108,5 +108,18 @@ describe("I99 — lib/server-history: contratti HTTP", () => {
     expect(ultimaFetch?.init?.method).toBe("DELETE");
     fingeFetch(() => new Response("{}", { status: 503 }));
     expect(await clearServerHistory()).toBeNull();
+  });
+});
+
+describe("I124 — serverPointsToHistory: la source del server segue il punto", () => {
+  test("api/demo/import passano al HistoryPoint (le analisi escludono i demo)", () => {
+    const punti = serverPointsToHistory([
+      { t: T, interval: 42, weekly: 55, source: "api", region: "eu" },
+      { t: T + 1, interval: 40, weekly: 55, source: "demo", region: "eu" },
+      { t: T + 2, interval: null, weekly: 60, source: "import", region: "cn" },
+    ]);
+    expect(punti).toHaveLength(3);
+    expect(punti.map((p) => p.source)).toEqual(["api", "demo", "import"]);
+    expect(punti[2]).toMatchObject({ t: T + 2, interval: 100, weekly: 60, source: "import" });
   });
 });

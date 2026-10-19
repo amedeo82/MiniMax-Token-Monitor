@@ -56,6 +56,7 @@ import {
 } from "@/lib/usage-events";
 import { Region, REGION_LABELS, UsageSnapshot, ApiError, chiaviPerRegione, findModel, parseUsageResponse, inferServerTime, regioneAlt } from "@/lib/minimax";
 import { persistJson, setQuotaNotifier } from "@/lib/persist-json";
+import { CHIAVE_STORICO } from "@/lib/storage-chiavi";
 import { delayAfterFailure, ritardoPolling, tickAllaVisibilita } from "@/lib/backoff";
 import { headerAdmin } from "@/lib/admin-token";
 import { makeDemoSnapshot, makeDemoHistory, makeDemoModelHistory } from "@/lib/demo";
@@ -107,7 +108,10 @@ import {
 } from "lucide-react";
 
 const SETTINGS_KEY = "mm-dash-settings-v1";
-const HISTORY_KEY = "mm-dash-history-v1";
+/* I124 — la chiave dello storico vive in lib/storage-chiavi.ts (fonte unica:
+   l'azione «Svuota storico locale» del dialog cancella esattamente le stesse
+   chiavi che la pagina scrive). */
+const HISTORY_KEY = CHIAVE_STORICO;
 const HISTORY_MAX = 600;
 
 /* I100 — iscrizioni a sistemi esterni per useSyncExternalStore (livello modulo:
@@ -421,7 +425,7 @@ export default function DashboardPage() {
        null) e produceva un punto finto {interval: 100, weekly: 100}, che le
        analisi (RESET_TARGET 85) leggevano come falso reset. La costruzione
        testabile del punto vive in lib/model-history.ts (flatPointFromGeneral). */
-    const point = general
+    const base = general
       ? flatPointFromGeneral(
           snap.fetchedAt,
           general.interval?.remainingPercent ?? null,
@@ -429,6 +433,10 @@ export default function DashboardPage() {
           prev,
         )
       : null;
+    /* I124 — la marca d'origine dello snapshot segue il punto: le analisi
+       escludono i demo (senzaDemo in cycles.ts; il server la conserva già
+       dalla colonna source di UsagePoint). */
+    const point = base ? { ...base, source: snap.source } : null;
     if (point) {
       // Deduplica: se l'ultimo punto è più vecchio di 20s accoda, altrimenti sostituisci
       const last = prev[prev.length - 1];
@@ -450,6 +458,8 @@ export default function DashboardPage() {
        solo general), stesse regole di dedup 20s; replica server dei soli nuovi. */
     const sample = {
       t: snap.fetchedAt,
+      // I124 — origine del campione replicata sui punti per-modello.
+      source: snap.source,
       models: snap.models.map((m) => ({
         name: m.modelName,
         interval: m.interval?.remainingPercent ?? null,

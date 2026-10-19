@@ -19,7 +19,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { formatCountdown, formatDateTimeRome, formatDuration, formatShortRome, formatTimeRome } from "@/lib/time";
-import { detectCycles, movingAverage } from "@/lib/cycles";
+import { detectCyclesFinestre, senzaDemo, movingAverage } from "@/lib/cycles";
 import { rateSeries } from "@/lib/rate";
 import type { EwmaProjection } from "@/lib/ewma";
 import type { TooltipContentProps } from "recharts";
@@ -41,6 +41,15 @@ export interface HistoryPoint {
   t: number;
   interval: number;
   weekly: number;
+  /**
+   * I124 — origine del punto («api» | «demo» | «import»): i punti demo sono
+   * ESCLUSI dalle analisi (senzaDemo in cycles.ts — proposal (a) del task 69:
+   * i tick demo replicati nella serie generano falsi reset). Assente nei punti
+   * legacy precedenti a I124: non è possibile discriminarli a posteriori e sono
+   * trattati come reali; la pulizia è delegata a «Svuota storico locale»
+   * (Impostazioni → Persistenza).
+   */
+  source?: string;
 }
 
 /** Ampiezza della media mobile (SMA) sovrapponibile al grafico. */
@@ -180,19 +189,31 @@ function HistoryChartBase({ history, window: win, onWindowChange, serverCount = 
    * ritagliati sull'arco visibile (ultimi 120 punti). Le fasce alternano lo
    * sfondo per distinguere i cicli contigui; il marker «reset»compare solo sui
    * cicli il cui inizio è un reset osservato (il primo è parziale per costruzione).
+   *
+   * I124 — il grafico mostra lo storico flat di «general»: fasce e marker
+   * usano le FINESTRE UFFICIALI (blocchi 5h UTC / settimane lunedì 00 UTC) e
+   * i punti demo sono esclusi; se non restano abbastanza punti reali (modalità
+   * demo) si ricade sull'intera serie così l'overlay resta sensato. Il marker
+   * sta al CONFINE di finestra (inizio ufficiale del ciclo): con campionamento
+   * sparso segna il momento vero del reset anche dentro un buco di dati.
    */
   const bands = React.useMemo(() => {
     if (!showCycles || history.length < 2 || data.length < 2) return [];
     const lo = data[0].t;
     const hi = data[data.length - 1].t;
-    return detectCycles(history, win)
+    const reali = senzaDemo(history);
+    const serie = reali.length >= 2 ? reali : history;
+    return detectCyclesFinestre(serie, win)
       .filter((c) => c.endT >= lo && c.startT <= hi)
-      .map((c) => ({
-        index: c.index,
-        x1: Math.max(c.startT, lo),
-        x2: Math.min(c.endT, hi),
-        reset: c.index > 1 && c.startT >= lo && c.startT <= hi ? c.startT : null,
-      }));
+      .map((c) => {
+        const confine = c.windowStartT ?? c.startT;
+        return {
+          index: c.index,
+          x1: Math.max(c.startT, lo),
+          x2: Math.min(c.endT, hi),
+          reset: c.index > 1 && confine >= lo && confine <= hi ? confine : null,
+        };
+      });
   }, [showCycles, history, win, data]);
   const showBands = bands.length >= 2; // con un solo ciclo l'alternanza non dice nulla
 

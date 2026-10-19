@@ -9,6 +9,7 @@
 
 import { parseUsageResponse, Region, UsageSnapshot } from "./minimax";
 import type { ModelHistoryPoint } from "./model-history";
+import type { HistoryPoint } from "@/components/history-chart";
 
 const FIVE_HOURS_MS = 5 * 3600_000;
 const WEEK_MS = 7 * 24 * 3600_000;
@@ -97,10 +98,11 @@ export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()
   return parseUsageResponse(raw, { source: "demo", region, fetchedAt: now });
 }
 
-/** Genera uno storico fittizio plausibile per popolare il grafico al primo avvio demo. */
-export function makeDemoHistory(samples = 40, stepMs = 5 * 60_000): { t: number; interval: number; weekly: number }[] {
+/** Genera uno storico fittizio plausibile per popolare il grafico al primo avvio demo.
+ *  I124 — punti marcati source «demo»: le analisi li escludono (senzaDemo). */
+export function makeDemoHistory(samples = 40, stepMs = 5 * 60_000): HistoryPoint[] {
   const now = Date.now();
-  const out: { t: number; interval: number; weekly: number }[] = [];
+  const out: HistoryPoint[] = [];
   const intervalStart = now - Math.round(3.2 * 3600_000);
   const weeklyStart = now - Math.round(2.7 * 24 * 3600_000);
 
@@ -113,6 +115,7 @@ export function makeDemoHistory(samples = 40, stepMs = 5 * 60_000): { t: number;
       t,
       interval: Math.max(0, Math.min(100, Math.round(interval * 10) / 10)),
       weekly: Math.max(0, Math.min(100, Math.round(weekly * 10) / 10)),
+      source: "demo",
     });
   }
   return out;
@@ -136,7 +139,8 @@ export function makeDemoModelHistory(samples = 40, stepMs = 5 * 60_000): ModelHi
       const interval = m.interval?.remainingPercent ?? null;
       const weekly = m.weekly?.remainingPercent ?? null;
       if (interval === null && weekly === null) continue;
-      out.push({ t, model: m.modelName, interval, weekly });
+      // I124 — anche il backfill per-modello è marcato «demo» (escluso dalle analisi).
+      out.push({ t, model: m.modelName, interval, weekly, source: "demo" });
     }
   }
   return out;

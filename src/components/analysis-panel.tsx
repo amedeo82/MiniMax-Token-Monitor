@@ -30,10 +30,12 @@ import {
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   detectCycles,
+  detectCyclesFinestre,
   heatmapConsumption,
   summarizeCycles,
   weekdayConsumption,
   WEEKDAY_LABELS,
+  senzaDemo,
   sprecoPerCiclo,
   prevedibilitaCicli,
   consumoGiornaliero,
@@ -142,13 +144,31 @@ function LongTermAnalysisBase({ history, nomeModello = "general", intervalLabel 
     return () => clearTimeout(avvio);
   }, [load]);
 
-  /** Serie d'analisi: storico pagina + punti server (dedup per timestamp). */
+  /** Serie d'analisi: storico pagina + punti server (dedup per timestamp).
+   *  I124 — i punti demo (source="demo", locali e server) sono ESCLUSI da
+   *  TUTTE le analisi (proposal (a) task 69: generano falsi reset e falsi
+   *  consumi); i punti senza marca (legacy) restano inclusi. */
   const data = React.useMemo(() => {
-    return remote ? mergeHistories(history, remote) : history;
+    const fuso = remote ? mergeHistories(history, remote) : history;
+    return senzaDemo(fuso);
   }, [history, remote]);
 
-  const intervalCycles = React.useMemo(() => detectCycles(data, "interval"), [data]);
-  const weeklyCycles = React.useMemo(() => detectCycles(data, "weekly"), [data]);
+  /* I124 — segmentazione a FINESTRE UFFICIALI dove la cadenza è verificata:
+   * - «interval» di general → blocchi fissi 5h UTC (verdetto V8, docs/02);
+   * - «weekly» → settimane da lunedì 00:00 UTC (finestra a livello di piano,
+   *   valida per qualunque modello);
+   * - «interval» degli ALTRI modelli → euristica dei salti (detectCycles):
+   *   la finestra breve varia per modello (5h general, 24h video) senza una
+   *   cadenza verificata per ciascuno — inventare un allineamento produrrebbe
+   *   cicli sbagliati con dati silenziosamente plausibili. */
+  const intervalCycles = React.useMemo(
+    () =>
+      nomeModello === "general"
+        ? detectCyclesFinestre(data, "interval")
+        : detectCycles(data, "interval"),
+    [data, nomeModello],
+  );
+  const weeklyCycles = React.useMemo(() => detectCyclesFinestre(data, "weekly"), [data]);
   const intervalSummary = React.useMemo(() => summarizeCycles(intervalCycles), [intervalCycles]);
   const weeklySummary = React.useMemo(() => summarizeCycles(weeklyCycles), [weeklyCycles]);
   const weekdayWeekly = React.useMemo(() => weekdayConsumption(data, "weekly"), [data]);
@@ -276,7 +296,8 @@ function LongTermAnalysisBase({ history, nomeModello = "general", intervalLabel 
           <Info className="size-3 shrink-0" />
           Analisi su {data.length.toLocaleString("it-IT")} rilevamenti su un arco di {formatDuration(spanMs)}
           {loadedAt ? ` · storico server caricato alle ${formatDateTimeRome(loadedAt).split(" ")[1]}` : ""}.
-          Il primo ciclo può essere parziale (storico iniziato a finestra in corso).
+          Il primo ciclo può essere parziale (storico iniziato a finestra in corso); i punti demo sono
+          esclusi dalle analisi (I124).
         </p>
       </CardContent>
     </Card>
@@ -351,6 +372,7 @@ function CycleSection({
               <TableRow className="border-white/[0.07] hover:bg-transparent">
                 <TableHead className="text-[11px] text-zinc-500">Inizio</TableHead>
                 <TableHead className="text-[11px] text-zinc-500">Fine</TableHead>
+                <TableHead className="text-[11px] text-zinc-500">Reset finestra</TableHead>
                 <TableHead className="text-[11px] text-zinc-500">Durata</TableHead>
                 <TableHead className="text-right text-[11px] text-zinc-500">Consumo</TableHead>
                 <TableHead className="text-right text-[11px] text-zinc-500">Residuo min</TableHead>
@@ -378,6 +400,12 @@ function CycleSection({
                       formatDateTimeRome(c.endT)
                     )}
                   </TableCell>
+                  {/* I124 — momento ufficiale del reset (confine di finestra):
+                      il ciclo si chiude qui anche senza campioni successivi;
+                      per il ciclo in corso è il PROSSIMO reset. */}
+                  <TableCell className="whitespace-nowrap text-right text-xs tabular-nums text-zinc-400">
+                    {c.windowEndT !== undefined ? formatDateTimeRome(c.windowEndT) : "—"}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-xs tabular-nums text-zinc-300">
                     {formatDuration(c.durationMs)}
                   </TableCell>
@@ -402,6 +430,15 @@ function CycleSection({
       {cycles.length > 8 ? (
         <p className="text-[11px] text-zinc-600">
           Mostrati gli ultimi 8 di {cycles.length} cicli rilevati sulla {winLabel}.
+        </p>
+      ) : null}
+      {/* I124 — semantica delle finestre ufficiali (per i cicli allineati). */}
+      {cycles.some((c) => c.windowEndT !== undefined) ? (
+        <p className="text-[11px] leading-relaxed text-zinc-600">
+          I cicli sono allineati alle finestre ufficiali e si chiudono al loro reset anche senza
+          rilevamenti successivi (le finestre proseguono il conteggio lato MiniMax); le finestre
+          senza rilevamenti non compaiono. Con campionamento sparso durata e ritmo sono limiti
+          inferiori (primo → ultimo rilevamento osservato).
         </p>
       ) : null}
     </div>

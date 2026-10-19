@@ -314,6 +314,25 @@ Checklist:
   fuori piattaforma, `turso db export`/dump periodico documentato nella sessione di riga di
   comando (il file esportato è un SQLite normale, riapribile in locale).
 
+### 7.1 I124 — Svuota storico locale (browser): la pulizia dei punti senza marca
+
+L'azione server «rimuovi-demo» (I122) cancella i punti demo **sul database**;
+i punti demo **nel browser** (buffer locale, fino a 600 flat + 2.000
+per-modello) dal I124 sono marcati `source="demo"` ed esclusi dalle analisi,
+ma quelli **precedenti a I124 non hanno la marca** e non sono discriminabili
+a posteriori. Per ripartire da una serie locale pulita:
+
+1. Aprire **Impostazioni → Dati → Storico locale (browser)**.
+2. Premere **«Svuota storico locale»** e confermare: le chiavi
+   `mm-dash-history-v1` e `mm-dash-modelhistory-v1` vengono rimosse (fonte
+   unica: `src/lib/storage-chiavi.ts`) e la pagina si ricarica.
+3. Al prossimo avvio lo storico del **server** viene riscaricato e fuso:
+   l'archivio condiviso non è toccato, quindi l'analisi riparte dai soli
+   punti `api` conservati sul database.
+
+Nota: lo svuotamento locale NON consuma quota MiniMax e NON tocca eventi,
+impostazioni, chiave API né token admin.
+
 ## 8. Verifiche (cosa dimostra la suite)
 
 - `tests/lib/database-manutenzione.test.ts` (dal I122: 21+4 test — il describe I122 copre `eseguiRimozioneDemo` su client finto LIMIT-aware: dryRun ZERO DELETE, backup PRIMA del DELETE, DELETE parametrizzato su `source="demo"`, cap/troncato, client senza superficie SQL; il motore reale in processo figlio verifica dryRun senza cancellazioni, reale con backup completo e idempotenza). Base I111 (21 test): funzioni pure (soglie, clamp, proiezione,

@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { REGION_LABELS, regioneAlt, Region } from "@/lib/minimax";
 import type { AlertThresholds, WindowThresholdKey } from "@/lib/usage-events";
+import { svuotaStoricoLocale } from "@/lib/storage-chiavi";
 import {
   cancellaTokenAdmin,
   esitoSondaAdmin,
@@ -329,6 +330,21 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
     } finally {
       setCaricamentoRegistro(false);
     }
+  }, []);
+
+  /* I124 — svuota lo storico LOCALE (flat + per-modello) con conferma esplicita:
+     i punti del server restano al sicuro e tornano al prossimo avvio
+     (offline-first I16/I82: riscaricati e fusi al boot). Il ricaricamento della
+     pagina riavvia il bootstrap: la serie locale riparte pulita — è la via per
+     eliminare i punti demo legacy pre-I124, privi della marca `source`. */
+  const svuotaStoricoConConferma = React.useCallback(() => {
+    const conferma = window.confirm(
+      "Svuotare lo storico locale del browser (flat + per-modello)?\n\n" +
+        "I punti conservati sul server NON vengono toccati: al prossimo avvio vengono riscaricati e fusi di nuovo.",
+    );
+    if (!conferma) return;
+    svuotaStoricoLocale();
+    window.location.reload();
   }, []);
 
   /* Caricamento all'APERTURA del dialogo (non al mount dell'app): le chiamate
@@ -1004,6 +1020,32 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
                 ) : (
                   <p className="text-[11px] text-zinc-500">Verifica in corso…</p>
                 )}
+              </div>
+
+              <Separator className="bg-white/[0.06]" />
+
+              {/* ---------------- I124 — Storico locale (browser) ---------------- */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+                  <History className="size-3.5 text-zinc-400" />
+                  Storico locale (browser)
+                </Label>
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  Il browser conserva fino a 600 rilevamenti flat e 2.000 per-modello (localStorage).
+                  Lo svuotamento rimuove SOLO i punti locali: l&apos;archivio server non è toccato e
+                  viene riscaricato al prossimo avvio. Utile per ripartire da una serie pulita —
+                  ad esempio per eliminare i punti demo precedenti a I124, non discriminabili a
+                  posteriori perché privi della marca d&apos;origine.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={svuotaStoricoConConferma}
+                  aria-label="Svuota lo storico locale del browser"
+                  className="h-7 gap-1.5 border-white/10 bg-white/[0.04] text-[11px] text-zinc-300 hover:bg-white/[0.08]!"
+                >
+                  Svuota storico locale
+                </Button>
               </div>
 
               <Separator className="bg-white/[0.06]" />

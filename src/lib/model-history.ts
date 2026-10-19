@@ -25,8 +25,10 @@
 import type { HistoryPoint } from "@/components/history-chart";
 import { headerAdmin } from "./admin-token";
 import { persistJson } from "./persist-json";
+import { CHIAVE_STORICO_MODELLI } from "./storage-chiavi";
 
-/** Un punto grezzo dello storico per-modello (valori nullable). */
+/** Un punto grezzo dello storico per-modello (valori nullable).
+ *  I124 — `source` (api/demo/import) per l'esclusione dei demo dalle analisi. */
 export interface ModelHistoryPoint {
   /** Epoch ms del rilevamento. */
   t: number;
@@ -36,11 +38,15 @@ export interface ModelHistoryPoint {
   interval: number | null;
   /** % residua della finestra settimanale, null se assente. */
   weekly: number | null;
+  /** Origine del punto (I124); assente nei punti legacy pre-I124. */
+  source?: string;
 }
 
 /** Campione minimo estratto da uno snapshot (disaccoppiato da UsageSnapshot). */
 export interface ModelSample {
   t: number;
+  /** Origine del campione (I124): «api» | «demo». */
+  source: string;
   models: { name: string; interval: number | null; weekly: number | null }[];
 }
 
@@ -54,7 +60,9 @@ export interface ModelPointRowClient {
   region: string;
 }
 
-export const MODEL_HISTORY_KEY = "mm-dash-modelhistory-v1";
+/* I124 — la chiave vive in storage-chiavi.ts (fonte unica); il re-export
+   conserva il contratto pubblico esistente (import e test che la importano). */
+export const MODEL_HISTORY_KEY = CHIAVE_STORICO_MODELLI;
 export const MODEL_HISTORY_MAX = 2_000;
 /** Finestra di dedup: stesso modello con punto più recente di 20s → sostituisce. */
 const DEDUP_MS = 20_000;
@@ -105,7 +113,7 @@ export function appendModelPoints(
     const interval = typeof m.interval === "number" && isFinite(m.interval) ? m.interval : null;
     const weekly = typeof m.weekly === "number" && isFinite(m.weekly) ? m.weekly : null;
     if (interval === null && weekly === null) continue;
-    nuovi.push({ t: sample.t, model: m.name, interval, weekly });
+    nuovi.push({ t: sample.t, model: m.name, interval, weekly, source: sample.source });
   }
   if (nuovi.length === 0) return { points: prev, nuovi };
 
@@ -166,6 +174,8 @@ export function historyForModel(points: ModelHistoryPoint[], model: string): His
       t: p.t,
       interval: p.interval ?? prev?.interval ?? 100,
       weekly: p.weekly ?? prev?.weekly ?? 100,
+      // I124 — la marca d'origine segue il punto: le analisi escludono i demo.
+      source: p.source,
     });
   }
   return out;
@@ -203,9 +213,12 @@ export function modelRowsToPoints(rows: ModelPointRowClient[]): ModelHistoryPoin
   for (const r of rows) {
     if (r.win !== "interval" && r.win !== "weekly") continue;
     const key = `${r.model}|${r.t}`;
-    const p = byKey.get(key) ?? { t: r.t, model: r.model, interval: null, weekly: null };
+    const p = byKey.get(key) ?? { t: r.t, model: r.model, interval: null, weekly: null, source: r.source };
     if (r.win === "interval") p.interval = r.percent;
     else p.weekly = r.percent;
+    // I124 — la source delle righe dello stesso (model, t) è identica: il primo
+    // punto la conserva (le righe successive non la sovrascrivono).
+    if (p.source === undefined) p.source = r.source;
     byKey.set(key, p);
   }
   return Array.from(byKey.values()).sort((a, b) => a.t - b.t);
