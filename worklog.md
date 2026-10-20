@@ -1740,3 +1740,19 @@ Stage Summary:
 - La proiezione della quota ora risponde alla domanda giusta: «se continuo così, arrivo al reset?» usa il ritmo della FINESTRA IN CORSO (quello che l'utente sta vivendo ora), mentre la media di lungo periodo resta come fallback dichiarato — niente più «Quota sufficiente» con spreco 55.6% mentre la sessione sta azzerando la quota
 - La Prevedibilità dichiara la propria fragilità statistica sotto 7 cicli completati (caveat «campione ridotto»)
 - Nessuna azione server richiesta (nessuno schema toccato); dopo il deploy il cambiamento è attivo da solo appena ci sono ≥2 rilevamenti nella finestra attiva
+
+---
+Task ID: 78
+Agent: main (Super Z)
+Task: «si procedi con il prossimo step» (esecuzione I127 richiesta dal task 76) — riconciliazione: I127 GIÀ CONSEGNATA da sessione parallela (quinto episodio); chiusura filiera
+
+Work Log:
+- RICONCILIAZIONE: la I127 era GIÀ STATA CONSEGNATA da una sessione parallela (quinto episodio, gemello di quanto accaduto con I126/task 76): HEAD locale 2699a56 = origin/main (rev-list 0/0), commit a084159 «I127 — proiezione sulla finestra corrente (ritmo di sessione) + caveat «campione ridotto» nella Prevedibilità» + 2699a56 igiene worklog Task 77 (già registrato con protocollo completo: tsc 0, lint 0, suite 617/617 — 2207 asserzioni, audit 651/651 PASS, build VERDE). version.ts «2026-10-20 · I127». Nessuna duplicazione: questa sessione NON ha toccato codice
+- COERENZA CON LA RICHIESTA: le 2 proposte autorizzate dall'utente («implementa tutte e 2 le proposte», task 76) sono ENTRAMBE nel commit — (1) computeSessionTrend (history-chart.tsx) usa il ritmo della FINESTRA IN CORSO per StatsPanelBase/ProjectionVerdict/PacePanel con etichetta dichiarata, media di lungo periodo come fallback esplicito; (2) PREVEDIBILITA_CAMPIONE_SOGLIA = 7 (cycles.ts) + caveat «campione ridotto (indice fragile)» nella strip Prevedibilità (analysis-panel.tsx)
+- CHIUSURA FILIERA: CI SUCCESS su ENTRAMBI i commit (a084159 e 2699a56, scripts/verifiche/ci-status.sh: typecheck·lint·test·audit completed/success); deploy Vercel attivo — footer di produzione «2026-10-20 · I127» (curl + grep sul DOM)
+- VERIFICA DATI PRODUZIONE: GET /api/history → 51 punti, TUTTI source=api (0 demo, 0 senza marca); ultimo punto 20/10 13:59:09 Roma, interval 48%, weekly 78%; campione salvato in scripts/verifiche/history-i127-check.json
+- NOTE PER L'UTENTE: con n=4 cicli completati < soglia 7, la strip in produzione ora mostra il caveat «campione ridotto»; la proiezione «al ritmo della finestra in corso» appare appena ci sono ≥2 rilevamenti nella finestra attiva (blocco UTC corrente per interval, settimana corrente per weekly)
+
+Stage Summary:
+- I127 è in produzione e completa: entrambe le proposte del task 76 implementate dalla sessione parallela, filiera chiusa (CI SUCCESS ×2 commit, footer I127, 51 punti tutti api)
+- Nessuna azione server richiesta (nessuno schema toccato); nessun residuo di lavoro: il prossimo item sarà I128 su nuova autorizzazione
