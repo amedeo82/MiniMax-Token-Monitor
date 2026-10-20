@@ -19,7 +19,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { formatCountdown, formatDateTimeRome, formatDuration, formatShortRome, formatTimeRome } from "@/lib/time";
-import { detectCyclesFinestre, senzaDemo, movingAverage } from "@/lib/cycles";
+import { detectCyclesFinestre, senzaDemo, movingAverage, inizioFinestra5h, inizioSettimanaUtc } from "@/lib/cycles";
 import { rateSeries } from "@/lib/rate";
 import type { EwmaProjection } from "@/lib/ewma";
 import type { TooltipContentProps } from "recharts";
@@ -526,6 +526,58 @@ export function computeTrend(history: HistoryPoint[], win: "interval" | "weekly"
   return { ...base, ratePerHour };
 }
 
+/**
+ * I127 — Trend della FINESTRA CORRENTE (ritmo di sessione). A differenza di
+ * computeTrend (corda sugli ultimi 60 punti = media di lungo periodo che
+ * include le ore di inattività e che con uno storico giovane copre GIORNI),
+ * qui valgono SOLO i rilevamenti caduti nella finestra attiva: blocco fisso
+ * UTC corrente {00,05,10,15,20} per «interval» (stesso allineamento di
+ * detectCyclesFinestre — verdetto V8, ultimo blocco 4h reali) e settimana
+ * corrente da lunedì 00:00 UTC per «weekly». Il modello di proiezione è lo
+ * STESSO di computeTrend (corda primo→ultimo campione, esaurimento lineare
+ * ancorato all'ultimo rilevamento), così verdetto, pace e card restano
+ * confrontabili; ritorna null con meno di 2 rilevamenti nella finestra
+ * corrente — in quel caso verdetto e pace ricadono sul trend di lungo
+ * periodo con etichetta esplicita della base. `now` iniettabile per test
+ * deterministici.
+ */
+export function computeSessionTrend(
+  history: HistoryPoint[],
+  win: "interval" | "weekly",
+  now: number = Date.now(),
+): TrendStats | null {
+  const inizio = win === "interval" ? inizioFinestra5h(now) : inizioSettimanaUtc(now);
+  const key = win === "interval" ? "interval" : "weekly";
+  const pts = history.filter((p) => p.t >= inizio);
+  if (pts.length < 2) return null;
+
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  const dtHours = (last.t - first.t) / 3600_000;
+  const dv = first[key] - last[key];
+  const ratePerHour = dtHours > 0 ? dv / dtHours : null;
+  const base: TrendStats = {
+    ratePerHour: null,
+    exhaustionMs: null,
+    exhaustionAt: null,
+    samples: pts.length,
+    windowMs: last.t - first.t,
+    lastT: last.t,
+    lastValue: last[key],
+  };
+
+  if (ratePerHour !== null && ratePerHour > 0.01 && last[key] > 0) {
+    const hoursLeft = last[key] / ratePerHour;
+    return {
+      ...base,
+      ratePerHour,
+      exhaustionMs: hoursLeft * 3600_000,
+      exhaustionAt: last.t + hoursLeft * 3600_000,
+    };
+  }
+  return { ...base, ratePerHour };
+}
+
 /* ------------------------------------------------------------------ */
 /* I31 — Pace e quota sprecata (stesso filone del verdetto I23)        */
 /* ------------------------------------------------------------------ */
@@ -606,6 +658,7 @@ export function computePace(trend: TrendStats, resetAt: number | null): PaceInfo
 /** Statistiche di proiezione sotto il grafico (memoizzate: I96). */
 function StatsPanelBase({
   trend,
+  sessionTrend = null,
   win,
   resetAt = null,
   remaining = null,
@@ -614,6 +667,8 @@ function StatsPanelBase({
   intervalLabel = "5 ore",
 }: {
   trend: TrendStats;
+  /** I127 — trend della finestra corrente (ritmo di sessione); null = ricaduta sul trend lungo. */
+  sessionTrend?: TrendStats | null;
   win: "interval" | "weekly";
   /** Epoch ms del reset previsto della finestra selezionata (end_time). */
   resetAt?: number | null;
@@ -627,6 +682,10 @@ function StatsPanelBase({
   intervalLabel?: string;
 }) {
   const winLabel = win === "interval" ? intervalLabel : "settimanale";
+  /* I127 — la proiezione usa il ritmo della finestra in corso quando c'è
+     (≥2 rilevamenti nella finestra attiva), altrimenti la media di lungo
+     periodo; la base è SEMPRE dichiarata nelle etichette di verdetto e pace. */
+  const base = sessionTrend ?? trend;
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4">
@@ -650,6 +709,16 @@ function StatsPanelBase({
               ? `Stai consumando quota ${winLabel}`
               : "Quota stabile o in recupero (reset)"}
         </p>
+        {/* I127 — il ritmo di sessione affiancato alla media di lungo periodo */}
+        {sessionTrend?.ratePerHour != null ? (
+          <p className="mt-0.5 text-[11px] text-zinc-400">
+            Finestra in corso: {""}
+            <span className="font-mono tabular-nums">
+              {sessionTrend.ratePerHour > 0 ? "+" : ""}
+              {sessionTrend.ratePerHour.toFixed(2)} %/h
+            </span>
+          </p>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4">
@@ -658,12 +727,14 @@ function StatsPanelBase({
           Esaurimento previsto
         </div>
         <p className="mt-2 font-mono text-xl font-bold tabular-nums text-zinc-100">
-          {trend.exhaustionMs === null ? "—" : formatCountdown(trend.exhaustionMs)}
+          {base.exhaustionMs === null ? "—" : formatCountdown(base.exhaustionMs)}
         </p>
         <p className="mt-1 truncate text-[11px] text-zinc-500">
-          {trend.exhaustionAt === null
+          {base.exhaustionAt === null
             ? "Nessun esaurimento previsto al ritmo attuale"
-            : `Raggiungibile il ${formatDateTimeRome(trend.exhaustionAt)}`}
+            : sessionTrend
+              ? `Sul ritmo della finestra in corso — il ${formatDateTimeRome(base.exhaustionAt)}`
+              : `Raggiungibile il ${formatDateTimeRome(base.exhaustionAt)}`}
         </p>
       </div>
 
@@ -683,10 +754,10 @@ function StatsPanelBase({
       </div>
 
       {/* Verdetto: esaurimento stimato vs orario di reset */}
-      <ProjectionVerdict trend={trend} resetAt={resetAt} remaining={remaining} win={win} intervalLabel={intervalLabel} />
+      <ProjectionVerdict trend={trend} sessionTrend={sessionTrend} resetAt={resetAt} remaining={remaining} win={win} intervalLabel={intervalLabel} />
 
       {/* I31 — pace di consumo e quota sprecata (stesso filone del verdetto) */}
-      <PacePanel trend={trend} resetAt={resetAt} remaining={remaining} win={win} intervalLabel={intervalLabel} />
+      <PacePanel trend={trend} sessionTrend={sessionTrend} resetAt={resetAt} remaining={remaining} win={win} intervalLabel={intervalLabel} />
 
       {/* I72 — proiezione EWMA: secondo parere affiancato al verdetto lineare */}
       <EwmaCard trend={trend} ewma={ewma} />
@@ -699,12 +770,15 @@ export const StatsPanel = React.memo(StatsPanelBase);
 /** Riga di verdetto: la quota durerà fino al reset o si esaurirà prima? */
 function ProjectionVerdict({
   trend,
+  sessionTrend = null,
   resetAt,
   remaining,
   win,
   intervalLabel = "5 ore",
 }: {
   trend: TrendStats;
+  /** I127 — ritmo della finestra in corso; quando presente è la BASE del verdetto. */
+  sessionTrend?: TrendStats | null;
   resetAt: number | null;
   remaining: number | null;
   win: "interval" | "weekly";
@@ -712,7 +786,12 @@ function ProjectionVerdict({
   intervalLabel?: string;
 }) {
   const winLabel = win === "interval" ? `di ${intervalLabel}` : "settimanale";
-  if (trend.samples < 2 || trend.ratePerHour === null) {
+  /* I127 — la base della proiezione: ritmo di sessione quando disponibile
+     (≥2 rilevamenti nella finestra attiva), altrimenti la corda sugli ultimi
+     60 punti (media di lungo periodo). L'etichetta lo dichiara SEMPRE. */
+  const base = sessionTrend ?? trend;
+  const baseLabel = sessionTrend ? "Al ritmo della finestra in corso" : "Al ritmo medio di lungo periodo";
+  if (base.samples < 2 || base.ratePerHour === null) {
     return (
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
         <div className="flex items-start gap-2.5">
@@ -730,7 +809,7 @@ function ProjectionVerdict({
   }
 
   const exhaustedBeforeReset =
-    trend.exhaustionAt !== null && resetAt !== null && trend.exhaustionAt < resetAt;
+    base.exhaustionAt !== null && resetAt !== null && base.exhaustionAt < resetAt;
 
   if (exhaustedBeforeReset) {
     return (
@@ -740,8 +819,8 @@ function ProjectionVerdict({
           <div>
             <p className="text-xs font-semibold text-amber-200">Rischio esaurimento prima del reset</p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-amber-200/70">
-              Al ritmo attuale (+{trend.ratePerHour.toFixed(2)} %/h) la quota {winLabel} ({remaining?.toFixed(1)}%)
-              si esaurirà il <strong>{formatDateTimeRome(trend.exhaustionAt)}</strong>, PRIMA del reset previsto
+              {baseLabel} (+{base.ratePerHour?.toFixed(2)} %/h) la quota {winLabel} ({remaining?.toFixed(1)}%)
+              si esaurirà il <strong>{formatDateTimeRome(base.exhaustionAt)}</strong>, PRIMA del reset previsto
               per le <strong>{formatTimeRome(resetAt)}</strong>.
             </p>
           </div>
@@ -750,7 +829,7 @@ function ProjectionVerdict({
     );
   }
 
-  if (trend.exhaustionAt !== null && resetAt !== null) {
+  if (base.exhaustionAt !== null && resetAt !== null) {
     return (
       <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] p-4 sm:col-span-3">
         <div className="flex items-start gap-2.5">
@@ -758,8 +837,8 @@ function ProjectionVerdict({
           <div>
             <p className="text-xs font-semibold text-emerald-200">Quota sufficiente fino al reset</p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-200/70">
-              Al ritmo attuale (+{trend.ratePerHour.toFixed(2)} %/h) l’esaurimento è previsto solo il{" "}
-              <strong>{formatDateTimeRome(trend.exhaustionAt)}</strong>: la finestra {winLabel} si ricaricherà
+              {baseLabel} (+{base.ratePerHour?.toFixed(2)} %/h) l’esaurimento è previsto solo il{" "}
+              <strong>{formatDateTimeRome(base.exhaustionAt)}</strong>: la finestra {winLabel} si ricaricherà
               alle <strong>{formatTimeRome(resetAt)}</strong>, prima di esaurirsi.
             </p>
           </div>
@@ -776,8 +855,8 @@ function ProjectionVerdict({
         <div>
           <p className="text-xs font-semibold text-zinc-300">Nessun esaurimento previsto al ritmo attuale</p>
           <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
-            {trend.ratePerHour > 0
-              ? `Il consumo è quasi nullo (+${trend.ratePerHour.toFixed(2)} %/h): la quota ${winLabel} durerà agevolmente fino al reset${resetAt ? ` delle ${formatTimeRome(resetAt)}` : ""}.`
+            {base.ratePerHour !== null && base.ratePerHour > 0
+              ? `Il consumo è quasi nullo (+${base.ratePerHour.toFixed(2)} %/h): la quota ${winLabel} durerà agevolmente fino al reset${resetAt ? ` delle ${formatTimeRome(resetAt)}` : ""}.`
               : `Quota stabile o in recupero (reset avvenuto): nessun rischio di esaurimento per la finestra ${winLabel}.`}
           </p>
         </div>
@@ -805,12 +884,15 @@ function fmtRate(r: number | null): string {
  */
 function PacePanel({
   trend,
+  sessionTrend = null,
   resetAt,
   remaining,
   win,
   intervalLabel = "5 ore",
 }: {
   trend: TrendStats;
+  /** I127 — ritmo della finestra in corso; quando presente è la BASE della pace. */
+  sessionTrend?: TrendStats | null;
   resetAt: number | null;
   remaining: number | null;
   win: "interval" | "weekly";
@@ -818,9 +900,12 @@ function PacePanel({
   intervalLabel?: string;
 }) {
   const winLabel = win === "interval" ? `di ${intervalLabel}` : "settimanale";
-  const pace = computePace(trend, resetAt);
+  /* I127 — stessa base del verdetto: sessione quando c'è, lungo periodo altrimenti. */
+  const base = sessionTrend ?? trend;
+  const baseLabel = sessionTrend ? "Al ritmo della finestra in corso" : "Al ritmo medio di lungo periodo";
+  const pace = computePace(base, resetAt);
 
-  if (trend.samples < 2 || pace.hoursToReset === null || pace.breakevenPace === null) {
+  if (base.samples < 2 || pace.hoursToReset === null || pace.breakevenPace === null) {
     return (
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 sm:col-span-3">
         <div className="flex items-start gap-2.5">
@@ -869,7 +954,7 @@ function PacePanel({
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-amber-200">Fermo tecnico prima del reset</p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-amber-200/70">
-              Al ritmo attuale la quota {winLabel} ({remaining?.toFixed(1)}%) si esaurirà PRIMA del reset
+              {baseLabel} la quota {winLabel} ({remaining?.toFixed(1)}%) si esaurirà PRIMA del reset
               previsto per le <strong>{formatTimeRome(resetAt)}</strong>: senza quota disponibile per circa{" "}
               <strong>{formatCountdown(pace.downtimeMs)}</strong>. Per azzerarla esattamente al reset il ritmo
               dovrebbe scendere a +{breakevenPace.toFixed(2)} %/h.
@@ -893,7 +978,7 @@ function PacePanel({
             <p className="mt-0.5 text-[11px] leading-relaxed text-violet-200/70">
               {pace.currentPace === null
                 ? "Nessun consumo osservato negli ultimi rilevamenti: alla fine della finestra"
-                : "Al ritmo attuale, alla fine della finestra"}{" "}
+                : `${baseLabel}, alla fine della finestra`}{" "}
               {winLabel} resterà circa il <strong>{wasted}%</strong> della quota, che il reset delle{" "}
               <strong>{formatTimeRome(resetAt)}</strong> azzererà senza che sia stata usata
               {pace.wastedForMs !== null

@@ -1,6 +1,7 @@
-# Audit implementazioni — 2026-10-20T10:10:13.344Z
+$ node scripts/verifiche/audit-implementazioni.mjs
+# Audit implementazioni — 2026-10-20T11:45:35.211Z
 
-- Verifiche totali: **645** · PASS: **645** · FAIL: **0**
+- Verifiche totali: **651** · PASS: **651** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -649,6 +650,14 @@
 | I126 | needsSetup gated su mounted: SSR e primo render mostrano lo skeleton — nessun flash della card di setup per gli utenti di ritorno con impostazioni salvate (src/app/page.tsx) | simbolo | PASS | — |
 | I126 | l'effetto connessione non chiama fetchData (e non apre il dialog via guard) senza demo né chiave: il primo fetch parte al salvataggio, quando connKey cambia (src/app/page.tsx) | simbolo | PASS | — |
 | I126 | test di componente dell'opt-in: default FALSE, switch spento, salvataggio senza chiave rispettato, opt-in esplicito funzionante, chiave trimmata (mock completo a livello di contratto — lezione bombe d'ordine) | file | PASS | — |
+| I127 | soglia di onestà statistica della strip Prevedibilità: sotto 7 cicli completati l'indice resta calcolato ma viene dichiarato fragile (σ dominata dai singoli valori + durate = limiti inferiori con campionamento sparso) (src/lib/cycles.ts) | simbolo | PASS | — |
+| I127 | la strip Prevedibilità mostra il caveat «campione ridotto (indice fragile)» quando n < soglia — onestà statistica sull'indice 26/100 osservato in produzione con 4 cicli (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I127 | ritmo della FINESTRA CORRENTE (blocco fisso UTC corrente per la 5h, settimana corrente da lunedì 00 UTC per la settimanale — stesso allineamento V8): la proiezione non usa più la sola media di lungo periodo che include le ore di inattività (+0.37 %/h di produzione mentre la sessione bruciava al 18-36 %/h) (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I127 | verdetto d'esaurimento e pace dichiarano SEMPRE la base della proiezione (sessione quando ci sono ≥2 rilevamenti nella finestra attiva, lungo periodo altrimenti) (src/components/history-chart.tsx) | simbolo | PASS | — |
+| I127 | il trend di sessione è calcolato memoizzato e passato a StatsPanel sia nella vista principale sia nel kiosk (src/app/page.tsx) | simbolo | PASS | — |
+| I127 | test della base di sessione: solo punti del blocco UTC corrente, null con <2 punti (i vecchi NON rientrano), confine inclusivo, settimanale da lunedì 00 UTC, consumo nullo, verdetto/pace con etichetta base, fallback dichiarato sul trend lungo | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (645 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (651 pass, 0 fail, 0 scoperte)
+
+Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-20T11-45-35.md

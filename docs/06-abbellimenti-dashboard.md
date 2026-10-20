@@ -77,6 +77,12 @@ UI: `MonitorHealth` nel pannello Diagnostica: lista episodi recenti, badge di st
 soglia. UI: striscia nei tab Cicli (`analysis-panel.tsx`): indice, σ, CV e lettura
 qualitativa («regolari» ≥ 70, «variabili» ≥ 40, «irregolari» sotto).
 
+**I127 — caveat «campione ridotto»**: l'indice è una σ su pochi campioni e le durate
+sono limiti inferiori (primo→ultimo rilevamento, campionamento sparso): con meno di
+`PREVEDIBILITA_CAMPIONE_SOGLIA` (7) cicli completati la strip aggiunge «campione ridotto
+(indice fragile)». Casi reali: in produzione con 4 cicli (11 min → 1h43) l'indice 26/100
+è corretto ma fragile — ora lo dichiara.
+
 ## 5.8 I64 — Oggi vs media
 `src/lib/cycles.ts`: `oggiVsMedia(history, win, settimane)` → `OggiVsMedia`: consumo di
 OGGI (Europe/Rome) contro la **media degli stessi weekday** delle ultime N settimane

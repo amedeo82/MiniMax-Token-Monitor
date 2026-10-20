@@ -86,6 +86,32 @@ describe("I63: prevedibilitaCicli", () => {
     expect(prevedibilitaCicli(detectCycles(serie, "interval"))).toBeNull();
     expect(prevedibilitaCicli([])).toBeNull();
   });
+
+  /* --- I127: caveat «campione ridotto» — onestà statistica sull'indice --- */
+
+  test("I127: campioneRidotto true con meno di 7 cicli completati", () => {
+    // serieCicli(): 3 cicli completati (2h ciascuno) + 1 in corso
+    const p = prevedibilitaCicli(detectCycles(serieCicli(), "interval"));
+    expect(p).not.toBeNull();
+    expect(p!.n).toBe(3);
+    expect(p!.campioneRidotto).toBe(true);
+  });
+
+  test("I127: campioneRidotto false con 7+ cicli completati", () => {
+    // 7 cicli completati da 2h (reset osservato: salto +75 verso 95) + in corso
+    const serie: HistoryPoint[] = [];
+    for (let i = 0; i < 7; i++) {
+      const base = LUN + 3 * i * H;
+      serie.push(mk(base, 95), mk(base + H, 60), mk(base + 2 * H, 20));
+    }
+    serie.push(mk(LUN + 21 * H, 96), mk(LUN + 22 * H, 88));
+    const p = prevedibilitaCicli(detectCycles(serie, "interval"));
+    expect(p).not.toBeNull();
+    expect(p!.n).toBe(7);
+    expect(p!.campioneRidotto).toBe(false);
+    // durate tutte identiche (2h) → indice perfetto
+    expect(p!.indice).toBe(100);
+  });
 });
 
 describe("I61: distribuzioneResiduo", () => {

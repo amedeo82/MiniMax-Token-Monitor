@@ -577,6 +577,17 @@ export function sprecoPerCiclo(cycles: Cycle[]): WasteStats | null {
 /* I63 — Prevedibilità dei cicli                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * I127 — Soglia di cicli completati sotto cui l'indice di regolarità è
+ * FRAGILE: con meno di 7 durate la σ e il CV sono dominati dai singoli
+ * valori (un solo burst anomalo sposta l'indice di decine di punti), e con
+ * campionamento sparso le durate sono limiti inferiori che dipendono anche
+ * dalla densità di rilevamento, non solo dal ritmo reale d'uso. La strip
+ * «Prevedibilità» mostra il caveat «campione ridotto» finché n è sotto
+ * questa soglia — onestà statistica, non è un blocco del calcolo.
+ */
+export const PREVEDIBILITA_CAMPIONE_SOGLIA = 7;
+
 /** Indice di regolarità dei cicli (I63). */
 export interface Prevedibilita {
   /** Cicli completati analizzati (≥ 3). */
@@ -589,6 +600,12 @@ export interface Prevedibilita {
   cv: number;
   /** Indice di regolarità 0–100: 100 × (1 − min(1, cv)). */
   indice: number;
+  /**
+   * I127 — true con meno di PREVEDIBILITA_CAMPIONE_SOGLIA cicli completati:
+   * l'indice è calcolato ma statisticamente fragile (σ su pochi campioni +
+   * durate = limiti inferiori col campionamento sparso).
+   */
+  campioneRidotto: boolean;
 }
 
 /**
@@ -611,6 +628,7 @@ export function prevedibilitaCicli(cycles: Cycle[]): Prevedibilita | null {
     sigmaMs,
     cv,
     indice: Math.round(Math.max(0, Math.min(100, 100 * (1 - Math.min(1, cv))))),
+    campioneRidotto: durate.length < PREVEDIBILITA_CAMPIONE_SOGLIA,
   };
 }
 

@@ -561,6 +561,12 @@ function PrevedibilitaStrip({ prev }: { prev: Prevedibilita | null }) {
       </p>
       <p className="text-[11px] text-zinc-500">
         durata media {formatDuration(prev.mediaMs)} · σ {formatDuration(prev.sigmaMs)} · CV {(prev.cv * 100).toFixed(0)}% · {prev.n} cicli
+        {/* I127 — onestà statistica: con pochi cicli completati la σ è dominata
+            dai singoli valori e le durate sono limiti inferiori (campionamento
+            sparso): l'indice resta calcolato ma va letto come indicativo. */}
+        {prev.campioneRidotto ? (
+          <span className="text-amber-300/90"> · campione ridotto (indice fragile)</span>
+        ) : null}
       </p>
     </div>
   );

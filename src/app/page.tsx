@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { ModelCard, MainWindows, windowShortLabel } from "@/components/quota-cards";
-import { HistoryChart, StatsPanel, computeTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
+import { HistoryChart, StatsPanel, computeTrend, computeSessionTrend, HistoryPoint, TrendBadge } from "@/components/history-chart";
 import { SettingsDialog, DashboardSettings, DEFAULT_SETTINGS } from "@/components/settings-dialog";
 import { RawJsonPanel, TechInfo } from "@/components/tech-panels";
 import { RegionAltPanel } from "@/components/region-alt-panel";
@@ -988,6 +988,14 @@ export default function DashboardPage() {
   /* I82 — etichetta breve della finestra «interval» del pivot («5 ore», «24 ore»…). */
   const intervalLabel = React.useMemo(() => windowShortLabel(pivotModel?.interval), [pivotModel]);
   const trend = React.useMemo(() => computeTrend(filteredHistory, chartWindow), [filteredHistory, chartWindow]);
+  /* I127 — ritmo della finestra corrente (sessione): la proiezione del verdetto,
+     della pace e della card «Esaurimento previsto» usa QUESTA base quando c'è
+     (≥2 rilevamenti nella finestra attiva), altrimenti ricade sul trend lungo;
+     l'etichetta della base è sempre dichiarata nell'interfaccia. */
+  const sessionTrend = React.useMemo(
+    () => computeSessionTrend(filteredHistory, chartWindow),
+    [filteredHistory, chartWindow],
+  );
   /* I72 — proiezione EWMA (A/B): segue l'intervallo selezionato come il trend lineare */
   const ewma = React.useMemo(() => ewmaProjection(filteredHistory, chartWindow), [filteredHistory, chartWindow]);
   const serverTime = React.useMemo(() => (snapshot ? inferServerTime(snapshot.models) : null), [snapshot]);
@@ -1389,6 +1397,7 @@ export default function DashboardPage() {
                     <SectionBoundary title="Statistiche di proiezione" fallbackHeight="h-40">
                       <StatsPanel
                         trend={trend}
+                        sessionTrend={sessionTrend}
                         win={chartWindow}
                         resetAt={selectedWindowEnd}
                         remaining={selectedWindowRemaining}
@@ -1448,6 +1457,7 @@ export default function DashboardPage() {
               <SectionBoundary title="Statistiche di proiezione" fallbackHeight="h-40">
                 <StatsPanel
                   trend={trend}
+                  sessionTrend={sessionTrend}
                   win={chartWindow}
                   resetAt={selectedWindowEnd}
                   remaining={selectedWindowRemaining}
