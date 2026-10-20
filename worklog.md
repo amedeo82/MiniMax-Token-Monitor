@@ -1702,3 +1702,22 @@ Work Log:
 Stage Summary:
 - I126 chiude lato CLIENT la storia dei punti demo: i contesti browser senza impostazioni non nascono più in demo (default FALSE), non replicano nulla e mostrano la scheda di configurazione; la demo richiede una scelta esplicita e il salvataggio senza chiave non la ri-attiva più di nascosto. Con ADMIN_TOKEN attivo (401 sui contesti anonimi) e la pulizia I122/I124, il ciclo causa→sintomo→presidio è completo su tutti i piani
 - Nessuna azione server richiesta (nessuno schema toccato); dopo il deploy: nessuna azione necessaria per l'utente — il comportamento al primo avvio cambia da solo
+
+---
+Task ID: 76
+Agent: main (Super Z)
+Task: Utente incolla l'output della sezione «Prevedibilità» (indice 26/100, 4 cicli, tabella 5 righe) — verifica di correttezza e fedeltà al modello MiniMax; riconciliazione post-I126
+
+Work Log:
+- RICONCILIAZIONE: la I126 era GIÀ STATA CONSEGNATA da una sessione parallela (quarto episodio): HEAD locale 84a38aa = origin/main (sincronizzate, nessun ahead/behind), commit «I126 — demo opt-in» con protocollo completo registrato nel Task 75. Nessuna duplicazione: questa sessione NON ha toccato codice
+- VERIFICHE POST-CONSEGNA I126 (chiusura filiera): CI SUCCESS su 84a38aa (scripts/verifiche/ci-status.sh: typecheck·lint·test·audit completed/success); deploy Vercel attivo — footer di produzione «2026-10-20 · I126» (curl + rg sul DOM)
+- VERIFICA DATI PRODUZIONE: GET /api/history → 43 punti, TUTTI source=api (0 demo, 0 senza marca — il presidio I122/I124/I126 tiene); il primo punto (17/10 19:54 Roma, 81%) coincide con il ciclo più vecchio della tabella incollata dall'utente
+- VERIFICA END-TO-END DELLA SEZIONE «PREVEDIBILITÀ» (richiesta implicita del paste): script scripts/verifiche/verifica-prevedibilita-i127.mjs (read-only) replica fedele di detectCyclesFinestre (blocchi fissi UTC {00,05,10,15,20}, ultimo blocco 4h reali), buildCycle (consumo = drawdown massimo start−min, ritmo = %/h) e prevedibilitaCicli (solo completati, σ popolazione, CV=σ/μ, indice=round(100·(1−min(1,cv)))) sui 43 punti reali → TUTTE le cifre dell'utente RIPRODOTTE AL DECIMALE: #1 17/10 11 min −13.0% (81→68) 72.51 %/h · #2 18/10 27 min −35.0% (35→0) 78.29 %/h · #3 19/10 47 min −21.0% (38→17) 26.86 %/h · #4 19/10 1h43 −22.0% (96→74) 12.79 %/h · strip: n=4 · media 47 min · σ 35 min · CV 74% · indice 26/100 «Cicli irregolari» → NESSUN BUG
+- Il ciclo in corso risultava 2 min/−1.0% (57→56) 36.79 %/h allo screenshot (13:14) e 7 min/−2.0% (57→55) 18.08 %/h alla verifica (~30 min dopo): solo EVOLUZIONE TEMPORALE del campionamento, coerente
+- ESITO ANALISI presentato all'utente: l'indice 26 misura la regolarità delle DURATE delle sessioni d'uso OSSERVATE (11 min→1h43, burst molto diversi), NON la prevedibilità dei reset (fissi per costruzione — blocchi UTC); durate/ritmi sono limiti inferiori onesti (primo→ultimo rilevamento, campionamento sparso); Fine = ultimo rilevamento, Reset finestra = confine ufficiale dedotto (semantica I124, già documentata nella nota sotto la tabella)
+- Debolezza onesta segnalata (non bloccante): con n=4 l'indice è statisticamente fragile e la strip non avverte del campione ridotto → PROPOSTA I127 (micro): caveat «campione ridotto» nella strip quando n è sotto soglia; in attesa di autorizzazione utente, nessuna modifica al codice
+
+Stage Summary:
+- La sezione Prevedibilità è CORRETTA e riproducibile al centesimo dai dati reali (verifica end-to-end su produzione); nessun difetto da correggere, nessuna consegna necessaria in questo task
+- Filiera I126 chiusa: CI SUCCESS + deploy attivo + 43 punti tutti api in produzione
+- Script di verifica persistito: scripts/verifiche/verifica-prevedibilita-i127.mjs (riusabile per future verifiche dei cicli)
