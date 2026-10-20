@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-20T12:26:34.322Z
+# Audit implementazioni — 2026-10-20T12:42:35.877Z
 
-- Verifiche totali: **655** · PASS: **655** · FAIL: **0**
+- Verifiche totali: **659** · PASS: **659** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -659,6 +659,10 @@
 | I128 | la strip Prevedibilità mostra il percorso dell'indice (chip n→indice, ultimi 8 punti, colori delle soglie 70/40) con ultimo Δ colorato e salti max quando ci sono ≥2 punti — con un solo punto (n=3) non c'è ancora una storia e la riga non appare (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I128 | l'evoluzione è calcolata memoizzata nella sezione cicli e passata alla strip (wiring I96) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I128 | test dell'evoluzione: null sotto 3 completati, punto unico con n=3 (nessun delta, salto 0), ricalcolo cumulativo coerente con prevedibilitaCicli (durati 2,2,2,7h → 100→33, Δ −67), percorso su 5 completati con ultimo Δ positivo e salto max preservato | file | PASS | — |
+| I129 | media cumulativa generica per k = 1..n (una media esiste dal primo ciclo, a differenza dell'indice I128 che parte da 3) con delta, ultimoDelta e maxSalto: la stessa lettura d'evoluzione di I128 applicata a ritmo medio e spreco medio — i cicli recenti stanno ancora spostando le medie? (src/lib/cycles.ts) | simbolo | PASS | — |
+| I129 | riga «n → media» (ultimi 8 punti, «…» se troncata) con ultimo Δ e salti max NEUTRI (grigio): la direzione del Δ di una media non ha valenza buona/cattiva univoca — il colore dichiarerebbe un giudizio che non è del codice (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I129 | wiring: evoluzioneMedia sui ratePerHour dei cicli completati (null con consumo nullo escluso), memoizzata, riga sopra lo spreco/per-ciclo; sotto la griglia spreco la riga «Evoluzione dello spreco medio» (residuo al reset) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I129 | test evoluzioneMedia: null su vuoto, punto unico, medie cumulative sui ritmi reali di serieCicli (35/46/24 → 35, 40,5, 35) con Δ e salto max, spreco endValue (20/3/44 → 20, 11,5, 22,33…), salto max = max|Δ| | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (655 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (659 pass, 0 fail, 0 scoperte)

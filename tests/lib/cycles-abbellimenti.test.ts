@@ -9,6 +9,7 @@ import {
   consumoGiornaliero,
   detectCycles,
   distribuzioneResiduo,
+  evoluzioneMedia,
   evoluzionePrevedibilita,
   oggiVsMedia,
   prevedibilitaCicli,
@@ -182,6 +183,58 @@ describe("I128: evoluzionePrevedibilita", () => {
     expect(evo!.serie[2].delta).toBe(8); // 41 − 33
     expect(evo!.ultimoDelta).toBe(8);
     expect(evo!.maxSalto).toBe(67); // max(|−67|, |8|)
+  });
+});
+
+describe("I129: evoluzioneMedia", () => {
+  test("null su array vuoto; punto unico con un valore (delta null, salto 0)", () => {
+    expect(evoluzioneMedia([])).toBeNull();
+    const evo = evoluzioneMedia([35]);
+    expect(evo).not.toBeNull();
+    expect(evo!.serie).toHaveLength(1);
+    expect(evo!.serie[0].n).toBe(1);
+    expect(evo!.serie[0].media).toBe(35);
+    expect(evo!.serie[0].delta).toBeNull();
+    expect(evo!.ultimoDelta).toBeNull();
+    expect(evo!.maxSalto).toBe(0);
+  });
+
+  test("medie cumulative corrette con ultimo Δ e salto max (ritmi di serieCicli)", () => {
+    // serieCicli(): 3 cicli da 2h con consumi 70, 92, 48 → ritmi 35, 46, 24 %/h
+    const cicli = detectCycles(serieCicli(), "interval").filter((c) => !c.ongoing);
+    const ritmi = cicli.map((c) => c.ratePerHour as number);
+    expect(ritmi).toEqual([35, 46, 24]);
+    const evo = evoluzioneMedia(ritmi);
+    expect(evo).not.toBeNull();
+    // medie cumulative: 35 · (35+46)/2 = 40,5 · (35+46+24)/3 = 35
+    expect(evo!.serie.map((p) => p.media)).toEqual([35, 40.5, 35]);
+    expect(evo!.serie.map((p) => p.n)).toEqual([1, 2, 3]);
+    expect(evo!.serie[0].delta).toBeNull();
+    expect(evo!.serie[1].delta).toBeCloseTo(5.5, 9);
+    expect(evo!.serie[2].delta).toBeCloseTo(-5.5, 9);
+    expect(evo!.ultimoDelta).toBeCloseTo(-5.5, 9);
+    expect(evo!.maxSalto).toBeCloseTo(5.5, 9);
+  });
+
+  test("I129: evoluzione dello spreco (residuo al reset) sui cicli reali della serie", () => {
+    // serieCicli(): spreci endValue = [20, 3, 44] → medie cumulative 20, 11,5, 22,33…
+    const cicli = detectCycles(serieCicli(), "interval").filter((c) => !c.ongoing);
+    const evo = evoluzioneMedia(cicli.map((c) => Math.max(0, c.endValue)));
+    expect(evo).not.toBeNull();
+    expect(evo!.serie.map((p) => p.media)).toEqual([20, 11.5, 67 / 3]);
+    expect(evo!.serie[1].delta).toBeCloseTo(-8.5, 9);
+    expect(evo!.serie[2].delta).toBeCloseTo(67 / 3 - 11.5, 9);
+    expect(evo!.ultimoDelta).toBeCloseTo(67 / 3 - 11.5, 9);
+    expect(evo!.maxSalto).toBeCloseTo(Math.max(8.5, 67 / 3 - 11.5), 9);
+  });
+
+  test("I129: salto max il più grande dei |Δ| (valori arbitrari)", () => {
+    // valori: [10, 30, 0] → medie [10, 20, 13,33…] → Δ [null, +10, −6,67] → salto max 10
+    const evo = evoluzioneMedia([10, 30, 0]);
+    expect(evo).not.toBeNull();
+    expect(evo!.serie.map((p) => p.media)).toEqual([10, 20, 40 / 3]);
+    expect(evo!.ultimoDelta).toBeCloseTo(-20 / 3, 9);
+    expect(evo!.maxSalto).toBeCloseTo(10, 9);
   });
 });
 

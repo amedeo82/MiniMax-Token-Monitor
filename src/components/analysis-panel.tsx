@@ -39,6 +39,7 @@ import {
   sprecoPerCiclo,
   prevedibilitaCicli,
   evoluzionePrevedibilita,
+  evoluzioneMedia,
   consumoGiornaliero,
   distribuzioneResiduo,
   oggiVsMedia,
@@ -48,6 +49,7 @@ import {
   type WasteStats,
   type Prevedibilita,
   type PrevedibilitaEvoluzione,
+  type EvoluzioneMedia,
   type CalendarGrid,
   type Distribuzione,
   type OggiVsMedia,
@@ -326,6 +328,16 @@ function CycleSection({
   const prev = React.useMemo(() => prevedibilitaCicli(cycles), [cycles]);
   // I128 — come si è mosso l'indice al crescere del campione (contesto del caveat I127).
   const evo = React.useMemo(() => evoluzionePrevedibilita(cycles), [cycles]);
+  // I129 — stessa lettura d'evoluzione per ritmo medio e spreco medio (sui completati,
+  // in ordine cronologico; ratePerHour null con consumo nullo è escluso dal ritmo).
+  const evoRitmo = React.useMemo(
+    () => evoluzioneMedia(cycles.filter((c) => !c.ongoing).map((c) => c.ratePerHour).filter((r): r is number => r !== null)),
+    [cycles],
+  );
+  const evoSpreco = React.useMemo(
+    () => evoluzioneMedia(cycles.filter((c) => !c.ongoing).map((c) => Math.max(0, c.endValue))),
+    [cycles],
+  );
 
   return (
     <div className="space-y-3">
@@ -361,9 +373,27 @@ function CycleSection({
         </div>
       </div>
 
+      {/* I129 — evoluzione del ritmo medio: i cicli recenti stanno ancora spostando la media? */}
+      {evoRitmo && evoRitmo.serie.length >= 2 ? (
+        <EvoluzioneMediaLine
+          etichetta="Evoluzione del ritmo medio"
+          evo={evoRitmo}
+          format={(m) => `${m.toFixed(2)} %/h`}
+        />
+      ) : null}
+
       {/* I57 — spreco per ciclo + I63 — prevedibilità + I128 — evoluzione dell'indice */}
       <CycleWaste waste={waste} />
       <PrevedibilitaStrip prev={prev} evo={evo} />
+
+      {/* I129 — evoluzione dello spreco medio (residuo al reset) */}
+      {evoSpreco && evoSpreco.serie.length >= 2 ? (
+        <EvoluzioneMediaLine
+          etichetta="Evoluzione dello spreco medio"
+          evo={evoSpreco}
+          format={(m) => `${m.toFixed(1)}%`}
+        />
+      ) : null}
 
       {visible.length === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-white/10 text-xs text-zinc-500">
@@ -622,6 +652,54 @@ function PrevedibilitaEvoLine({ evo }: { evo: PrevedibilitaEvoluzione }) {
         ultimo Δ {ultimo.delta === null ? "—" : ultimo.delta > 0 ? `+${ultimo.delta}` : ultimo.delta}
       </span>
       <span className="text-zinc-600"> · salti max {evo.maxSalto}</span>
+    </p>
+  );
+}
+
+/**
+ * I129 — riga dell'evoluzione di una media cumulativa (ritmo medio, spreco
+ * medio): chip «n → media» (ultimi 8 punti, «…» se troncata) + ultimo Δ +
+ * salto max, stesso linguaggio visivo di PrevedibilitaEvoLine (I128) ma con
+ * delta NEUTRO (grigio): a differenza dell'indice, la direzione del Δ di una
+ * media (ritmo più veloce/lento, spreco maggiore/minore) non ha una valenza
+ * buona/cattiva univoca — il colore qui dichiarerebbe un giudizio che non è
+ * del codice. `format` decide l'unità (%/h, %). Visibile con ≥2 punti (il
+ * gate è del chiamante).
+ */
+function EvoluzioneMediaLine({
+  etichetta,
+  evo,
+  format,
+}: {
+  etichetta: string;
+  evo: EvoluzioneMedia;
+  format: (media: number) => string;
+}) {
+  const visibili = evo.serie.slice(-8);
+  const troncata = evo.serie.length > visibili.length;
+  const ultimo = visibili[visibili.length - 1];
+  const segno = ultimo.delta === null ? "" : ultimo.delta > 0 ? "+" : "";
+  return (
+    <p className="text-[11px] text-zinc-500" aria-label={`${etichetta} al crescere del campione`}>
+      <span className="text-zinc-400">{etichetta}: </span>
+      {troncata ? <span className="text-zinc-600">… </span> : null}
+      {visibili.map((p, i) => (
+        <span key={p.n}>
+          {i > 0 ? <span className="text-zinc-600"> → </span> : null}
+          <span className="font-mono tabular-nums">
+            <span className="text-zinc-600">{p.n}→</span>
+            <span className="text-zinc-300">{format(p.media)}</span>
+          </span>
+        </span>
+      ))}
+      <span className="text-zinc-600">
+        {" "}
+        ·{" "}
+      </span>
+      <span className="text-zinc-400">
+        ultimo Δ {ultimo.delta === null ? "—" : `${segno}${format(ultimo.delta)}`}
+      </span>
+      <span className="text-zinc-600"> · salti max {format(evo.maxSalto)}</span>
     </p>
   );
 }

@@ -94,6 +94,18 @@ soglie qualitative, ultimo Δ colorato e «salti max»; visibile solo con ≥2 p
 cicli arrivati di recente. Nella pratica: con 4 cicli (100→26 cumulativo per durate 11
 min…1h43) la riga rende immediato il perché del «campione ridotto».
 
+**I129 — evoluzione di ritmo medio e spreco medio**: la stessa lettura applicata alle
+medie per ciclo. `evoluzioneMedia(values)` (cycles.ts) è una media cumulativa GENERICA
+per k = 1..n (una media esiste dal primo ciclo, non serve σ) con `delta`, `ultimoDelta`
+e `maxSalto`; il chiamante sceglie la metrica e filtra i null prima (il `ratePerHour`
+è null con consumo nullo). Due righe in `CycleSection` con `EvoluzioneMediaLine`: chip
+«n → media» (ultimi 8 punti) + ultimo Δ + «salti max» in colore NEUTRO — la direzione
+del Δ di una media non ha valenza buona/cattiva univoca (a differenza dell'indice).
+«Evoluzione del ritmo medio» sopra la griglia spreco (unità %/h), «Evoluzione dello
+spreco medio» sotto la strip Prevedibilità (residuo al reset, come I57); visibili con
+≥2 cicli completati. Caso di produzione (20/10): ritmi 72,51 → 78,29 → 26,86 → 12,79
+%/h → medie cumulativa 72,51 → 75,40 → 59,22 → 47,61: il movimento è grande e visibile.
+
 ## 5.8 I64 — Oggi vs media
 `src/lib/cycles.ts`: `oggiVsMedia(history, win, settimane)` → `OggiVsMedia`: consumo di
 OGGI (Europe/Rome) contro la **media degli stessi weekday** delle ultime N settimane

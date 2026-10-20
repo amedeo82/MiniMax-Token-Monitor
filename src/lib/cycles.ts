@@ -697,6 +697,61 @@ export function evoluzionePrevedibilita(cycles: Cycle[]): PrevedibilitaEvoluzion
 }
 
 /* ------------------------------------------------------------------ */
+/* I129 — Evoluzione delle medie per ciclo (ritmo, spreco)             */
+/* ------------------------------------------------------------------ */
+
+/** Un punto dell'evoluzione di una media cumulativa (I129). */
+export interface PuntoEvoluzioneMedia {
+  /** Numero di valori usati per questo punto (1, 2, … n). */
+  n: number;
+  /** Media dei primi `n` valori. */
+  media: number;
+  /** Differenza dalla media del punto precedente; `null` per il primo (n = 1). */
+  delta: number | null;
+}
+
+/** Evoluzione di una media cumulativa al crescere del campione (I129). */
+export interface EvoluzioneMedia {
+  /** Serie cumulativa in ordine cronologico: k = 1..n. */
+  serie: PuntoEvoluzioneMedia[];
+  /** Variazione della media all'ultimo valore arrivato; `null` con un solo punto. */
+  ultimoDelta: number | null;
+  /** Massimo |Δ| tra punti consecutivi (ampiezza dei movimenti della media). */
+  maxSalto: number;
+}
+
+/**
+ * I129 — COME si è mossa la MEDIA di una metrica man mano che i cicli
+ * arrivavano: per ogni k da 1 a n la media dei primi k valori, con la
+ * differenza dal punto precedente, l'ultimo Δ e il salto massimo. A differenza
+ * dell'indice Prevedibilità (I128, k parte da 3 perché serve σ) qui k parte
+ * da 1: una media esiste dal primo ciclo. Stessa lettura operativa di I128:
+ * Δ piccoli = la media si sta stabilizzando, salti ampi = i cicli recenti
+ * stanno ancora spostandola. Generica su `number[]`: il chiamante decide la
+ * metrica (ritmo %/h dei cicli completati, spreco = residuo al reset, …) e
+ * filtrare i null PRIMA (es. `ratePerHour` è null con consumo nullo).
+ * `null` su array vuoto.
+ */
+export function evoluzioneMedia(values: number[]): EvoluzioneMedia | null {
+  if (values.length === 0) return null;
+  const serie: PuntoEvoluzioneMedia[] = [];
+  let somma = 0;
+  for (let k = 0; k < values.length; k++) {
+    somma += values[k];
+    serie.push({ n: k + 1, media: somma / (k + 1), delta: null });
+  }
+  for (let i = serie.length - 1; i >= 1; i--) {
+    serie[i].delta = serie[i].media - serie[i - 1].media;
+  }
+  const salti = serie.slice(1).map((s) => Math.abs(s.delta ?? 0));
+  return {
+    serie,
+    ultimoDelta: serie.length >= 2 ? (serie[serie.length - 1].delta ?? null) : null,
+    maxSalto: salti.length > 0 ? Math.max(...salti) : 0,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* I58 — Calendario del consumo per giorno di calendario               */
 /* ------------------------------------------------------------------ */
 
