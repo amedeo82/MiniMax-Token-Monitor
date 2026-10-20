@@ -1792,3 +1792,21 @@ Work Log:
 Stage Summary:
 - I129 completa la famiglia «evoluzione» (I128 indice + I129 medie): tutte le tre statistiche principali dei cicli — indice di regolarità, ritmo medio, spreco medio — mostrano ora COME si sono mosse al crescere del campione, così l'utente giudica la stabilità delle letture invece di fidarsi di numeri a campione giovane; in produzione (n=4) le righe saranno subito visibili con percorsi ancora molto mossi (ritmo: 72,51→47,61 %/h cumulativo)
 - Nessuna azione server richiesta (nessuno schema toccato); dopo il deploy le due righe appaiono da sole appena ci sono ≥2 cicli completati
+
+---
+Task ID: 81
+Agent: main (Super Z)
+Task: «sì implementa» + «si procedi» (esecuzione I129 richiesta a chiusura I128) — riconciliazione: I129 GIÀ CONSEGNATA da sessione parallela (sesto episodio, gemello di I126/task 76 e I127/task 78); chiusura filiera
+
+Work Log:
+- RICONCILIAZIONE: la I129 era GIÀ STATA CONSEGNATA da una sessione parallela (sesto episodio): HEAD locale 975f130 = origin/main (rev-list 0/0), commit 975f130 «I129 — evoluzione di ritmo medio e spreco medio per ciclo» con protocollo completo già eseguito (tsc 0, lint 0, suite 625/625 — 2264 asserzioni, audit 659/659 PASS, build VERDE) e worklog Task 80 già registrato. version.ts «2026-10-20 · I129». Nessuna duplicazione: questa sessione NON ha toccato codice
+- IGIENE WORKING TREE: 17 file risultavano modificati (docs/11, scripts, src/lib/admin-token.ts, storage-chiavi.ts, test vari) ma il diff era SOLO mode change 644→755 (0 insertion, 0 deletion) — rumore di permessi, non lavoro parallelo; ripristinati con git checkout -- (working tree di nuovo pulito)
+- COERENZA CON LA RICHIESTA: la proposta autorizzata dall'utente («la stessa lettura d'evoluzione per il ritmo medio e lo spreco per ciclo», formulata a chiusura I128) è nel commit per intero — evoluzioneMedia generica (media cumulativa per k=1..n, delta/ultimoDelta/maxSalto, null filtrato PRIMA dal chiamante perché ratePerHour è null con consumo nullo), EvoluzioneMediaLine con Δ NEUTRO (la direzione del Δ di una media non ha valenza buona/cattiva univoca), due righe in CycleSection («Evoluzione del ritmo medio» + «Evoluzione dello spreco medio») con gate ≥2 cicli completati, +4 test I129, +4 check audit I129, docs complete (04 §3+§8, 06 §5.7, README badge/contatori/sezioni)
+- PROTOCOLLO RIVERIFICATO LOCALMENTE (exit REALI di questa sessione): tsc 0, lint 0, suite 625/625 (2264 asserzioni), bun run audit 659/659 PASS 0 scoperte («Verifiche totali: 659 · PASS: 659 · FAIL: 0»), bun audit 1 vulnerabilità attesa (braces dev-only via eslint-config-next›@next/eslint-plugin-next›fast-glob›micromatch›braces — produzione a ZERO)
+- CHIUSURA FILIERA: CI SUCCESS su 975f130 (scripts/verifiche/ci-status.sh: typecheck·lint·test·audit completed/success); deploy Vercel attivo — footer di produzione «2026-10-20 · I129» su https://minimax-token-monitor.vercel.app (curl + grep sul DOM server-rendered; NOTA: il vecchio dominio mini-max-token-monitor.vercel.app ora risponde 404 DEPLOYMENT_NOT_FOUND — il riferimento corretto è senza il primo trattino, come già nel README e nella verifica I127)
+- VERIFICA DATI PRODUZIONE: GET /api/history → 56 punti, TUTTI source=api (0 demo, 0 senza marca; erano 51 al check I127), ultimo punto interval 40%, weekly 77%; campione salvato in scripts/verifiche/history-i129-check.json
+
+Stage Summary:
+- I129 è in produzione e completa: la famiglia «evoluzione» è chiusa (I128 indice + I129 medie) e le due righe «Evoluzione del ritmo medio» / «Evoluzione dello spreco medio» appaiono da sole con ≥2 cicli completati (in produzione n=4: subito visibili)
+- Dominio di produzione aggiornato nei riferimenti operativi: minimax-token-monitor.vercel.app (il vecchio mini-max-token-monitor... è DEPLOYMENT_NOT_FOUND)
+- Nessuna azione server richiesta (nessuno schema toccato); nessun residuo di lavoro: il prossimo item sarà I130 su nuova autorizzazione
