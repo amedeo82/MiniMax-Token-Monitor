@@ -83,6 +83,17 @@ sono limiti inferiori (primo→ultimo rilevamento, campionamento sparso): con me
 (indice fragile)». Casi reali: in produzione con 4 cicli (11 min → 1h43) l'indice 26/100
 è corretto ma fragile — ora lo dichiara.
 
+**I128 — evoluzione dell'indice**: il caveat dichiara la fragilità, l'evoluzione la
+MOSTRA. `evoluzionePrevedibilita(cycles)` (cycles.ts) ricalcola l'indice con la stessa
+formula di `prevedibilitaCicli` sui primi k cicli completati, per ogni k = 3..n (serie
+cumulativa), con la differenza dal punto precedente (`delta`), l'`ultimoDelta` e il
+`maxSalto` (massimo |Δ| tra punti consecutivi); `null` sotto 3 cicli. La strip aggiunge
+la riga «Evoluzione dell'indice»: chip «n → indice» (ultimi 8 punti) con i colori delle
+soglie qualitative, ultimo Δ colorato e «salti max»; visibile solo con ≥2 punti. Lettura:
+Δ piccoli = l'indice si sta stabilizzando; salti ampi = la lettura è ancora dominata dai
+cicli arrivati di recente. Nella pratica: con 4 cicli (100→26 cumulativo per durate 11
+min…1h43) la riga rende immediato il perché del «campione ridotto».
+
 ## 5.8 I64 — Oggi vs media
 `src/lib/cycles.ts`: `oggiVsMedia(history, win, settimane)` → `OggiVsMedia`: consumo di
 OGGI (Europe/Rome) contro la **media degli stessi weekday** delle ultime N settimane

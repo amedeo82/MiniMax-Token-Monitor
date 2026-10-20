@@ -1,7 +1,6 @@
-$ node scripts/verifiche/audit-implementazioni.mjs
-# Audit implementazioni — 2026-10-20T11:45:35.211Z
+# Audit implementazioni — 2026-10-20T12:26:34.322Z
 
-- Verifiche totali: **651** · PASS: **651** · FAIL: **0**
+- Verifiche totali: **655** · PASS: **655** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -656,8 +655,10 @@ $ node scripts/verifiche/audit-implementazioni.mjs
 | I127 | verdetto d'esaurimento e pace dichiarano SEMPRE la base della proiezione (sessione quando ci sono ≥2 rilevamenti nella finestra attiva, lungo periodo altrimenti) (src/components/history-chart.tsx) | simbolo | PASS | — |
 | I127 | il trend di sessione è calcolato memoizzato e passato a StatsPanel sia nella vista principale sia nel kiosk (src/app/page.tsx) | simbolo | PASS | — |
 | I127 | test della base di sessione: solo punti del blocco UTC corrente, null con <2 punti (i vecchi NON rientrano), confine inclusivo, settimanale da lunedì 00 UTC, consumo nullo, verdetto/pace con etichetta base, fallback dichiarato sul trend lungo | file | PASS | — |
+| I128 | serie cumulativa dell'indice di regolarità (k = 3..n cicli completati, ricalcolo con la STESSA formula di prevedibilitaCicli) con ultimo Δ e salto massimo: dà il CONTESTO del caveat «campione ridotto» (I127) — non basta dichiarare la fragilità statistica (indice 26 con 4 cicli in produzione, task 76), va mostrata come si è mossa la lettura al crescere del campione (src/lib/cycles.ts) | simbolo | PASS | — |
+| I128 | la strip Prevedibilità mostra il percorso dell'indice (chip n→indice, ultimi 8 punti, colori delle soglie 70/40) con ultimo Δ colorato e salti max quando ci sono ≥2 punti — con un solo punto (n=3) non c'è ancora una storia e la riga non appare (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I128 | l'evoluzione è calcolata memoizzata nella sezione cicli e passata alla strip (wiring I96) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I128 | test dell'evoluzione: null sotto 3 completati, punto unico con n=3 (nessun delta, salto 0), ricalcolo cumulativo coerente con prevedibilitaCicli (durati 2,2,2,7h → 100→33, Δ −67), percorso su 5 completati con ultimo Δ positivo e salto max preservato | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (651 pass, 0 fail, 0 scoperte)
-
-Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-20T11-45-35.md
+Verdetto: **PASS** (655 pass, 0 fail, 0 scoperte)

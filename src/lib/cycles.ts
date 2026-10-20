@@ -633,6 +633,70 @@ export function prevedibilitaCicli(cycles: Cycle[]): Prevedibilita | null {
 }
 
 /* ------------------------------------------------------------------ */
+/* I128 — Evoluzione dell'indice Prevedibilità                         */
+/* ------------------------------------------------------------------ */
+
+/** Un punto dell'evoluzione dell'indice (I128): l'indice ricalcolato cumulativamente. */
+export interface PuntoEvoluzione {
+  /** Numero di cicli completati usati per questo punto (3, 4, … n). */
+  n: number;
+  /** Indice di regolarità ricalcolato sui primi `n` cicli completati. */
+  indice: number;
+  /** Coefficiente di variazione corrispondente (σ/μ). */
+  cv: number;
+  /**
+   * Differenza dell'indice rispetto al punto precedente (n−1); `null` per il
+   * primo punto (n = 3, nessun confronto possibile).
+   */
+  delta: number | null;
+}
+
+/** Evoluzione dell'indice di regolarità al crescere del campione (I128). */
+export interface PrevedibilitaEvoluzione {
+  /** Serie cumulativa in ordine cronologico: k = 3..n cicli completati. */
+  serie: PuntoEvoluzione[];
+  /**
+   * Variazione dell'indice all'ultimo ciclo arrivato (ultimo Δ); `null` con
+   * un solo punto (n = 3: l'indice non ha ancora una storia).
+   */
+  ultimoDelta: number | null;
+  /** Massimo |Δ| tra punti consecutivi (ampiezza dei salti della lettura). */
+  maxSalto: number;
+}
+
+/**
+ * I128 — COME si è mosso l'indice di regolarità man mano che il campione
+ * cresceva: per ogni k da 3 a n ricalcola `prevedibilitaCicli` sui PRIMI k
+ * cicli completati (stessi parametri, stessa formula) e registra indice, CV
+ * e differenza dal punto precedente. Dà il CONTESTO del caveat «campione
+ * ridotto» (I127): se gli ultimi Δ sono piccoli l'indice si sta stabilizzando,
+ * se i salti sono ampi la lettura corrente è ancora dominata dai cicli
+ * arrivati di recente. Completa la risposta alla fragilità statistica
+ * osservata in produzione (indice 26 con 4 cicli, task 76): non basta
+ * dichiarare la fragilità, va mostrata. `null` sotto 3 cicli completati.
+ */
+export function evoluzionePrevedibilita(cycles: Cycle[]): PrevedibilitaEvoluzione | null {
+  const completati = cycles.filter((c) => !c.ongoing);
+  if (completati.length < 3) return null;
+  const serie: PuntoEvoluzione[] = [];
+  for (let k = 3; k <= completati.length; k++) {
+    const p = prevedibilitaCicli(completati.slice(0, k));
+    if (!p) continue; // difensivo: durate positive ⇒ media > 0, mai null qui
+    serie.push({ n: k, indice: p.indice, cv: p.cv, delta: null });
+  }
+  if (serie.length === 0) return null;
+  for (let i = serie.length - 1; i >= 1; i--) {
+    serie[i].delta = serie[i].indice - serie[i - 1].indice;
+  }
+  const salti = serie.slice(1).map((s) => Math.abs(s.delta ?? 0));
+  return {
+    serie,
+    ultimoDelta: serie.length >= 2 ? (serie[serie.length - 1].delta ?? null) : null,
+    maxSalto: salti.length > 0 ? Math.max(...salti) : 0,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* I58 — Calendario del consumo per giorno di calendario               */
 /* ------------------------------------------------------------------ */
 

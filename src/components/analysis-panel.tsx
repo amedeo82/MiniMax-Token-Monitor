@@ -38,6 +38,7 @@ import {
   senzaDemo,
   sprecoPerCiclo,
   prevedibilitaCicli,
+  evoluzionePrevedibilita,
   consumoGiornaliero,
   distribuzioneResiduo,
   oggiVsMedia,
@@ -46,6 +47,7 @@ import {
   type HeatmapGrid,
   type WasteStats,
   type Prevedibilita,
+  type PrevedibilitaEvoluzione,
   type CalendarGrid,
   type Distribuzione,
   type OggiVsMedia,
@@ -322,6 +324,8 @@ function CycleSection({
   const visible = [...cycles].slice(-8).reverse(); // i più recenti prima
   const waste = React.useMemo(() => sprecoPerCiclo(cycles), [cycles]);
   const prev = React.useMemo(() => prevedibilitaCicli(cycles), [cycles]);
+  // I128 — come si è mosso l'indice al crescere del campione (contesto del caveat I127).
+  const evo = React.useMemo(() => evoluzionePrevedibilita(cycles), [cycles]);
 
   return (
     <div className="space-y-3">
@@ -357,9 +361,9 @@ function CycleSection({
         </div>
       </div>
 
-      {/* I57 — spreco per ciclo + I63 — prevedibilità */}
+      {/* I57 — spreco per ciclo + I63 — prevedibilità + I128 — evoluzione dell'indice */}
       <CycleWaste waste={waste} />
-      <PrevedibilitaStrip prev={prev} />
+      <PrevedibilitaStrip prev={prev} evo={evo} />
 
       {visible.length === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-white/10 text-xs text-zinc-500">
@@ -549,7 +553,13 @@ function CycleWaste({ waste }: { waste: WasteStats | null }) {
   );
 }
 
-function PrevedibilitaStrip({ prev }: { prev: Prevedibilita | null }) {
+function PrevedibilitaStrip({
+  prev,
+  evo,
+}: {
+  prev: Prevedibilita | null;
+  evo?: PrevedibilitaEvoluzione | null;
+}) {
   if (!prev) return null;
   const lettura = prev.indice >= 70 ? "Cicli regolari" : prev.indice >= 40 ? "Cicli variabili" : "Cicli irregolari";
   const tone = prev.indice >= 70 ? "text-emerald-300" : prev.indice >= 40 ? "text-amber-300" : "text-rose-300";
@@ -568,7 +578,51 @@ function PrevedibilitaStrip({ prev }: { prev: Prevedibilita | null }) {
           <span className="text-amber-300/90"> · campione ridotto (indice fragile)</span>
         ) : null}
       </p>
+      {/* I128 — evoluzione dell'indice al crescere del campione: il contesto
+          del caveat «campione ridotto». Con ≥2 punti mostra il percorso
+          (chip n → indice) con l'ultimo Δ e il salto massimo: Δ piccoli =
+          l'indice si sta stabilizzando, salti ampi = la lettura è ancora
+          dominata dai cicli arrivati di recente. */}
+      {evo && evo.serie.length >= 2 ? <PrevedibilitaEvoLine evo={evo} /> : null}
     </div>
+  );
+}
+
+/** I128 — riga dell'evoluzione: chip «n → indice» (ultimi 8 punti) + ultimo Δ + salto max. */
+function PrevedibilitaEvoLine({ evo }: { evo: PrevedibilitaEvoluzione }) {
+  const visibili = evo.serie.slice(-8);
+  const troncata = evo.serie.length > visibili.length;
+  const ultimo = visibili[visibili.length - 1];
+  const deltaTone =
+    ultimo.delta === null || ultimo.delta === 0
+      ? "text-zinc-400"
+      : ultimo.delta > 0
+        ? "text-emerald-300"
+        : "text-rose-300";
+  const chipTone = (indice: number) =>
+    indice >= 70 ? "text-emerald-300/90" : indice >= 40 ? "text-amber-300/90" : "text-rose-300/90";
+  return (
+    <p className="text-[11px] text-zinc-500" aria-label="Evoluzione dell'indice Prevedibilità al crescere del campione">
+      <span className="text-zinc-400">Evoluzione dell&apos;indice: </span>
+      {troncata ? <span className="text-zinc-600">… </span> : null}
+      {visibili.map((p, i) => (
+        <span key={p.n}>
+          {i > 0 ? <span className="text-zinc-600"> → </span> : null}
+          <span className="font-mono tabular-nums">
+            <span className="text-zinc-600">{p.n}→</span>
+            <span className={chipTone(p.indice)}>{p.indice}</span>
+          </span>
+        </span>
+      ))}
+      <span className="text-zinc-600">
+        {" "}
+        ·{" "}
+      </span>
+      <span className={deltaTone}>
+        ultimo Δ {ultimo.delta === null ? "—" : ultimo.delta > 0 ? `+${ultimo.delta}` : ultimo.delta}
+      </span>
+      <span className="text-zinc-600"> · salti max {evo.maxSalto}</span>
+    </p>
   );
 }
 

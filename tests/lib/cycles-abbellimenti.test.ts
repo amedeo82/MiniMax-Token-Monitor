@@ -9,6 +9,7 @@ import {
   consumoGiornaliero,
   detectCycles,
   distribuzioneResiduo,
+  evoluzionePrevedibilita,
   oggiVsMedia,
   prevedibilitaCicli,
   sprecoPerCiclo,
@@ -111,6 +112,76 @@ describe("I63: prevedibilitaCicli", () => {
     expect(p!.campioneRidotto).toBe(false);
     // durate tutte identiche (2h) → indice perfetto
     expect(p!.indice).toBe(100);
+  });
+});
+
+describe("I128: evoluzionePrevedibilita", () => {
+  test("null con meno di 3 cicli completati", () => {
+    expect(evoluzionePrevedibilita([])).toBeNull();
+    // 1 completato + 1 in corso
+    const serie = [mk(LUN, 90), mk(LUN + H, 55), mk(LUN + 2 * H, 20), mk(LUN + 3 * H, 96)];
+    expect(evoluzionePrevedibilita(detectCycles(serie, "interval"))).toBeNull();
+  });
+
+  test("punto unico con 3 completati: nessun delta, salto 0 (serieCicli: 3×2h)", () => {
+    const evo = evoluzionePrevedibilita(detectCycles(serieCicli(), "interval"));
+    expect(evo).not.toBeNull();
+    expect(evo!.serie).toHaveLength(1);
+    expect(evo!.serie[0].n).toBe(3);
+    expect(evo!.serie[0].indice).toBe(100); // durate identiche
+    expect(evo!.serie[0].delta).toBeNull();
+    expect(evo!.ultimoDelta).toBeNull();
+    expect(evo!.maxSalto).toBe(0);
+  });
+
+  test("I128: ricalcolo cumulativo coerente con prevedibilitaCicli + delta (durati 2,2,2,7h)", () => {
+    // ciclo 4 lungo 7h: l'indice crolla da 100 (k=3) a 33 (k=4)
+    const serie = [
+      mk(LUN, 90), mk(LUN + H, 55), mk(LUN + 2 * H, 20), // ciclo 1: 2h
+      mk(LUN + 3 * H, 95), mk(LUN + 4 * H, 60), mk(LUN + 5 * H, 20), // ciclo 2: 2h
+      mk(LUN + 6 * H, 95), mk(LUN + 7 * H, 60), mk(LUN + 8 * H, 20), // ciclo 3: 2h
+      mk(LUN + 9 * H, 96), mk(LUN + 15 * H, 50), mk(LUN + 16 * H, 3), // ciclo 4: 7h
+      mk(LUN + 17 * H, 96), // in corso: NON conta
+    ];
+    const cicli = detectCycles(serie, "interval");
+    const evo = evoluzionePrevedibilita(cicli);
+    expect(evo).not.toBeNull();
+    expect(evo!.serie).toHaveLength(2); // k = 3 e k = 4 (l'in corso è escluso)
+    // l'ultimo punto coincide con la prevedibilità sull'intero campione
+    const p = prevedibilitaCicli(cicli);
+    expect(p).not.toBeNull();
+    expect(evo!.serie[1].n).toBe(4);
+    expect(evo!.serie[1].indice).toBe(p!.indice);
+    expect(evo!.serie[1].cv).toBeCloseTo(p!.cv, 9);
+    // k=4: media 3,25h, cv 0,6662 → indice 33; delta = 33 − 100 = −67
+    expect(evo!.serie[1].indice).toBe(33);
+    expect(evo!.serie[1].delta).toBe(-67);
+    expect(evo!.serie[0].indice).toBe(100);
+    expect(evo!.serie[0].delta).toBeNull();
+    expect(evo!.ultimoDelta).toBe(-67);
+    expect(evo!.maxSalto).toBe(67);
+  });
+
+  test("I128: percorso su 5 completati (2,2,2,7,6h) — ultimo Δ positivo, salto max resta 67", () => {
+    const serie = [
+      mk(LUN, 90), mk(LUN + H, 55), mk(LUN + 2 * H, 20), // ciclo 1: 2h
+      mk(LUN + 3 * H, 95), mk(LUN + 4 * H, 60), mk(LUN + 5 * H, 20), // ciclo 2: 2h
+      mk(LUN + 6 * H, 95), mk(LUN + 7 * H, 60), mk(LUN + 8 * H, 20), // ciclo 3: 2h
+      mk(LUN + 9 * H, 96), mk(LUN + 15 * H, 50), mk(LUN + 16 * H, 3), // ciclo 4: 7h
+      mk(LUN + 17 * H, 96), mk(LUN + 19 * H, 60), mk(LUN + 23 * H, 10), // ciclo 5: 6h
+      mk(LUN + 24 * H, 96), mk(LUN + 25 * H, 80), // in corso
+    ];
+    const evo = evoluzionePrevedibilita(detectCycles(serie, "interval"));
+    expect(evo).not.toBeNull();
+    expect(evo!.serie).toHaveLength(3);
+    // k=3: 100 · k=4: 33 · k=5: media 3,8h, cv 0,5861 → indice 41
+    expect(evo!.serie.map((s) => s.indice)).toEqual([100, 33, 41]);
+    expect(evo!.serie.map((s) => s.n)).toEqual([3, 4, 5]);
+    expect(evo!.serie[0].delta).toBeNull();
+    expect(evo!.serie[1].delta).toBe(-67);
+    expect(evo!.serie[2].delta).toBe(8); // 41 − 33
+    expect(evo!.ultimoDelta).toBe(8);
+    expect(evo!.maxSalto).toBe(67); // max(|−67|, |8|)
   });
 });
 
