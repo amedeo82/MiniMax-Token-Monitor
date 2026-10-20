@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-20T12:42:35.877Z
+# Audit implementazioni — 2026-10-20T13:44:12.794Z
 
-- Verifiche totali: **659** · PASS: **659** · FAIL: **0**
+- Verifiche totali: **663** · PASS: **663** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -663,6 +663,10 @@
 | I129 | riga «n → media» (ultimi 8 punti, «…» se troncata) con ultimo Δ e salti max NEUTRI (grigio): la direzione del Δ di una media non ha valenza buona/cattiva univoca — il colore dichiarerebbe un giudizio che non è del codice (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I129 | wiring: evoluzioneMedia sui ratePerHour dei cicli completati (null con consumo nullo escluso), memoizzata, riga sopra lo spreco/per-ciclo; sotto la griglia spreco la riga «Evoluzione dello spreco medio» (residuo al reset) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I129 | test evoluzioneMedia: null su vuoto, punto unico, medie cumulative sui ritmi reali di serieCicli (35/46/24 → 35, 40,5, 35) con Δ e salto max, spreco endValue (20/3/44 → 20, 11,5, 22,33…), salto max = max|Δ| | file | PASS | — |
+| I130 | stessa lettura d'evoluzione (I128/I129) per il consumo medio per ciclo: la terza metrica della sezione cicli completa il quadro — `consumed` è SEMPRE un numero (anche 0, con nessuna discesa osservata) e a differenza del ritmo non serve alcun filtro null: il consumo nullo è un dato valido e resta nel campione (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I130 | riga dopo la griglia KPI (prima dell'evoluzione del ritmo: ordine di lettura consumo → ritmo → spreco come le colonne della tabella) con chip «n → media», ultimo Δ neutro e salti max; gate ≥2 cicli completati come I129 (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I130 | wiring al campo drawdown massimo (start − minValue) di buildCycle: robusto ai recuperi interni al ciclo (una risalita non è consumo mancato) — coerenza col KPI «Consumo medio» di summarizeCycles (avgConsumed) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I130 | test I130: consumi reali di serieCicli (70/92/48 → medie 70, 81, 70 con Δ ±11), coerenza ultimo punto = avgConsumed, drawdown ≠ start−end con recupero interno (90→10→30 → 80, non 60), consumo nullo 0 resta nel campione (a differenza del ritmo null → escluso: 85→85 → medie 0, 15 con Δ +15) | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (659 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (663 pass, 0 fail, 0 scoperte)

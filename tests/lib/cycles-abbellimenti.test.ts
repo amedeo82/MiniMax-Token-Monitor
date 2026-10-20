@@ -14,6 +14,7 @@ import {
   oggiVsMedia,
   prevedibilitaCicli,
   sprecoPerCiclo,
+  summarizeCycles,
 } from "@/lib/cycles";
 import type { HistoryPoint } from "@/components/history-chart";
 
@@ -235,6 +236,72 @@ describe("I129: evoluzioneMedia", () => {
     expect(evo!.serie.map((p) => p.media)).toEqual([10, 20, 40 / 3]);
     expect(evo!.ultimoDelta).toBeCloseTo(-20 / 3, 9);
     expect(evo!.maxSalto).toBeCloseTo(10, 9);
+  });
+});
+
+describe("I130: evoluzione del consumo medio (drawdown per ciclo)", () => {
+  test("consumo per ciclo sui cicli reali di serieCicli: medie cumulative 70, 81, 70 con Δ ±11", () => {
+    // serieCicli(): consumi (drawdown) [70, 92, 48] → medie cumulative [70, 81, 70]
+    const cicli = detectCycles(serieCicli(), "interval").filter((c) => !c.ongoing);
+    const consumi = cicli.map((c) => c.consumed);
+    expect(consumi).toEqual([70, 92, 48]);
+    const evo = evoluzioneMedia(consumi);
+    expect(evo).not.toBeNull();
+    expect(evo!.serie.map((p) => p.media)).toEqual([70, 81, 70]);
+    expect(evo!.serie.map((p) => p.n)).toEqual([1, 2, 3]);
+    expect(evo!.serie[0].delta).toBeNull();
+    expect(evo!.serie[1].delta).toBe(11); // 81 − 70
+    expect(evo!.serie[2].delta).toBe(-11); // 70 − 81
+    expect(evo!.ultimoDelta).toBe(-11);
+    expect(evo!.maxSalto).toBe(11);
+  });
+
+  test("coerenza col KPI «Consumo medio»: l'ultimo punto coincide con summary.avgConsumed", () => {
+    const cicli = detectCycles(serieCicli(), "interval");
+    const evo = evoluzioneMedia(cicli.filter((c) => !c.ongoing).map((c) => c.consumed));
+    const summary = summarizeCycles(cicli);
+    expect(evo).not.toBeNull();
+    expect(summary.avgConsumed).not.toBeNull();
+    expect(evo!.serie[evo!.serie.length - 1].media).toBeCloseTo(summary.avgConsumed!, 9);
+  });
+
+  test("consumo = DRAWDOWN (start − min), robusto ai recuperi interni al ciclo", () => {
+    // ciclo 1: 90→10→30 — il recupero 10→30 NON è consumo mancato: il consumo
+    // reale è la discesa massima 90−10 = 80 (non start−end = 60)
+    const serie = [
+      mk(LUN, 90), mk(LUN + H, 10), mk(LUN + 2 * H, 30),
+      mk(LUN + 3 * H, 95), mk(LUN + 4 * H, 60), // ciclo 2: 95→60, consumed 35
+      mk(LUN + 5 * H, 96), // reset → in corso
+    ];
+    const cicli = detectCycles(serie, "interval").filter((c) => !c.ongoing);
+    expect(cicli[0].consumed).toBe(80); // drawdown, NON 60
+    expect(cicli[0].startValue - cicli[0].endValue).toBe(60); // lo start−end sarebbe minore
+    const evo = evoluzioneMedia(cicli.map((c) => c.consumed));
+    expect(evo).not.toBeNull();
+    // medie cumulative su [80, 35]: 80, 57,5 → Δ −22,5
+    expect(evo!.serie.map((p) => p.media)).toEqual([80, 57.5]);
+    expect(evo!.ultimoDelta).toBeCloseTo(-22.5, 9);
+    expect(evo!.maxSalto).toBeCloseTo(22.5, 9);
+  });
+
+  test("consumo nullo (0) resta nel campione della media (a differenza del ritmo, null → escluso)", () => {
+    // ciclo 1: 85→85 nessuna discesa → consumed 0 (il suo ritmo sarebbe null);
+    // il salto 85→100 (+15) lo chiude. ciclo 2: 100→70, consumed 30.
+    const serie = [
+      mk(LUN, 85), mk(LUN + H, 85), mk(LUN + 2 * H, 100),
+      mk(LUN + 3 * H, 70),
+      mk(LUN + 4 * H, 96), // reset → chiude ciclo 2
+      mk(LUN + 5 * H, 60), // in corso
+    ];
+    const cicli = detectCycles(serie, "interval").filter((c) => !c.ongoing);
+    expect(cicli[0].consumed).toBe(0);
+    expect(cicli[0].ratePerHour).toBeNull(); // il ritmo del ciclo fermo NON esiste
+    const evo = evoluzioneMedia(cicli.map((c) => c.consumed));
+    expect(evo).not.toBeNull();
+    // lo 0 è un dato valido: media [0, 15] con Δ +15 — niente esclusione
+    expect(evo!.serie.map((p) => p.media)).toEqual([0, 15]);
+    expect(evo!.serie[1].delta).toBe(15);
+    expect(evo!.maxSalto).toBe(15);
   });
 });
 

@@ -106,6 +106,22 @@ spreco medio» sotto la strip Prevedibilità (residuo al reset, come I57); visib
 ≥2 cicli completati. Caso di produzione (20/10): ritmi 72,51 → 78,29 → 26,86 → 12,79
 %/h → medie cumulativa 72,51 → 75,40 → 59,22 → 47,61: il movimento è grande e visibile.
 
+**I130 — evoluzione del consumo medio (terza metrica, quadro completo)**: la stessa
+lettura applicata al consumo per ciclo, il drawdown massimo (start − minValue) che è
+la prima colonna della tabella e la base del KPI «Consumo medio». Nessuna nuova
+funzione: `evoConsumo` passa `c.consumed` a `evoluzioneMedia`. Due differenze
+semantiche PRESIDIATE IN TEST: (1) `consumed` è sempre un numero — anche 0 con
+nessuna discesa osservata — e il consumo nullo RESTA nel campione della media
+(a differenza del ritmo, che con consumo nullo diventa `null` e viene escluso);
+(2) il drawdown è robusto ai recuperi interni al ciclo: una risalita non è consumo
+mancato (90→10→30 vale 80, non lo start−end = 60). Riga «Evoluzione del consumo
+medio» dopo la griglia KPI e prima dell'evoluzione del ritmo — ordine di lettura
+consumo → ritmo → spreco come le colonne della tabella; un test verifica che
+l'ultimo punto della serie coincida con `avgConsumed` del KPI (la riga e la card non
+possono divergere). Con questo item la famiglia evoluzione copre TUTTE e tre le
+statistiche principali dei cicli: indice di regolarità (I128), ritmo medio e spreco
+medio (I129), consumo medio (I130).
+
 ## 5.8 I64 — Oggi vs media
 `src/lib/cycles.ts`: `oggiVsMedia(history, win, settimane)` → `OggiVsMedia`: consumo di
 OGGI (Europe/Rome) contro la **media degli stessi weekday** delle ultime N settimane

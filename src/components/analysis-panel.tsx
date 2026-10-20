@@ -338,6 +338,14 @@ function CycleSection({
     () => evoluzioneMedia(cycles.filter((c) => !c.ongoing).map((c) => Math.max(0, c.endValue))),
     [cycles],
   );
+  // I130 — stessa lettura per il consumo medio (drawdown massimo per ciclo):
+  // `consumed` è SEMPRE un numero (anche 0, con nessuna discesa osservata) —
+  // a differenza del ritmo non serve alcun filtro null: il consumo nullo è un
+  // dato valido e resta nel campione della media.
+  const evoConsumo = React.useMemo(
+    () => evoluzioneMedia(cycles.filter((c) => !c.ongoing).map((c) => c.consumed)),
+    [cycles],
+  );
 
   return (
     <div className="space-y-3">
@@ -372,6 +380,17 @@ function CycleSection({
           <p className="mt-0.5 text-[10px] text-zinc-500">minimo registrato {summary.minEver?.toFixed(1) ?? "—"}%</p>
         </div>
       </div>
+
+      {/* I130 — evoluzione del consumo medio (drawdown massimo per ciclo):
+          il consumo è la prima metrica della tabella e la sua media si muove
+          a ogni ciclo giovane, come ritmo e spreco (I129) */}
+      {evoConsumo && evoConsumo.serie.length >= 2 ? (
+        <EvoluzioneMediaLine
+          etichetta="Evoluzione del consumo medio"
+          evo={evoConsumo}
+          format={(m) => `${m.toFixed(1)}%`}
+        />
+      ) : null}
 
       {/* I129 — evoluzione del ritmo medio: i cicli recenti stanno ancora spostando la media? */}
       {evoRitmo && evoRitmo.serie.length >= 2 ? (
