@@ -54,6 +54,7 @@ import {
   type Distribuzione,
   type OggiVsMedia,
 } from "@/lib/cycles";
+import { puntiSparkline, SPARKLINE_H, SPARKLINE_W } from "@/lib/sparkline";
 import { mergeHistories, fetchServerHistory, serverPointsToHistory } from "@/lib/server-history";
 import { fetchServerModelHistory, historyForModel, modelRowsToPoints } from "@/lib/model-history";
 import { formatDateTimeRome, formatDuration } from "@/lib/time";
@@ -637,11 +638,52 @@ function PrevedibilitaStrip({
   );
 }
 
-/** I128 — riga dell'evoluzione: chip «n → indice» (ultimi 8 punti) + ultimo Δ + salto max. */
+/**
+ * I131 — sparkline SVG inline per le righe di evoluzione: polilinea normalizzata
+ * su min/max (geometria in lib/sparkline.ts, puro e testato) con l'ultimo punto
+ * cerchiato. A differenza delle chip testuali I128/I129 NON tronca: mostra
+ * TUTTI i punti come forma, il che è il suo scopo — al crescere del campione
+ * la sequenza «n → valore» diventava un elenco illeggibile dietro il «…».
+ * currentColor eredita il tono della riga (indice colorato per soglia, medie
+ * neutre); i valori intermedi esatti che le chip mostravano restano
+ * accessibili nell'aria-label/title della svg.
+ */
+function Sparkline({ values, ariaLabel }: { values: number[]; ariaLabel: string }) {
+  const punti = React.useMemo(() => puntiSparkline(values), [values]);
+  if (punti.length === 0) return null;
+  const tratto = punti.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const ultimoPunto = punti[punti.length - 1];
+  return (
+    <svg
+      width={SPARKLINE_W}
+      height={SPARKLINE_H}
+      viewBox={`0 0 ${SPARKLINE_W} ${SPARKLINE_H}`}
+      className="shrink-0 align-middle"
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <title>{ariaLabel}</title>
+      <polyline
+        points={tratto}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle cx={ultimoPunto.x} cy={ultimoPunto.y} r="2.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * I128 + I131 — riga dell'evoluzione dell'indice: sparkline (TUTTI i punti,
+ * colorata col tono di soglia dell'ultimo) + chip finale «n → indice» +
+ * ultimo Δ + salto max. La chip finale conserva il valore esatto corrente;
+ * la forma completa resta nella sparkline (e nell'aria-label).
+ */
 function PrevedibilitaEvoLine({ evo }: { evo: PrevedibilitaEvoluzione }) {
-  const visibili = evo.serie.slice(-8);
-  const troncata = evo.serie.length > visibili.length;
-  const ultimo = visibili[visibili.length - 1];
+  const ultimo = evo.serie[evo.serie.length - 1];
   const deltaTone =
     ultimo.delta === null || ultimo.delta === 0
       ? "text-zinc-400"
@@ -650,19 +692,21 @@ function PrevedibilitaEvoLine({ evo }: { evo: PrevedibilitaEvoluzione }) {
         : "text-rose-300";
   const chipTone = (indice: number) =>
     indice >= 70 ? "text-emerald-300/90" : indice >= 40 ? "text-amber-300/90" : "text-rose-300/90";
+  const coloreSpark =
+    ultimo.indice >= 70 ? "text-emerald-400" : ultimo.indice >= 40 ? "text-amber-400" : "text-rose-400";
   return (
     <p className="text-[11px] text-zinc-500" aria-label="Evoluzione dell'indice Prevedibilità al crescere del campione">
       <span className="text-zinc-400">Evoluzione dell&apos;indice: </span>
-      {troncata ? <span className="text-zinc-600">… </span> : null}
-      {visibili.map((p, i) => (
-        <span key={p.n}>
-          {i > 0 ? <span className="text-zinc-600"> → </span> : null}
-          <span className="font-mono tabular-nums">
-            <span className="text-zinc-600">{p.n}→</span>
-            <span className={chipTone(p.indice)}>{p.indice}</span>
-          </span>
-        </span>
-      ))}
+      <span className={coloreSpark}>
+        <Sparkline
+          values={evo.serie.map((p) => p.indice)}
+          ariaLabel={`Indice Prevedibilità cumulativo: ${evo.serie.map((p) => `${p.n}→${p.indice}`).join(", ")}`}
+        />
+      </span>
+      <span className="font-mono tabular-nums">
+        <span className="text-zinc-600">{ultimo.n}→</span>
+        <span className={chipTone(ultimo.indice)}>{ultimo.indice}</span>
+      </span>
       <span className="text-zinc-600">
         {" "}
         ·{" "}
@@ -676,14 +720,15 @@ function PrevedibilitaEvoLine({ evo }: { evo: PrevedibilitaEvoluzione }) {
 }
 
 /**
- * I129 — riga dell'evoluzione di una media cumulativa (ritmo medio, spreco
- * medio): chip «n → media» (ultimi 8 punti, «…» se troncata) + ultimo Δ +
- * salto max, stesso linguaggio visivo di PrevedibilitaEvoLine (I128) ma con
- * delta NEUTRO (grigio): a differenza dell'indice, la direzione del Δ di una
- * media (ritmo più veloce/lento, spreco maggiore/minore) non ha una valenza
- * buona/cattiva univoca — il colore qui dichiarerebbe un giudizio che non è
- * del codice. `format` decide l'unità (%/h, %). Visibile con ≥2 punti (il
- * gate è del chiamante).
+ * I129 + I131 — riga dell'evoluzione di una media cumulativa (ritmo medio,
+ * spreco medio, consumo medio): sparkline (TUTTI i punti, tono neutro) +
+ * chip finale «n → media» + ultimo Δ + salto max. Come PrevedibilitaEvoLine:
+ * la chip finale conserva il valore esatto corrente, la forma completa sta
+ * nella sparkline. Delta NEUTRO (grigio) come da decisione I129: la direzione
+ * del Δ di una media (ritmo più veloce/lento, spreco maggiore/minore) non ha
+ * una valenza buona/cattiva univoca — il colore dichiarerebbe un giudizio che
+ * non è del codice. `format` decide l'unità (%/h, %). Visibile con ≥2 punti
+ * (il gate è del chiamante).
  */
 function EvoluzioneMediaLine({
   etichetta,
@@ -694,23 +739,21 @@ function EvoluzioneMediaLine({
   evo: EvoluzioneMedia;
   format: (media: number) => string;
 }) {
-  const visibili = evo.serie.slice(-8);
-  const troncata = evo.serie.length > visibili.length;
-  const ultimo = visibili[visibili.length - 1];
+  const ultimo = evo.serie[evo.serie.length - 1];
   const segno = ultimo.delta === null ? "" : ultimo.delta > 0 ? "+" : "";
   return (
     <p className="text-[11px] text-zinc-500" aria-label={`${etichetta} al crescere del campione`}>
       <span className="text-zinc-400">{etichetta}: </span>
-      {troncata ? <span className="text-zinc-600">… </span> : null}
-      {visibili.map((p, i) => (
-        <span key={p.n}>
-          {i > 0 ? <span className="text-zinc-600"> → </span> : null}
-          <span className="font-mono tabular-nums">
-            <span className="text-zinc-600">{p.n}→</span>
-            <span className="text-zinc-300">{format(p.media)}</span>
-          </span>
-        </span>
-      ))}
+      <span className="text-zinc-400">
+        <Sparkline
+          values={evo.serie.map((p) => p.media)}
+          ariaLabel={`${etichetta}: ${evo.serie.map((p) => `${p.n}→${format(p.media)}`).join(", ")}`}
+        />
+      </span>
+      <span className="font-mono tabular-nums">
+        <span className="text-zinc-600">{ultimo.n}→</span>
+        <span className="text-zinc-300">{format(ultimo.media)}</span>
+      </span>
       <span className="text-zinc-600">
         {" "}
         ·{" "}

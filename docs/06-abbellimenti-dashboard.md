@@ -166,3 +166,25 @@ anello colorato con la percentuale, colore = `coloreContinuo`); componente `<Tab
 `<link rel="icon">` quando cambia il residuo, con **guard anti re-asserzione**
 (MutationObserver sul `<title>`: Next/React 19 può ri-scrivere il titolo da metadata —
 il guard lo ripristina), disattivato senza snapshot.
+
+**I131 — sparkline per le righe di evoluzione (usabilità al crescere del campione)**:
+le quattro righe di evoluzione nascevano come chip testuali «n → valore» troncate
+agli ULTIMI 8 punti con «…» — un formato che funziona con pochi cicli ma che al
+crescere del campione nasconde la storia dietro l'ellipsis e rende la sequenza di
+numeri illeggibile d'un fiato. Da questo item le chip sono SOSTITUITE da una
+sparkline svg inline (96×24, allineata al testo delle righe): polilinea normalizzata
+su min/max con l'ultimo punto cerchiato, TUTTI i punti visibili senza troncamento,
+`currentColor` per ereditare il tono della riga (indice colorato per soglia ≥70/≥40,
+medie neutre). Resta la chip FINALE «n → valore» col punto corrente esatto più
+ultimo Δ e salti max: nessuna informazione persa. I valori intermedi esatti che le
+chip mostravano restano accessibili nell'aria-label/title della svg (hover e screen
+reader). La geometria è una funzione PURA in `src/lib/sparkline.ts`
+(`puntiSparkline`) con tre decisioni PRESIDIATE IN TEST: (1) y INVERTITA —
+l'origine SVG è in alto a sinistra, quindi valore alto = y piccolo (il segno
+invertito è l'errore classico che disegna la serie al contrario); (2) serie piatta
+(min === max) → tutti i punti a metà altezza, perché una media costante è una
+lettura legittima e non un errore da gestire a parte; (3) scala min/max e NON
+primo/ultimo — il test con viewport custom su [70, 92, 48] verifica che il primo
+punto non sia né in alto né in basso (con la scala sbagliata il primo valore
+finirebbe sempre sul bordo). Sotto i 2 punti la sparkline non esiste (una retta
+non è una forma): le righe hanno comunque il gate ≥2 punti.

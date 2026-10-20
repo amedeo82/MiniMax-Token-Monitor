@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-20T13:44:12.794Z
+# Audit implementazioni — 2026-10-20T14:20:27.059Z
 
-- Verifiche totali: **663** · PASS: **663** · FAIL: **0**
+- Verifiche totali: **667** · PASS: **667** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -667,6 +667,10 @@
 | I130 | riga dopo la griglia KPI (prima dell'evoluzione del ritmo: ordine di lettura consumo → ritmo → spreco come le colonne della tabella) con chip «n → media», ultimo Δ neutro e salti max; gate ≥2 cicli completati come I129 (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I130 | wiring al campo drawdown massimo (start − minValue) di buildCycle: robusto ai recuperi interni al ciclo (una risalita non è consumo mancato) — coerenza col KPI «Consumo medio» di summarizeCycles (avgConsumed) (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I130 | test I130: consumi reali di serieCicli (70/92/48 → medie 70, 81, 70 con Δ ±11), coerenza ultimo punto = avgConsumed, drawdown ≠ start−end con recupero interno (90→10→30 → 80, non 60), consumo nullo 0 resta nel campione (a differenza del ritmo null → escluso: 85→85 → medie 0, 15 con Δ +15) | file | PASS | — |
+| I131 | geometria della sparkline come funzione PURA e testata: puntiSparkline(values, w, h, pad) normalizza su min/max con y INVERTITA (origine SVG in alto a sinistra), serie piatta (min === max) a metà altezza, <2 punti → array vuoto — nessun troncamento: la forma mostra TUTTI i punti al posto delle chip tagliate a 8 con «…» | file | PASS | — |
+| I131 | componente svg inline per le righe di evoluzione: polilinea + ultimo punto cerchiato, currentColor (indice colorato per soglia, medie neutre), aria-label/title con la serie completa dei valori esatti che le chip mostravano (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I131 | wiring: ENTRAMBE le righe (PrevedibilitaEvoLine I128 e EvoluzioneMediaLine I129/I130) passano dalla sparkline — slice(-8) e il troncamento «…» rimossi; resta la chip finale «n → valore» col punto corrente esatto (src/components/analysis-panel.tsx) | simbolo | PASS | — |
+| I131 | test I131: normalizzazione [0,50,100] → x 2/48/94 e y 22/12/2 (invertita), serie piatta [5,5,5,5] → y=h/2 con x distribuita, <2 punti → [], viewport custom (200×40, pad 5) su [70,92,48] → y 20/5/35 (scala min/max, NON primo/ultimo) | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (663 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (667 pass, 0 fail, 0 scoperte)
