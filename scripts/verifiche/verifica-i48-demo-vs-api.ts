@@ -8,9 +8,16 @@
  *
  * Cosa verifica, campo per campo dello schema di `docs/02` §2:
  *   A. radice della risposta (base_resp, model_remains, campi opzionali);
- *   B. modello general (finestra 5h rolling + settimanale condivisa);
+ *   B. modello general (finestra breve = BLOCCO FISSO UTC corrente I125 + settimanale da lunedì 00 UTC);
  *   C. modello video (finestra 24h allineata a mezzanotte UTC + settimanale);
  *   D. livello normalizzato (lo STESSO parser su entrambe le sorgenti).
+ *
+ * I125 — la demo non simula più finestre «rolling» (3,2h fa / 2,7 giorni fa):
+ * è ancorata alle finestre VERIFICATE (verdetto V8, docs/02 §5) — blocchi
+ * fissi UTC {00,05,10,15,20} per la 5h (ultimo blocco 4h reali) e settimane
+ * da lunedì 00:00 UTC. Le vecchie «differenze dichiarate» G9 (allineamento
+ * settimanale non simulato) sono CHIUSE e aggiunta G13 (allineamento al
+ * blocco fisso della finestra breve).
  *
  * Definizione di fedeltà: STESSO schema + STESSE invarianti + semantica
  * coerente con la storia simulata. I VALORI sono per costruzione simulati
@@ -26,6 +33,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { makeDemoSnapshot } from "../../src/lib/demo";
+import { fineFinestra5h, inizioFinestra5h, inizioSettimanaUtc } from "../../src/lib/cycles";
 import { parseUsageResponse, type QuotaWindow } from "../../src/lib/minimax";
 
 const ROOT = resolve(import.meta.dirname, "..", "..");
@@ -202,21 +210,32 @@ if (!demoGeneral) {
     "G2",
     "general: current_interval_remaining_percent",
     `${reGeneral.current_interval_remaining_percent} (nessun consumo nella finestra osservata)`,
-    `${fmt(pi)} (calo simulato: finestra in corso da 3,2h su 5h)`,
-    pi !== null && pi > 0 && pi < 100 ? "differenza dichiarata" : "FALLITO",
+    `${fmt(pi)} (calo simulato dentro il blocco corrente, ancorato al confine — I125)`,
+    pi !== null && pi > 0 && pi <= 100 ? "differenza dichiarata" : "FALLITO",
     "valori diversi per costruzione; semantica identica (0–100, fonte della verità)",
   );
   const durReale = reGeneral.end_time - reGeneral.start_time;
   const iv = demoGeneral.interval;
   const durDemo =
     iv && iv.start !== null && iv.end !== null ? iv.end - iv.start : null;
+  const durBloccoAttesa = fineFinestra5h(now) - inizioFinestra5h(now);
   riga(
     "G3",
     "general: durata finestra breve (end − start)",
-    `${durReale} ms = 5h`,
-    `${fmt(durDemo)} ms = 5h`,
-    durDemo === durReale ? "fedele" : "FALLITO",
-    "18.000.000 ms su ENTRAMBE le sorgenti (docs/02 §4.1)",
+    `${durReale} ms = 5h (campione 02/10, blocco pieno)`,
+    `${fmt(durDemo)} ms = ${durDemo === 18_000_000 ? "5h (blocco pieno)" : durDemo === 14_400_000 ? "4h reali (ultimo blocco 20:00→mezzanotta)" : "—"} (I125)`,
+    durDemo === durBloccoAttesa ? "fedele" : "FALLITO",
+    "la demo usa la durata del BLOCCO CORRENTE (verdetto V8: 5h nominali, 4h reali nell'ultimo — docs/02 §5/§10); il campione reale cadeva in un blocco pieno",
+  );
+  const allineamentoBlocco =
+    iv && iv.start !== null ? iv.start === inizioFinestra5h(now) : false;
+  riga(
+    "G13",
+    "general: allineamento finestra breve al blocco fisso UTC (I125, NUOVO)",
+    "start sempre su confini di griglia UTC (verdetto V8, offset 0 ms su 205 campioni)",
+    allineamentoBlocco ? `start = inizioFinestra5h(now) esatto (${new Date(iv!.start!).toISOString()})` : "NON allineato",
+    allineamentoBlocco ? "fedele" : "FALLITO",
+    "NUOVO dal I125: la demo simula l'ancoraggio ai blocchi UTC {00,05,10,15,20} — prima rolling (finestra «3,2h fa»), mai fedele al server osservato",
   );
   invarianteRemains(
     "G4",
@@ -251,8 +270,8 @@ if (!demoGeneral) {
     "G7",
     "general: current_weekly_remaining_percent",
     `${reGeneral.current_weekly_remaining_percent} (36% consumato)`,
-    `${fmt(pw)} (calo simulato su 2,7 giorni)`,
-    pw !== null && pw > 0 && pw < 100 ? "differenza dichiarata" : "FALLITO",
+    `${fmt(pw)} (calo simulato sulla settimana corrente da lunedì 00 UTC — I125)`,
+    pw !== null && pw > 0 && pw <= 100 ? "differenza dichiarata" : "FALLITO",
     "semantica identica: consumato = 100 − residuo",
   );
   const durWReale = reGeneral.weekly_end_time - reGeneral.weekly_start_time;
@@ -268,15 +287,17 @@ if (!demoGeneral) {
   );
   const dReale = new Date(reGeneral.weekly_start_time);
   const allineamentoReale = dReale.getUTCDay() === 1 && dReale.getUTCHours() === 0;
+  const allineamentoDemo =
+    demoGeneral.weekly?.start !== null && demoGeneral.weekly?.start !== undefined
+      ? demoGeneral.weekly.start === inizioSettimanaUtc(now)
+      : false;
   riga(
     "G9",
-    "general: allineamento settimanale",
-    allineamentoReale
-      ? `lunedì 00:00 UTC esatto (${dReale.toISOString()})`
-      : "NON allineato (inaspettato)",
-    "rolling (start = now − 2,7 giorni): ancoraggio NON simulato",
-    allineamentoReale ? "differenza dichiarata" : "FALLITO",
-    "semplificazione dichiarata: l'ancoraggio è una proprietà del SERVER (docs/02 §5); parser e UI non ne dipendono (la durata 7g determina la finestra)",
+    "general: allineamento settimanale (CHIUSA dal I125)",
+    allineamentoReale ? `lunedì 00:00 UTC esatto (${dReale.toISOString()})` : "NON allineato (inaspettato)",
+    allineamentoDemo ? `lunedì 00:00 UTC esatto (${new Date(demoGeneral.weekly!.start!).toISOString()})` : "NON allineato",
+    allineamentoReale && allineamentoDemo ? "fedele" : "FALLITO",
+    "la differenza dichiarata del 12/10 («rolling, semplificazione dichiarata») è CHIUSA: dal I125 la demo ancora la settimana a lunedì 00:00 UTC come il server (inizioSettimanaUtc)",
   );
   invarianteRemains(
     "G10",
@@ -457,7 +478,7 @@ const nFedeli = righe.filter((r) => r.esito === "fedele").length;
 const nDichiarate = righe.filter((r) => r.esito === "differenza dichiarata").length;
 const verdetto =
   falli === 0
-    ? `Demo fedele al 100% sullo schema e sulle invarianti osservate (${righe.length} campi: ${nFedeli} fedeli, ${nDichiarate} differenze dichiarate, 0 falliti). Differenze SOLO nei valori simulati e nelle semplificazioni dichiarate (allineamento settimanale non simulato, marcatore «(demo)», campi radice opzionali sempre presenti); 1 incoerenza della simulazione trovata e corretta in itinere (stato settimanale del video, riga V8).`
+    ? `Demo fedele al 100% sullo schema, sulle invarianti e sugli ALLINEAMENTI osservati (${righe.length} campi: ${nFedeli} fedeli, ${nDichiarate} differenze dichiarate, 0 falliti). Dal I125 anche gli ancoraggi sono simulati fedelmente (G9 settimanale a lunedì 00:00 UTC — differenza dichiarata CHIUSA; G13 finestra breve al blocco fisso UTC, NUOVA): le differenze restano SOLO nei valori simulati (curve di consumo con jitter), nel marcatore «(demo)» e nei campi radice opzionali sempre presenti; 1 incoerenza della simulazione trovata e corretta in itinere il 12/10 (stato settimanale del video, riga V8).`
     : `VERDETTO NEGATIVO: ${falli} campi FALLITI su ${righe.length} — la demo NON è fedele, vedere le righe FALLITO.`;
 
 const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -488,9 +509,9 @@ ${tabella}
 ## Note
 
 - Le righe «differenza dichiarata» sono differenze di VALORE attese e volute (la demo simula curve di consumo con jitter): non sono infedeltà di schema o semantica.
-- Riga V8 registra una CORREZIONE applicata alla demo durante la verifica: \`src/lib/demo.ts\` dava al video lo stato settimanale «3» (mai usata) con percentuale < 100 — incoerente; ora «1» (in uso), coerente col consumo simulato.
-- L'allineamento della finestra settimanale (lunedì 00:00 UTC, reale) NON è simulato dalla demo (rolling): semplificazione dichiarata, senza impatto su parser e UI (la durata 7g determina la finestra — docs/02 §5).
-- Le invarianti verificate programmaticamente: durate finestre (5h/24h/7g), condivisione della finestra settimanale tra modelli, allineamento mezzanotte UTC della finestra video, \`remains ≡ end − t\` su entrambe le sorgenti, conteggi a 0 («non dichiarati»), codici di stato 1/3.
+- Riga V8 registra una CORREZIONE applicata alla demo durante la verifica (12/10): \`src/lib/demo.ts\` dava al video lo stato settimanale «3» (mai usata) con percentuale < 100 — incoerente; ora «1» (in uso), coerente col consumo simulato.
+- I125 (20/10/2026): le finestre demo sono ANCORATE alle finestre verificate del server — riga G9 (settimanale a lunedì 00:00 UTC) ora FEDELE (era «differenza dichiarata»), nuova riga G13 (finestra breve = blocco fisso UTC corrente {00,05,10,15,20}, 4h reali nell'ultimo blocco del giorno). Il reset a confine è ora visibile anche nello storico demo (curva a sega, test I125).
+- Le invarianti verificate programmaticamente: durate finestre (blocco corrente 5h/4h per la breve, 24h video, 7g settimanale), allineamento al blocco fisso (G13) e a lunedì 00:00 UTC (G9), condivisione della finestra settimanale tra modelli, allineamento mezzanotte UTC della finestra video, \`remains ≡ end − t\` su entrambe le sorgenti, conteggi a 0 («non dichiarati»), codici di stato 1/3.
 `;
 
 const json = {

@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-19T16:26:38.140Z
+# Audit implementazioni — 2026-10-20T08:48:24.521Z
 
-- Verifiche totali: **630** · PASS: **630** · FAIL: **0**
+- Verifiche totali: **640** · PASS: **640** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -634,8 +634,16 @@
 | I124 | la source dei punti server (api/demo/import) passa al HistoryPoint (src/lib/server-history.ts) | simbolo | PASS | — |
 | I124 | lo storico per-modello replica la marca d'origine lungo tutta la catena (ModelSample → ModelHistoryPoint → HistoryPoint) (src/lib/model-history.ts) | simbolo | PASS | — |
 | I124 | i casi di test replicano i dati reali di produzione (confine 15:00 UTC 17→96; settimanale 46→92 al lunedì 00 UTC; chiusura al reset senza campioni successivi) (tests/lib/cycles-finestre.test.ts) | simbolo | PASS | — |
+| I125 | la finestra breve demo è il BLOCCO FISSO corrente UTC {00,05,10,15,20} (verdetto V8) — non più rolling «3,2h fa»: il reset a confine è ora visibile in demo come sul server reale (src/lib/demo.ts) | simbolo | PASS | — |
+| I125 | la fine della finestra breve demo è il confine del blocco successivo (durata reale 5h, 4h nell'ultimo blocco del giorno) (src/lib/demo.ts) | simbolo | PASS | — |
+| I125 | la finestra settimanale demo è la settimana corrente da lunedì 00:00 UTC, condivisa tra i modelli (chiude la differenza dichiarata G9 della matrice I48) (src/lib/demo.ts) | simbolo | PASS | — |
+| I125 | le percentuali demo sono clampate in [0,100]: l'API non sfora mai, nemmeno il jitter deve farlo (src/lib/demo.ts) | simbolo | PASS | — |
+| I125 | lo storico demo simula ogni punto dentro la SUA finestra (ancoraggio per punto): il grafico dimostrativo mostra i reset ai confini come la serie reale (src/lib/demo.ts) | simbolo | PASS | — |
+| I125 | test di fedeltà demo con istanti deterministici 19–20/10/2026 (blocco pieno, ultimo blocco 4h reali, post-reset settimanale, salto al confine) (tests/lib/demo-finestre.test.ts) | simbolo | PASS | — |
+| I125 | matrice I48 con la NUOVA riga G13 (finestra breve = blocco fisso UTC) e la riga G9 CHIUSA (settimanale allineata, ora fedele) (scripts/verifiche/verifica-i48-demo-vs-api.ts) | simbolo | PASS | — |
+| I125 | quadro ufficiale ri-verificato in tempo reale (20/10/2026): tier 1×/3×/7,5×, modelli per tier, endpoint confermato, NESSUNO schema JSON ufficiale (docs/02 resta il riferimento de-facto), tensione «rolling» ufficiale vs V8 presidiata (docs/02-analisi-json-quota.md) | simbolo | PASS | — |
+| I125 | racconto dell'ancoraggio demo (G9 chiusa, G13 nuova) con l'esito della matrice ri-eseguita (docs/01-api-minimax-ricerca.md) | simbolo | PASS | — |
+| I125 | la nota §7 distingue la CITAZIONE delle docs ufficiali (rolling) dal comportamento verificato (blocchi V8) con la data della verifica documentale (docs/01-api-minimax-ricerca.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (630 pass, 0 fail, 0 scoperte)
-
-Report salvato: /home/z/my-project/scripts/verifiche/esiti/audit-implementazioni-2026-10-19T16-26-38.md
+Verdetto: **PASS** (640 pass, 0 fail, 0 scoperte)

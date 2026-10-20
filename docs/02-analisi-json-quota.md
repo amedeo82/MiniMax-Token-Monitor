@@ -6,7 +6,7 @@
 > orario **Europe/Rome**. Se devi toccare il parser (`src/lib/minimax.ts`) o la
 > logica temporale (`src/lib/time.ts`), parti da qui.
 >
-> Ultimo aggiornamento: 2026-10-02.
+> Ultimo aggiornamento: 2026-10-20 (I125: quadro ufficiale ri-verificato in tempo reale + fedeltà della demo alle finestre).
 
 ---
 
@@ -339,3 +339,59 @@ ufficiale (finestra ancorata al primo uso), l'allineamento andrebbe rivisto —
 l'hedge robusto (persistire `end_time` per punto e usarlo come chiave di
 finestra con fallback sul blocco statico) è rinviato a un item futuro, con
 questa sezione come punto di partenza.
+
+---
+
+## 11. I125 — Quadro ufficiale ri-verificato (20/10/2026) e fedeltà della demo
+
+### 11.1 Cosa dicono OGGI le fonti ufficiali (fetch in tempo reale)
+
+Il 20/10/2026 le due pagine documentali del piano (`platform.minimax.io/docs/m-plan/faq`
+e `/docs/m-plan/usage-rules`) sono state ri-interrogate dal vivo; sintesi del
+quadro attuale (dettagli e citazioni in `docs/01` §7):
+
+| Aspetto | Testo ufficiale attuale | Confronto col progetto |
+|---------|--------------------------|------------------------|
+| Tier | **Go / Explore / Build**, uso relativo a Go **1× / 3× / 7,5×**; nessun tetto assoluto pubblicato | Le percentuali RESTANO l'unica fonte della verità (§3): confermato |
+| Modelli | M3.1 Flash Preview (testo) + immagini + audio + web search + multimodale in tutti i tier; video **H3** solo Explore/Build (Go: nessun video) | `model_name` "general" (testo/immagini/audio) e "video" — coerente; `MODEL_LABELS` aggiornabile se arrivassero nuove categorie |
+| Finestre | 5h (non video) + 7 giorni (tutti), **«start with your first use»** (rolling), reset indipendenti, no carry-over | Semantica «rolling» ANCORA nel testo ufficiale ma empiricamente smentita (§5 verdetto V8: blocchi fissi UTC, offset 0 ms; conferme di produzione 16–19/10) — tensione documentata e presidiata |
+| Video | «subject only to the weekly window, with no 5-hour window» | Il JSON reale espone comunque l'`interval` 24h allineato a mezzanotte UTC (§5 oss. 2): gestito dal parser |
+| Endpoint | `GET https://www.minimax.io/v1/token_plan/remains`, `Authorization: Bearer <API Key>` | Invariato: REGION_ENDPOINTS (eu/cn) + fallback `coding_plan/remains` (I18) |
+| Schema JSON | **NON documentato ufficialmente** (la pagina `/docs/m-plan/usage` citata dalle usage-rules risponde 404) | Questo documento (§1/§2, campione reale 02/10/2026) resta IL riferimento de-facto, corroborato da issue #99 e progetti open-source |
+| Crediti | 1.000 = 1 $; piano prima, poi credit pack; validità 1 anno | `credits_balance` mostrato quando presente; nessuna dipendenza per le statistiche |
+
+Conclusione operativa: nessun cambiamento di contratto rilevato — lo schema di
+§2, le unità (ms) di §4 e l'allineamento a blocchi di §5 restano validi e sono
+la base di parser, countdown e segmentazione dei cicli (§10).
+
+### 11.2 La demo ora simula le finestre verificate (I125)
+
+Prima del I125 la demo (`src/lib/demo.ts`) simulava finestre «rolling» relativi
+al momento della chiamata (5h iniziata «3,2h fa», settimana «2,7 giorni fa»):
+plausibili nei valori ma NON fedeli all'allineamento osservato sul server — e
+soprattutto incapaci di mostrare il RESET (la finestra scivolava con «now»,
+mai un salto verso il 100%). Dal I125 la demo usa le STESSE funzioni di
+allineamento dell'analisi (`inizioFinestra5h`/`fineFinestra5h`/`inizioSettimanaUtc`,
+`src/lib/cycles.ts`):
+
+- **finestra breve** = blocco fisso corrente UTC {00,05,10,15,20} (durata reale
+  5h, 4h nell'ultimo blocco del giorno): al confine il residuo torna verso il
+  100% come l'API reale (17% alle 16:59 → 96% alle 17:04 Roma del 19/10);
+- **settimanale** = settimana corrente da lunedì 00:00 UTC, condivisa tra i
+  modelli (livello di piano);
+- **video** = finestra 24h a mezzanotte UTC (invariata: già fedele);
+- **percentuali clampate in [0,100]** — l'API non riporta mai valori fuori range,
+  quindi anche il jitter demo non deve farlo;
+- **storico demo a curva a sega**: ogni punto è simulato dentro la SUA finestra
+  (ancoraggio per punto), quindi il grafico dimostrativo mostra i reset ai
+  confini esattamente come la serie reale;
+- un tick demo che attraversa un confine genera il salto e — attraverso
+  `evaluateTransitions` — anche l'evento di reset nel registro: la demo ora
+  DIMOSTRA anche la rilevazione dei reset, non solo il consumo.
+
+Verifica formale: matrice I48 ri-eseguita il 20/10/2026 — **30 campi: 25 fedeli,
+5 differenze dichiarate (solo valori simulati), 0 falliti**; la differenza G9
+(allineamento settimanale) è CHIUSA, la nuova G13 (blocco fisso della finestra
+breve) è fedele. Esiti su file `scripts/verifiche/esiti/i48-demo-vs-api-latest.md`;
+test dedicati `tests/lib/demo-finestre.test.ts` (10 test, istanti deterministici
+19–20/10/2026). Racconto completo in `docs/01` §11.3.

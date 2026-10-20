@@ -177,7 +177,9 @@ Strategie, in ordine di utilità:
 | No carry-over | Quota non usata non si accumula né tra finestre né tra cicli di fatturazione. |
 | Rate limit (RPM/TPM) | Distinto dalla quota: si può essere throttled prima di esaurire la quota. Recupero tipico ~1 minuto. |
 | Crediti | 1.000 Credits = 1 $. Coprono l'overflow dopo l'esaurimento del piano (stessa Subscription Key). Validità 1 anno. |
-| Piani | M Plan: **Go / Explore / Build**. Token Plan (legacy): **Plus 20$ / Max 50$ / Ultra 120$** (+ tier retired Starter/Plus-hs/Max-hs/Ultra-hs). |
+| Piani | M Plan: **Go / Explore / Build** — uso relativo a Go: **1× / 3× / 7,5×** (nessun tetto assoluto pubblicato: le statistiche viaggiano a percentuali — verificato 20/10/2026). Token Plan (legacy): **Plus 20$ / Max 50$ / Ultra 120$** (+ tier retired Starter/Plus-hs/Max-hs/Ultra-hs). |
+| Modelli per tier (verificato 20/10/2026) | **M3.1 Flash Preview** (testo), generazione immagini e audio, web search e comprensione multimodale in TUTTI i tier; modello video **H3** solo **Explore e Build** (Go: nessun video). Tutti i modelli M Plan condividono GLI STESSI limiti («usage shared») ma consumano a velocità diverse (il video molto di più; contesto lungo, task agentici e thinking profondo accelerano il consumo). |
+| Ordine di deduzione (verificato 20/10/2026) | Uso del piano PRIMA, poi credit pack (a partire dalla più prossima a scadenza); la Subscription Key NON tocca mai il saldo pay-as-you-go. Crediti: 1.000 = 1 $, validità 1 anno, senza carry-over. |
 | A chi serve | Uso individuale interattivo; per produzione è consigliato pay-as-you-go. |
 
 > **⚠️ Nota empirica (V8, 12/10)**: le regole «rolling al primo utilizzo» qui sopra sono la
@@ -186,6 +188,14 @@ Strategie, in ordine di utilità:
 > giorno, ancorate alla mezzanotte UTC; 24h video a mezzanotte; settimanale lunedì 00:00 UTC),
 > pre-armati e NON riancorati dall'uso (205 campioni, offset 0 ms). Verdetto formale in
 > `docs/02` §5, esiti `scripts/verifiche/esiti/v8-fuso-reset-latest.md`.
+>
+> **✅ Verifica fresca 20/10/2026 (I125)**: FAQ (`platform.minimax.io/docs/m-plan/faq`) e
+> usage-rules (`/docs/m-plan/usage-rules`) ri-interrogate in tempo reale: la semantica
+> «rolling al primo utilizzo» è ANCORA il testo ufficiale (invariata); tier e moltiplicatori
+> 1×/3×/7,5× confermati; modelli per tier confermati (H3 video solo Explore/Build); endpoint
+> `token_plan/remains` confermato (GET con `Authorization: Bearer`); **nessuno schema JSON
+> documentato ufficialmente** (la pagina `/docs/m-plan/usage` citata dalle regole d'uso
+> risponde 404) → la ricostruzione di `docs/02` resta IL riferimento de-facto.
 
 ---
 
@@ -297,3 +307,32 @@ La riga V8 è l'unico reperto attivo della verifica: una vera incoerenza della
 simulazione (stato «mai usata» su una finestra con percentuale consumata) trovata
 dalla matrice e corretta in itinere. Nessun test la definiva: suite invariata
 (311/311, 897 asserzioni).
+
+### 11.3 I125 — l'ancoraggio delle finestre demo (G9 CHIUSA, G13 NUOVA)
+
+La richiesta dell'utente del 20/10/2026 — «anche in modalità demo occorre mostrare
+dati fedeli alle specifiche delle API MiniMax» — chiude l'ultima semplificazione
+dichiarata della matrice. Le due differenze di allineamento erano note dal 12/10:
+
+- **G9 (settimanale)**: la demo partiva la settimana «2,7 giorni fa» (rolling) —
+  il server la ancora a **lunedì 00:00 UTC** (triangolazione `docs/02` §5, conferma
+  di produzione 18→19/10). Rischio reale: un tick demo attorno al confine non
+  mostrava il reset settimanale.
+- **(implicita, finestra breve)**: la finestra 5h partiva «3,2h fa» (rolling) —
+  il server usa **blocchi fissi UTC {00,05,10,15,20}** (verdetto V8; l'ultimo
+  blocco 20:00→mezzanotta dura 4h reali). Rischio reale: la demo non mostrava
+  MAI il reset 5h (la finestra scivolava con «now»).
+
+`src/lib/demo.ts` ora ancora le finestre con le STESSE funzioni dell'analisi
+(`inizioFinestra5h`/`fineFinestra5h`/`inizioSettimanaUtc` di `src/lib/cycles.ts`):
+un tick che attraversa un confine mostra il salto verso il 100% (come il server
+reale: 17% alle 16:59 → 96% alle 17:04 Roma del 19/10), lo storico demo è una
+**curva a sega** fedele ai reset, e le percentuali sono clampate in [0,100]
+(l'API non sfora mai: nemmeno il jitter demo deve farlo).
+
+Matrice RI-eseguita il 20/10/2026 (`verifica-i48-demo-vs-api.ts` aggiornata):
+**30 campi — 25 fedeli, 5 differenze dichiarate, 0 falliti**; G9 ora FEDELE,
+nuova riga G13 (finestra breve = blocco fisso corrente) FEDELE. Esito su file
+`scripts/verifiche/esiti/i48-demo-vs-api-latest.md`. Test dedicati:
+`tests/lib/demo-finestre.test.ts` (10 test con gli istanti deterministici
+19–20/10/2026, incluso l'ultimo blocco da 4h reali).

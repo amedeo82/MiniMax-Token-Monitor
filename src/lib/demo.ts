@@ -1,17 +1,29 @@
 /**
  * Generatore di dati dimostrativi per la modalità Demo.
- * Simula in modo plausibile il consumo di un Token Plan MiniMax:
- * - finestra 5h iniziata 3,2 ore fa (quota in calo);
- * - finestra settimanale iniziata 2,7 giorni fa;
- * - modello "video" soggetto solo alla finestra settimanale;
- * - leggero jitter ad ogni generazione così il grafico di storia si muove.
+ *
+ * I125 — La simulazione è ANCORATA ALLE FINESTRE VERIFICATE dell'API MiniMax
+ * (stessa base di `src/lib/cycles.ts` e `docs/02` §5/§10), non più a finestre
+ * «rolling» relativi al momento della chiamata:
+ * - finestra breve (general): il BLOCCO FISSO corrente a orario UTC
+ *   {00,05,10,15,20} (verdetto V8, offset 0 ms su 205 campioni; l'ultimo
+ *   blocco 20:00→mezzanotta dura 4h reali) — a ogni confine il residuo torna
+ *   verso il 100% come fa il server reale;
+ * - finestra settimanale (tutti i modelli, livello di piano): la settimana
+ *   corrente da LUNEDÌ 00:00 UTC (`inizioSettimanaUtc`);
+ * - finestra giornaliera del video: 24h allineata a mezzanotte UTC (invariata,
+ *   già fedele — docs/02 §5 osservazione 2).
+ *
+ * Conseguenza di fedeltà: un tick demo che attraversa un confine di blocco
+ * mostra il SALTO verso il 100% (reset), riproducendo il comportamento
+ * osservato sull'API con chiave reale — prima il «3,2h fa» rolling non
+ * mostrava MAI il reset (la finestra scivolava con «now»).
  */
 
+import { fineFinestra5h, inizioFinestra5h, inizioSettimanaUtc } from "./cycles";
 import { parseUsageResponse, Region, UsageSnapshot } from "./minimax";
 import type { ModelHistoryPoint } from "./model-history";
 import type { HistoryPoint } from "@/components/history-chart";
 
-const FIVE_HOURS_MS = 5 * 3600_000;
 const WEEK_MS = 7 * 24 * 3600_000;
 
 /** Curve di consumo plausibili: calo più rapido nelle prime ore d'uso intensivo. */
@@ -26,14 +38,26 @@ function jitter(max: number): number {
   return (Math.random() * 2 - 1) * max;
 }
 
-export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()): UsageSnapshot {
-  // Finestra 5h: iniziata 3,2h fa
-  const intervalStart = now - Math.round(3.2 * 3600_000);
-  const intervalEnd = intervalStart + FIVE_HOURS_MS;
-  const intervalRemaining = simulatedRemaining(now - intervalStart, FIVE_HOURS_MS, 100, 12) + jitter(1.2);
+/** I125 — le percentuali dell'API sono sempre in [0,100]: il jitter non le deve sforare. */
+function clampPct(v: number): number {
+  return Math.max(0, Math.min(100, v));
+}
 
-  // Finestra settimanale: iniziata 2,7 giorni fa
-  const weeklyStart = now - Math.round(2.7 * 24 * 3600_000);
+function round1(v: number): number {
+  return Math.round(v * 10) / 10;
+}
+
+export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()): UsageSnapshot {
+  // Finestra breve (general): il BLOCCO FISSO corrente (I125, verdetto V8).
+  // La durata del blocco è 5h nominali, 4h reali nell'ultimo (20:00→mezzanotta):
+  // la curva di consumo si comprime di conseguenza — come sul server reale.
+  const intervalStart = inizioFinestra5h(now);
+  const intervalEnd = fineFinestra5h(now);
+  const intervalRemaining =
+    simulatedRemaining(now - intervalStart, intervalEnd - intervalStart, 100, 12) + jitter(1.2);
+
+  // Finestra settimanale: la settimana corrente da LUNEDÌ 00:00 UTC (I125).
+  const weeklyStart = inizioSettimanaUtc(now);
   const weeklyEnd = weeklyStart + WEEK_MS;
   const weeklyRemaining = simulatedRemaining(now - weeklyStart, WEEK_MS, 100, 31) + jitter(0.8);
 
@@ -53,14 +77,14 @@ export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()
     model_remains: [
       {
         model_name: "general",
-        current_interval_remaining_percent: Math.round(intervalRemaining * 10) / 10,
+        current_interval_remaining_percent: round1(clampPct(intervalRemaining)),
         current_interval_total_count: 0,
         current_interval_usage_count: 0,
         current_interval_status: 1,
         start_time: intervalStart,
         end_time: intervalEnd,
         remains_time: Math.max(0, intervalEnd - now),
-        current_weekly_remaining_percent: Math.round(weeklyRemaining * 10) / 10,
+        current_weekly_remaining_percent: round1(clampPct(weeklyRemaining)),
         current_weekly_total_count: 0,
         current_weekly_usage_count: 0,
         current_weekly_status: 1,
@@ -73,14 +97,14 @@ export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()
         // giornaliera di 24h (allineata a mezzanotte UTC = 02:00 a Roma in CEST),
         // oltre a quella settimanale condivisa.
         model_name: "video",
-        current_interval_remaining_percent: Math.round(videoDailyRemaining * 10) / 10,
+        current_interval_remaining_percent: round1(clampPct(videoDailyRemaining)),
         current_interval_total_count: 0,
         current_interval_usage_count: 0,
         current_interval_status: 3,
         start_time: videoDayStart,
         end_time: videoDayEnd,
         remains_time: Math.max(0, videoDayEnd - now),
-        current_weekly_remaining_percent: Math.round(videoWeeklyRemaining * 10) / 10,
+        current_weekly_remaining_percent: round1(clampPct(videoWeeklyRemaining)),
         current_weekly_total_count: 0,
         current_weekly_usage_count: 0,
         // I48 — stato 1 («attiva · in uso»): la simulazione ha un consumo
@@ -99,22 +123,29 @@ export function makeDemoSnapshot(region: Region = "eu", now: number = Date.now()
 }
 
 /** Genera uno storico fittizio plausibile per popolare il grafico al primo avvio demo.
- *  I124 — punti marcati source «demo»: le analisi li escludono (senzaDemo). */
+ *  I124 — punti marcati source «demo»: le analisi li escludono (senzaDemo).
+ *  I125 — la curva di ogni punto è ancorata al PROPRIO blocco/periodo: quando
+ *  l'arco temporale attraversa un confine di blocco il residuo torna verso il
+ *  100% (curva a sega), riproducendo i reset osservati sull'API reale — prima
+ *  la finestra «3,2h fa» saltava i punti pre-finestra e non mostrava mai il
+ *  reset. */
 export function makeDemoHistory(samples = 40, stepMs = 5 * 60_000): HistoryPoint[] {
   const now = Date.now();
   const out: HistoryPoint[] = [];
-  const intervalStart = now - Math.round(3.2 * 3600_000);
-  const weeklyStart = now - Math.round(2.7 * 24 * 3600_000);
 
   for (let i = samples; i >= 0; i--) {
     const t = now - i * stepMs;
-    if (t < intervalStart) continue;
-    const interval = simulatedRemaining(t - intervalStart, FIVE_HOURS_MS, 100, 12) + jitter(1.5);
-    const weekly = simulatedRemaining(t - weeklyStart, WEEK_MS, 100, 31) + jitter(1.0);
+    // I125 — ancoraggio PER PUNTO: ogni campione simula il consumo dentro la
+    // SUA finestra (blocco 5h corrente / settimana corrente).
+    const blockStart = inizioFinestra5h(t);
+    const blockEnd = fineFinestra5h(t);
+    const interval = clampPct(simulatedRemaining(t - blockStart, blockEnd - blockStart, 100, 12) + jitter(1.5));
+    const weekStart = inizioSettimanaUtc(t);
+    const weekly = clampPct(simulatedRemaining(t - weekStart, WEEK_MS, 100, 31) + jitter(1.0));
     out.push({
       t,
-      interval: Math.max(0, Math.min(100, Math.round(interval * 10) / 10)),
-      weekly: Math.max(0, Math.min(100, Math.round(weekly * 10) / 10)),
+      interval: round1(interval),
+      weekly: round1(weekly),
       source: "demo",
     });
   }
