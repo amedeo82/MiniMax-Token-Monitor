@@ -583,9 +583,9 @@ const CHECKS = [
   check.assenza("I105", "package.json", "nextjs_tailwind_shadcn_ts", "name generico scaffolding RIMOSSO"),
   check.contatore("I105", "README.md", (n) => `audit-${n}_PASS`, "badge audit allineato al numero reale dei check"),
   check.contatore("I105", "README.md", (n) => `${n} verifiche dichiarative`, "contatore audit §Qualità allineato"),
-  check.simbolo("I105", "README.md", "603 test / 2159 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
-  check.simbolo("I123", "README.md", "Suite test automatica\\*\\*: 603 test / 2159 asserzioni", "contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896"),
-  check.simbolo("I123", "README.md", "test-603_pass", "badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560"),
+  check.simbolo("I105", "README.md", "608 test / 2170 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
+  check.simbolo("I123", "README.md", "Suite test automatica\\*\\*: 608 test / 2170 asserzioni", "contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896"),
+  check.simbolo("I123", "README.md", "test-608_pass", "badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560"),
   check.simbolo("I105", "README.md", "01–11", "indice documentazione README completo (docs/11 incluso)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
@@ -921,6 +921,13 @@ const CHECKS = [
   check.simbolo("I125", "docs/02-analisi-json-quota.md", "^## 11\\. I125", "quadro ufficiale ri-verificato in tempo reale (20/10/2026): tier 1×/3×/7,5×, modelli per tier, endpoint confermato, NESSUNO schema JSON ufficiale (docs/02 resta il riferimento de-facto), tensione «rolling» ufficiale vs V8 presidiata"),
   check.simbolo("I125", "docs/01-api-minimax-ricerca.md", "^### 11\\.3", "racconto dell'ancoraggio demo (G9 chiusa, G13 nuova) con l'esito della matrice ri-eseguita"),
   check.simbolo("I125", "docs/01-api-minimax-ricerca.md", "Verifica fresca 20/10/2026", "la nota §7 distingue la CITAZIONE delle docs ufficiali (rolling) dal comportamento verificato (blocchi V8) con la data della verifica documentale"),
+
+  /* --- I126 — demo opt-in: default FALSE, niente forzamento silenzioso al salvataggio --- */
+  check.simbolo("I126", "src/components/settings-dialog.tsx", "demoMode: false", "il default NON è più la demo: il primo avvio senza chiave mostra la needsSetup card — chiusa lato client la causa radice dei burst demo post-deploy (task 69/I122)"),
+  check.assenza("I126", "src/components/settings-dialog.tsx", "demoMode \\|\\| !apiKey", "handleSave non forza più la demo quando la chiave è vuota: la scelta dell'utente viene salvata così com'è (il caso api-senza-chiave è della needsSetup card e del guard fetchData)"),
+  check.simbolo("I126", "src/app/page.tsx", "needsSetup = mounted && !settings\\.demoMode", "needsSetup gated su mounted: SSR e primo render mostrano lo skeleton — nessun flash della card di setup per gli utenti di ritorno con impostazioni salvate"),
+  check.simbolo("I126", "src/app/page.tsx", "I126 — primo avvio senza chiave", "l'effetto connessione non chiama fetchData (e non apre il dialog via guard) senza demo né chiave: il primo fetch parte al salvataggio, quando connKey cambia"),
+  check.file("I126", "tests/components/settings-demo-default.test.tsx", "test di componente dell'opt-in: default FALSE, switch spento, salvataggio senza chiave rispettato, opt-in esplicito funzionante, chiave trimmata (mock completo a livello di contratto — lezione bombe d'ordine)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

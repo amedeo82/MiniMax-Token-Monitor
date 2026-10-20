@@ -772,6 +772,11 @@ export default function DashboardPage() {
     const connKey = settings.demoMode ? "demo" : `${settings.apiKey}|${settings.region}|${settings.apiKeyAlt}`;
     if (lastConnKeyRef.current === connKey) return;
     lastConnKeyRef.current = connKey;
+    /* I126 — primo avvio senza chiave (la demo non è più il default): nessun
+       fetch e nessun dialog auto-aperto dal guard di fetchData — la needsSetup
+       card È lo stato iniziale del monitor. Il primo fetch parte al salvataggio,
+       quando connKey cambia (chiave inserita o «Prova la demo»). */
+    if (!settings.demoMode && !settings.apiKey) return;
     void fetchData(settingsRef.current);
   }, [mounted, settings.demoMode, settings.apiKey, settings.region, settings.apiKeyAlt, fetchData]);
 
@@ -1000,7 +1005,12 @@ export default function DashboardPage() {
       ? lastFetch + (pollDelayMs ?? settings.refreshSeconds * 1000)
       : null;
 
-  const needsSetup = !settings.demoMode && !settings.apiKey;
+  /* I126 — needsSetup richiede mounted: SSR e primo render mostrano lo skeleton
+     (comportamento invariato rispetto a quando demoMode era il default), poi il
+     microtask di init decide — card di setup per i visitatori senza chiave,
+     dashboard immediata per chi ha già salvato le impostazioni (niente flash
+     della card di setup agli utenti di ritorno). */
+  const needsSetup = mounted && !settings.demoMode && !settings.apiKey;
 
   /* I53 — seconda regione attiva SOLO con chiave dedicata diversa dalla primaria
      (la stessa chiave incollata due volte produrrebbe 1004: dedup, pannello assente). */

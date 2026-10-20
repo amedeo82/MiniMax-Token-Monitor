@@ -66,7 +66,12 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   apiKeyAlt: "",
   region: "eu",
   refreshSeconds: 60,
-  demoMode: true,
+  /* I126 — la demo NON è più il default: al primo avvio (nessuna impostazione
+     salvata) il monitor mostra la needsSetup card («Inserisci la chiave» /
+     «Prova la demo»). La demo diventa una scelta ESPLICITA: niente più dati
+     simulati che partono da soli nei contesti browser senza impostazioni —
+     la causa storica dei punti demo in produzione (task 69, azione I122). */
+  demoMode: false,
   alertsEnabled: true,
   thresholds: {
     h5: { warn: 25, crit: 10 },
@@ -478,7 +483,11 @@ export function SettingsDialog({ open, onOpenChange, settings, onSave, onImportJ
       apiKeyAlt: apiKeyAlt.trim(),
       region,
       refreshSeconds,
-      demoMode: demoMode || !apiKey.trim(),
+      /* I126 — la scelta dell'utente viene salvata COSÌ COM'È: niente più
+         forzamento silenzioso a demo quando la chiave è vuota. Il caso
+         «api senza chiave» è governato dalla needsSetup card e dal guard
+         di fetchData, non ri-attivando dati simulati a insaputa dell'utente. */
+      demoMode,
       alertsEnabled,
       thresholds,
       notifyReset,

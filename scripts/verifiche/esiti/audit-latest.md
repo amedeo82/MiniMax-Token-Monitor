@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-20T08:48:24.521Z
+# Audit implementazioni — 2026-10-20T10:10:13.344Z
 
-- Verifiche totali: **640** · PASS: **640** · FAIL: **0**
+- Verifiche totali: **645** · PASS: **645** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -644,6 +644,11 @@
 | I125 | quadro ufficiale ri-verificato in tempo reale (20/10/2026): tier 1×/3×/7,5×, modelli per tier, endpoint confermato, NESSUNO schema JSON ufficiale (docs/02 resta il riferimento de-facto), tensione «rolling» ufficiale vs V8 presidiata (docs/02-analisi-json-quota.md) | simbolo | PASS | — |
 | I125 | racconto dell'ancoraggio demo (G9 chiusa, G13 nuova) con l'esito della matrice ri-eseguita (docs/01-api-minimax-ricerca.md) | simbolo | PASS | — |
 | I125 | la nota §7 distingue la CITAZIONE delle docs ufficiali (rolling) dal comportamento verificato (blocchi V8) con la data della verifica documentale (docs/01-api-minimax-ricerca.md) | simbolo | PASS | — |
+| I126 | il default NON è più la demo: il primo avvio senza chiave mostra la needsSetup card — chiusa lato client la causa radice dei burst demo post-deploy (task 69/I122) (src/components/settings-dialog.tsx) | simbolo | PASS | — |
+| I126 | handleSave non forza più la demo quando la chiave è vuota: la scelta dell'utente viene salvata così com'è (il caso api-senza-chiave è della needsSetup card e del guard fetchData) — assenza richiesta (src/components/settings-dialog.tsx) | assenza | PASS | — |
+| I126 | needsSetup gated su mounted: SSR e primo render mostrano lo skeleton — nessun flash della card di setup per gli utenti di ritorno con impostazioni salvate (src/app/page.tsx) | simbolo | PASS | — |
+| I126 | l'effetto connessione non chiama fetchData (e non apre il dialog via guard) senza demo né chiave: il primo fetch parte al salvataggio, quando connKey cambia (src/app/page.tsx) | simbolo | PASS | — |
+| I126 | test di componente dell'opt-in: default FALSE, switch spento, salvataggio senza chiave rispettato, opt-in esplicito funzionante, chiave trimmata (mock completo a livello di contratto — lezione bombe d'ordine) | file | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (640 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (645 pass, 0 fail, 0 scoperte)
