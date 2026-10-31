@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-31T12:01:48.698Z
+# Audit implementazioni — 2026-10-31T13:03:01.379Z
 
-- Verifiche totali: **676** · PASS: **676** · FAIL: **0**
+- Verifiche totali: **679** · PASS: **679** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -680,6 +680,9 @@
 | I133 | hint con rotazione disattivata: distingue lo stato spento (solo cambio manuale coi bottoni a fianco) dal ciclo automatico (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
 | I133 | title esplicativo sul selettore dell'intervallo + aria-label «Intervallo di rotazione delle schermate»: il selettore spiega se stesso (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
 | I133 | test di componente: etichetta esplicita + aria-label switch, hint ciclo/spento mutuamente esclusi, title del selettore, countdown allineato a «prossima schermata tra» (tests/components/kiosk-bar.test.tsx) | simbolo | PASS | — |
+| I134 | cattura I126-aware: la demo NON è più il default (I126) e un contesto fresco mostra la scheda di setup — la pipeline clicca esplicitamente «Prova la demo» e verifica il badge «dati simulati» dopo il click; il badge da solo non basta come segnale: la copia della scheda I126 lo contiene lei stessa (scripts/github-assets.py) | simbolo | PASS | — |
+| I134 | cattura della modalità kiosk/TV (?kiosk=1) con stato kiosk seminato (rotazione attiva a 30 s): lo screenshot mostra la barra I133 («Rotazione tra schermate» + hint del ciclo) e il countdown I132 («prossima schermata tra Ns»), verificati nel body prima dello scatto (scripts/github-assets.py) | simbolo | PASS | — |
+| I134 | lo screenshot della modalità kiosk è referenziato nel README: la funzionalità di punta I87/I132/I133 ha ora una visuale nella sezione Screenshot, accanto ai 4 PNG della dashboard (README.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (676 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (679 pass, 0 fail, 0 scoperte)

@@ -966,6 +966,10 @@ const CHECKS = [
   check.simbolo("I133", "src/components/kiosk-bar.tsx", "rotazione spenta: cambio schermata solo coi bottoni", "hint con rotazione disattivata: distingue lo stato spento (solo cambio manuale coi bottoni a fianco) dal ciclo automatico"),
   check.simbolo("I133", "src/components/kiosk-bar.tsx", "Ogni quanto cambia la schermata durante la rotazione automatica", "title esplicativo sul selettore dell'intervallo + aria-label «Intervallo di rotazione delle schermate»: il selettore spiega se stesso"),
   check.simbolo("I133", "tests/components/kiosk-bar.test.tsx", "I133", "test di componente: etichetta esplicita + aria-label switch, hint ciclo/spento mutuamente esclusi, title del selettore, countdown allineato a «prossima schermata tra»"),
+  /* --- I134 — asset visivi del README allineati a I133 (richiesta utente) --- */
+  check.simbolo("I134", "scripts/github-assets.py", "Prova la demo", "cattura I126-aware: la demo NON è più il default (I126) e un contesto fresco mostra la scheda di setup — la pipeline clicca esplicitamente «Prova la demo» e verifica il badge «dati simulati» dopo il click; il badge da solo non basta come segnale: la copia della scheda I126 lo contiene lei stessa"),
+  check.simbolo("I134", "scripts/github-assets.py", "modalita-kiosk", "cattura della modalità kiosk/TV (?kiosk=1) con stato kiosk seminato (rotazione attiva a 30 s): lo screenshot mostra la barra I133 («Rotazione tra schermate» + hint del ciclo) e il countdown I132 («prossima schermata tra Ns»), verificati nel body prima dello scatto"),
+  check.simbolo("I134", "README.md", "modalita-kiosk\\.png", "lo screenshot della modalità kiosk è referenziato nel README: la funzionalità di punta I87/I132/I133 ha ora una visuale nella sezione Screenshot, accanto ai 4 PNG della dashboard"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",
