@@ -20,6 +20,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Monitor, MonitorOff, MoonStar, RotateCw } from "lucide-react";
 import { KIOSK_ROTATION_OPTIONS, KIOSK_VIEWS, type KioskState, type KioskView } from "@/lib/kiosk";
+import { useOrologio } from "@/lib/orologio";
+import { formatCountdown } from "@/lib/time";
 import { APP_VERSION } from "@/lib/version";
 
 interface KioskBarProps {
@@ -27,12 +29,35 @@ interface KioskBarProps {
   view: KioskView;
   /** True quando il dimming è EFFETTIVAMENTE attivo (kiosk + preferenza + ora notturna). */
   nightDimActive: boolean;
+  /** I132 — epoch (ms) del prossimo cambio vista programmato; null = non armato. */
+  prossimaRotazione?: number | null;
   onView: (v: KioskView) => void;
   onPrefs: (patch: Partial<Pick<KioskState, "rotation" | "rotationSeconds" | "nightDim">>) => void;
   onExit: () => void;
 }
 
-export function KioskBar({ state, view, nightDimActive, onView, onPrefs, onExit }: KioskBarProps) {
+/**
+ * I132 — Countdown della rotazione («prossima vista tra 12s»): foglia VIVA che
+ * si abbona all'orologio condiviso a 1 Hz (I96) — la pagina NON re-renderizza
+ * al secondo, solo questo span. È l'unica evidenza continua che il timer della
+ * rotazione gira: con un intervallo lungo (fino a 5 minuti) prima l'utente non
+ * aveva alcun riscontro finché il cambio vista non avveniva.
+ */
+function CountdownRotazione({ scade }: { scade: number | null }) {
+  const adesso = useOrologio();
+  if (scade === null) return null;
+  const base = adesso > 0 ? adesso : Date.now();
+  return (
+    <span
+      className="hidden font-mono text-[10px] text-zinc-500 lg:inline"
+      aria-label="Prossima rotazione vista"
+    >
+      prossima vista tra {formatCountdown(Math.max(0, scade - base))}
+    </span>
+  );
+}
+
+export function KioskBar({ state, view, nightDimActive, prossimaRotazione = null, onView, onPrefs, onExit }: KioskBarProps) {
   return (
     <div className="mt-auto sticky bottom-0 z-50 border-t border-white/[0.08] bg-[#09090b]/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
@@ -96,6 +121,11 @@ export function KioskBar({ state, view, nightDimActive, onView, onPrefs, onExit 
             </SelectContent>
           </Select>
         ) : null}
+
+        {/* I132 — countdown del prossimo cambio vista (solo con la rotazione attiva):
+            riscontro continuo che il timer gira anche quando il cambio vista è
+            lontano (fino a 5 minuti) o lo schermo è nello stato d'attesa dati. */}
+        {state.rotation ? <CountdownRotazione scade={prossimaRotazione} /> : null}
 
         {/* Dimming notturno (22:00–06:59 Europe/Rome) */}
         <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-400">

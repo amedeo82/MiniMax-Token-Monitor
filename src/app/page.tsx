@@ -23,10 +23,12 @@ import { stampaReportSettimanale } from "@/lib/print";
 import { APP_VERSION } from "@/lib/version";
 import {
   isNightRome,
+  intervalloRotazioneMs,
   kioskHref,
   KIOSK_DEFAULTS,
   loadKioskState,
   nextKioskView,
+  prossimaRotazioneEpoch,
   readKioskMode,
   saveKioskState,
   type KioskState,
@@ -223,6 +225,13 @@ export default function DashboardPage() {
      vista corrente della rotazione (quote/grafico/analisi). */
   const [kioskState, setKioskState] = React.useState<KioskState>(KIOSK_DEFAULTS);
   const [kioskView, setKioskView] = React.useState<KioskView>("quote");
+  /* I132 — epoch del PROSSIMO cambio vista programmato: alimenta il countdown
+     nella barra kiosk («prossima vista tra Ns»), unica evidenza visibile che il
+     timer gira mentre la rotazione è attiva. null = rotazione spenta o non
+     ancora armata. Scritture SOLO dal microtask iniziale dell'effetto rotazione
+     e dalla sua callback dell'intervallo — mai setState sincrono nel corpo
+     dell'effetto (regola react-hooks/set-state-in-effect v7, pattern I90). */
+  const [prossimaRotazione, setProssimaRotazione] = React.useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [now, setNow] = React.useState<number>(() => Date.now());
   /** I16: punti conservati sul server; null = server non ancora raggiunto. */
@@ -406,11 +415,21 @@ export default function DashboardPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [kioskAttivo]);
 
-  /* Rotazione automatica delle viste (solo con la rotazione attiva). */
+  /* Rotazione automatica delle viste (solo con la rotazione attiva).
+     I132 — il timer arma anche il countdown della barra: il microtask iniziale
+     (pattern I90) fissa la prima scadenza, la callback dell'intervallo la
+     riprogramma a ogni cambio vista così il countdown resta veritiero; il
+     cambio vista MANUALE non riparte (il setInterval conserva la sua fase e il
+     countdown la segue). */
   React.useEffect(() => {
     if (!kioskAttivo || !kioskState.rotation) return;
-    const ms = Math.max(5, kioskState.rotationSeconds) * 1000;
-    const id = setInterval(() => setKioskView((v) => nextKioskView(v)), ms);
+    const secondi = kioskState.rotationSeconds;
+    const ms = intervalloRotazioneMs(secondi);
+    queueMicrotask(() => setProssimaRotazione(prossimaRotazioneEpoch(Date.now(), secondi)));
+    const id = setInterval(() => {
+      setKioskView((v) => nextKioskView(v));
+      setProssimaRotazione(prossimaRotazioneEpoch(Date.now(), secondi));
+    }, ms);
     return () => clearInterval(id);
   }, [kioskAttivo, kioskState.rotation, kioskState.rotationSeconds]);
 
@@ -1345,6 +1364,88 @@ export default function DashboardPage() {
                 <div className="h-64 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
               </div>
             )
+          ) : kioskAttivo ? (
+            /* I87 — VISTA KIOSK/TV: solo la vista selezionata (+ banner soglie);
+               niente nav, panoramiche, diagnostica, tecnici, registro né footer —
+               la KioskBar sticky lo sostituisce (uscita sempre disponibile).
+               I132 — il branch kiosk è FUORI dal branch «snapshot ?»: senza dati
+               (primo fetch in corso, errore API, quota esaurita) il kiosk mostra
+               uno stato d'attesa dedicato invece di ereditare i rami loading/null
+               della dashboard — prima l'area centrale restava VUOTA (o bloccata
+               sul loader) e la rotazione sembrava senza effetto: lo stato
+               kioskView cambiava ma lo schermo no. Errore API e schermata di
+               setup restano visibili sopra (fuori da qui). */
+            <>
+              {bannerAlert}
+
+              {snapshot ? (
+                <>
+                  {kioskView === "quote" ? (
+                    <>
+                      <MainWindows general={general} />
+                      <p className="text-center text-xs text-zinc-500">
+                        Oggi a Roma: <span className="font-medium text-zinc-400">{formatDateRome(now)}</span>
+                      </p>
+                    </>
+                  ) : null}
+
+                  {kioskView === "grafico" ? (
+                    <div className="space-y-3">
+                      {rangeSelector}
+                      {modelSelector}
+                      <SectionBoundary title="Grafico storico" fallbackHeight="h-64">
+                        <HistoryChart
+                          history={filteredHistory}
+                          window={chartWindow}
+                          onWindowChange={setChartWindow}
+                          serverCount={serverCount}
+                          intervalLabel={intervalLabel}
+                        />
+                      </SectionBoundary>
+                      <SectionBoundary title="Statistiche di proiezione" fallbackHeight="h-40">
+                        <StatsPanel
+                          trend={trend}
+                          sessionTrend={sessionTrend}
+                          win={chartWindow}
+                          resetAt={selectedWindowEnd}
+                          remaining={selectedWindowRemaining}
+                          serverCount={serverCount}
+                          ewma={ewma}
+                          intervalLabel={intervalLabel}
+                        />
+                      </SectionBoundary>
+                      <SectionBoundary title="Ritmo di consumo" fallbackHeight="h-56">
+                        <RateChart history={filteredHistory} window={chartWindow} intervalLabel={intervalLabel} />
+                      </SectionBoundary>
+                    </div>
+                  ) : null}
+
+                  {kioskView === "analisi" ? (
+                    <SectionBoundary title="Analisi di lungo periodo" fallbackHeight="h-64">
+                      <LongTermAnalysis
+                        history={filteredHistory}
+                        nomeModello={selectedModel}
+                        intervalLabel={intervalLabel}
+                      />
+                    </SectionBoundary>
+                  ) : null}
+                </>
+              ) : (
+                /* I132 — stato d'attesa del kiosk senza snapshot: la rotazione
+                   continua a girare (la barra mostra la vista attiva e il
+                   countdown) e le viste compaiono da sole al primo dato. */
+                <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center">
+                  <Monitor className="size-10 text-zinc-700" />
+                  <p className="text-sm font-medium text-zinc-400">Kiosk attivo — in attesa dei dati</p>
+                  <p className="max-w-md text-xs leading-relaxed text-zinc-600">
+                    {loading
+                      ? "Sincronizzazione in corso…"
+                      : "Nessuno snapshot disponibile: le viste compariranno appena il monitor riceve i dati. Rotazione e comandi nella barra restano attivi."}
+                  </p>
+                  {loading ? <RefreshCw className="size-4 animate-spin text-zinc-600" /> : null}
+                </div>
+              )}
+            </>
           ) : snapshot ? (
             compact ? (
               /* I73 — VISTA COMPATTA (widget): solo anelli principali + countdown + ritmo.
@@ -1363,64 +1464,6 @@ export default function DashboardPage() {
                     <RateChart history={filteredHistory} window={chartWindow} />
                   </SectionBoundary>
                 </div>
-              </>
-            ) : kioskAttivo ? (
-              /* I87 — VISTA KIOSK/TV: solo la vista selezionata (+ banner soglie);
-                 niente nav, panoramiche, diagnostica, tecnici, registro né footer —
-                 la KioskBar sticky lo sostituisce (uscita sempre disponibile).
-                 Errore API e schermata di setup restano visibili sopra (fuori da qui). */
-              <>
-                {bannerAlert}
-
-                {kioskView === "quote" ? (
-                  <>
-                    <MainWindows general={general} />
-                    <p className="text-center text-xs text-zinc-500">
-                      Oggi a Roma: <span className="font-medium text-zinc-400">{formatDateRome(now)}</span>
-                    </p>
-                  </>
-                ) : null}
-
-                {kioskView === "grafico" ? (
-                  <div className="space-y-3">
-                    {rangeSelector}
-                    {modelSelector}
-                    <SectionBoundary title="Grafico storico" fallbackHeight="h-64">
-                      <HistoryChart
-                        history={filteredHistory}
-                        window={chartWindow}
-                        onWindowChange={setChartWindow}
-                        serverCount={serverCount}
-                        intervalLabel={intervalLabel}
-                      />
-                    </SectionBoundary>
-                    <SectionBoundary title="Statistiche di proiezione" fallbackHeight="h-40">
-                      <StatsPanel
-                        trend={trend}
-                        sessionTrend={sessionTrend}
-                        win={chartWindow}
-                        resetAt={selectedWindowEnd}
-                        remaining={selectedWindowRemaining}
-                        serverCount={serverCount}
-                        ewma={ewma}
-                        intervalLabel={intervalLabel}
-                      />
-                    </SectionBoundary>
-                    <SectionBoundary title="Ritmo di consumo" fallbackHeight="h-56">
-                      <RateChart history={filteredHistory} window={chartWindow} intervalLabel={intervalLabel} />
-                    </SectionBoundary>
-                  </div>
-                ) : null}
-
-                {kioskView === "analisi" ? (
-                  <SectionBoundary title="Analisi di lungo periodo" fallbackHeight="h-64">
-                    <LongTermAnalysis
-                      history={filteredHistory}
-                      nomeModello={selectedModel}
-                      intervalLabel={intervalLabel}
-                    />
-                  </SectionBoundary>
-                ) : null}
               </>
             ) : (
             <>
@@ -1618,6 +1661,7 @@ export default function DashboardPage() {
             state={kioskState}
             view={kioskView}
             nightDimActive={nightDimAttivo}
+            prossimaRotazione={prossimaRotazione}
             onView={setKioskView}
             onPrefs={(patch) => setKioskState((s) => ({ ...s, ...patch }))}
             onExit={() => setKioskState((s) => ({ ...s, enabled: false }))}

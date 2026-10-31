@@ -60,6 +60,24 @@ export const KIOSK_ROTATION_OPTIONS: { value: number; label: string }[] = [
   { value: 300, label: "5 minuti" },
 ];
 
+/**
+ * I132 — Limite minimo dell'intervallo di rotazione (secondi): sotto questa
+ * soglia il cambio vista sarebbe troppo rapido per essere leggibile su una TV.
+ * Il clamp era inlinea in page.tsx (Math.max(5, rotationSeconds)) dalla I87;
+ * estratto qui per essere testato e condiviso dal countdown della barra.
+ */
+export const KIOSK_ROTATION_MIN_SECONDS = 5;
+
+/** I132 — Intervallo di rotazione in millisecondi, con clamp al minimo. */
+export function intervalloRotazioneMs(seconds: number): number {
+  return Math.max(KIOSK_ROTATION_MIN_SECONDS, seconds) * 1000;
+}
+
+/** I132 — Epoch (ms) del PROSSIMO cambio vista: istante + intervallo. */
+export function prossimaRotazioneEpoch(now: number, seconds: number): number {
+  return now + intervalloRotazioneMs(seconds);
+}
+
 /** Carica lo stato kiosk dal localStorage, sanificando i campi invalidi. */
 export function loadKioskState(): KioskState {
   if (typeof window === "undefined") return KIOSK_DEFAULTS;

@@ -104,7 +104,7 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/lib/interval.ts` | Presetti intervallo 6h/24h/3g/7g/30g/tutto, filtro client-side (I69) |
 | `src/lib/event-filters.ts` | Filtri registro eventi: kind multi-selezione, testo, periodo (I77) |
 | `src/lib/compact.ts` | Parsing modalità compatta `?compact=1` (I73) |
-| `src/lib/kiosk.ts` | Stato kiosk persistito (`mm-dash-kiosk-v1`), rotazione viste, finestra notturna `isNightRome` 22:00–06:59 Roma, parsing `?kiosk=1`, gestione URL (I87) |
+| `src/lib/kiosk.ts` | Stato kiosk persistito (`mm-dash-kiosk-v1`), rotazione viste, finestra notturna `isNightRome` 22:00–06:59 Roma, parsing `?kiosk=1`, gestione URL (I87), helper rotazione con clamp `intervalloRotazioneMs`/`prossimaRotazioneEpoch` (I132) |
 | `src/lib/version.ts` | Marcatore `APP_VERSION` reso nel footer e nella barra kiosk — aggiornato a OGNI passata documentale, insieme ai docs (I46, riattivato da I86) |
 | `src/lib/print.ts` | `stampaReportSettimanale()` — classe body + ripristino su afterprint (I75) |
 | `src/lib/ring-color.ts` | Colore continuo HSL, glow dinamico, count-up con reduced-motion (I65) |
@@ -119,7 +119,7 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/components/bottom-nav.tsx` | Barra navigazione fissa su mobile <md, stesso scrollspy (I74) |
 | `src/components/section-boundary.tsx` | Error boundary per sezione con skeleton e «Riprova» (I76) |
 | `src/components/theme-toggle.tsx` | Toggle sole/luna (tema chiaro/scuro/sistema, I78) |
-| `src/components/kiosk-bar.tsx` | Barra di controllo kiosk/TV sticky a fondo pagina: cambio vista, rotazione con intervallo, dimming, uscita sempre disponibile (I87) |
+| `src/components/kiosk-bar.tsx` | Barra di controllo kiosk/TV sticky a fondo pagina: cambio vista, rotazione con intervallo, countdown «prossima vista tra Ns» (I132), dimming, uscita sempre disponibile (I87) |
 | `src/components/print-report.tsx` | Report settimanale stampabile (I75) |
 | `src/components/pwa-register.tsx` | Registrazione Service Worker + sync notifiche a tab chiuso (I52) |
 | `src/app/api/summary/route.ts` | `GET /api/summary` read-only senza chiave: KPI aggregati per widget esterni (I80) |

@@ -87,4 +87,41 @@ describe("I87 componenti: KioskBar", () => {
     // versione resa dalla fonte unica version.ts (formato AAAA-MM-GG)
     expect(screen.getByText(/v \d{4}-\d{2}-\d{2}/)).toBeDefined();
   });
+
+  /* --------------------------- I132 — countdown rotazione --------------------------- */
+
+  test("I132: rotazione attiva + scadenza armata → countdown «prossima vista tra»", () => {
+    render(
+      <KioskBar
+        state={stato}
+        view="quote"
+        nightDimActive={false}
+        prossimaRotazione={Date.now() + 15_000}
+        onView={() => {}}
+        onPrefs={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    expect(screen.getByLabelText("Prossima rotazione vista").textContent).toMatch(/^prossima vista tra \d+s$/);
+  });
+
+  test("I132: rotazione attiva ma scadenza non armata (null) → nessun countdown", () => {
+    render(<KioskBar state={stato} view="quote" nightDimActive={false} prossimaRotazione={null} onView={() => {}} onPrefs={() => {}} onExit={() => {}} />);
+    expect(screen.queryByLabelText("Prossima rotazione vista")).toBeNull();
+  });
+
+  test("I132: rotazione spenta → nessun countdown anche con scadenza passata via prop", () => {
+    render(
+      <KioskBar
+        state={{ ...stato, rotation: false }}
+        view="quote"
+        nightDimActive={false}
+        prossimaRotazione={Date.now() + 15_000}
+        onView={() => {}}
+        onPrefs={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    expect(screen.queryByLabelText("Prossima rotazione vista")).toBeNull();
+  });
 });
