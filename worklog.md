@@ -1926,3 +1926,22 @@ Work Log:
 Stage Summary:
 - Gli asset visivi sono tornati a essere SPECCHIO del progetto: demo fedele alle finestre (I125), verdetto con base dichiarata (I127), kiosk con la sua immagine (I87/I132/I133) — e la pipeline di cattura è I126-aware: la demo è una scelta esplicita anche nelle catture, con probe affidabili
 - Lezione di sessione: due false partite beccate dai probe (il badge «dati simulati» presente nella copia della scheda I126; lo skeleton SSR prima dell'idratazione) — i segnali affidabili sono i SELETTORI di ruolo e il contenuto specifico, mai il testo del body da solo
+
+---
+Task ID: 88
+Agent: main (Super Z)
+Task: «procedi con il prossimo step» — chiusura dell'asset orfano sezione-diagnostica.png: la Diagnostica ha la sua immagine nel README (I135)
+
+Work Log:
+- VERIFICA ANTI-SESSIONE-PARALLELA: HEAD 5b616f5 (I134) 0/0 con origin/main, albero pulito, APP_VERSION I134 — nessun nuovo episodio; nota di filiera per memoria: la consegna I134 era stata implementata in locale da sessione parallela e NON pushata — verificata integralmente dalla sessione precedente (verifica visiva dei PNG, protocollo tsc/lint/suite/audit con exit reale, audit-latest allineato) e poi pushata (b4b0129..5b616f5) con CI SUCCESS e footer produzione «2026-10-31 · I134» confermato
+- IL PROSSIMO STEP (residuo esplicito di I134): docs/04 senza suggerimenti in attesa di autorizzazione, ma sezione-diagnostica.png — rigenerato retina in I134 e verificato a vista — restava ORFANO: nessun riferimento nel README, nessun check audit; peggio, la griglia §Screenshot aveva la didascalia «Diagnostica del monitor» mostrando sezione-analisi.png (incongruenza didascalia/immagine: l'immagine mostra la TAB Analisi con la Diagnostica sotto)
+- VERIFICA VISIVA di sezione-diagnostica.png: TAB Diagnostica attiva, Orologio dei reset sui blocchi UTC 00/05/10/15/20 con reset finestra 5h sul blocco 10, «Salute del monitor — Scheduler regolare · nessun episodio di errore negli ultimi 7 giorni», «Anomalie del ritmo — Nessuna anomalia fuori regime (regime atteso 20.40 %/h · soglia |z| > 3.5 · 34 campioni)», «Qualità del campionamento», badge «Modalità demo — dati simulati» — perfetta per il README
+- IMPLEMENTAZIONE (solo README + audit + docs; ZERO src/ salvo il marcatore di versione): griglia §Screenshot 2×3 completa — riga Analisi (nota I124) · Diagnostica con la SUA immagine; riga Compatta · Kiosk (I132/I133); nota demo estesa (la Diagnostica del monitor — orologio dei reset, salute, anomalie — resta leggibile anche in demo); ogni PNG generato dalla pipeline è ora nel README
+- AUDIT +1 check I135 → 680/680 PASS 0 scoperte (simbolo sezione-diagnostica\.png in README: presidio anti-orfano); badge audit README 679→680 (contatore I105 auto-allineato); §Qualità 680 + presidio I135
+- DOCS: docs/04 §3 riga I135 (provenienza: «procedi con il prossimo step», proseguimento del mandato I134) + §8 changelog in cima; versione «2026-10-31 · I135»
+- PROTOCOLLO (exit REALE): tsc 0, lint 0, suite 644/644 (2332 asserzioni), audit 680/680 PASS 0 scoperte; audit-latest.md allineato (copia manuale)
+- CONSEGNA: commit/push, CI SUCCESS, footer produzione «… · I135»
+
+Stage Summary:
+- La sezione Screenshot del README copre ora TUTTE le superfici del progetto (dashboard, grafico, analisi, diagnostica, compatta, kiosk) e nessun asset generato dalla pipeline può restare orfano senza rompere l'audit
+- Chiuso il loop aperto da I134: le 4 proposte erano tutte operative, ma l'asset diagnostica era stato rigenerato senza destinazione — ora ha la sua riga e un presidio permanente

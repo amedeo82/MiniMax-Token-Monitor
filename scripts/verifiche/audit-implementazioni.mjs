@@ -970,6 +970,8 @@ const CHECKS = [
   check.simbolo("I134", "scripts/github-assets.py", "Prova la demo", "cattura I126-aware: la demo NON è più il default (I126) e un contesto fresco mostra la scheda di setup — la pipeline clicca esplicitamente «Prova la demo» e verifica il badge «dati simulati» dopo il click; il badge da solo non basta come segnale: la copia della scheda I126 lo contiene lei stessa"),
   check.simbolo("I134", "scripts/github-assets.py", "modalita-kiosk", "cattura della modalità kiosk/TV (?kiosk=1) con stato kiosk seminato (rotazione attiva a 30 s): lo screenshot mostra la barra I133 («Rotazione tra schermate» + hint del ciclo) e il countdown I132 («prossima schermata tra Ns»), verificati nel body prima dello scatto"),
   check.simbolo("I134", "README.md", "modalita-kiosk\\.png", "lo screenshot della modalità kiosk è referenziato nel README: la funzionalità di punta I87/I132/I133 ha ora una visuale nella sezione Screenshot, accanto ai 4 PNG della dashboard"),
+  /* --- I135 — asset orfano chiuso: la Diagnostica ha la sua immagine nel README --- */
+  check.simbolo("I135", "README.md", "sezione-diagnostica\\.png", "l'ultimo asset orfano di docs/assets è referenziato: la sezione Screenshot mostra la Diagnostica del monitor con la SUA immagine (orologio dei reset sui blocchi UTC, salute, anomalie del ritmo) invece di usare sezione-analisi.png con didascalia Diagnostica — nessun PNG generato dalla pipeline resta fuori dal README"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",
