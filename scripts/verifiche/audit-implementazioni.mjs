@@ -982,6 +982,8 @@ const CHECKS = [
   check.nonTracciato("I136", "scripts/verifiche/campione-live\\.jsonl", "i campioni REALI dell'account non entrano nel repo pubblico (I136: fixture sintetica al loro posto)"),
   check.nonTracciato("I136", "scripts/issue(88|99)\\.(json|html)", "le copie locali delle issue GitHub non sono più tracciate (le issue restano online: fonti pubbliche, artefatti HTML fuori dal repo)"),
   check.nonTracciato("I136", "(\\.zscripts|examples)/.*", "artefatti dell'ambiente di sviluppo (script sandbox, scaffold websocket) fuori dal repo pubblico"),
+  /* --- I137 — chiusura checklist pubblicazione: rotazione token eseguita --- */
+  check.simbolo("I137", "docs/12-pubblicazione-github.md", "Rotazione eseguita", "chiusura della checklist di pubblicazione: l'unica azione utente residua (rotazione token Turso + rebuild Vercel) è registrata come ESEGUITA con la dichiarazione dell'utente — il vecchio token è definitivamente inoffensivo anche di fronte a cache SHA/fork/clone pre-esistenti e il repo non ha più prerequisiti tecnici prima dell'apertura (docs/12 §5)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

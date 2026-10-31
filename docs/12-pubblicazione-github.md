@@ -6,7 +6,9 @@
 > codice sia sicuro, non contenga bug, segreti o informazioni personali, non esponga
 > o documenti password e vulnerabilità; produci tutta la documentazione necessaria
 > per pubblicare e distribuire il progetto». L'audit pre-pubblicazione è registrato
-> in §2; ciò che resta ALL'UTENTE prima di aprire il repo è in §3 (una sola azione).
+> in §2; l'unica azione utente richiesta prima di aprire il repo (§3, rotazione del
+> token Turso) è stata ESEGUITA il 31/10/2026 e registrata in I137: resta solo
+> l'apertura del repo (§5), decisione dell'utente.
 
 ---
 
@@ -22,6 +24,7 @@
 | 6 | Dipendenze: `bun audit` | ✅ produzione a ZERO; high dev-only (`happy-dom`) risolto con update; 5 advisory residue dev-only senza fix upstream (eslint/prisma CLI) — documentate |
 | 7 | Qualità: tsc / lint / suite / audit | ✅ 0 / 0 / 644 / 689 PASS |
 | 8 | File di pubblicazione | ✅ `LICENSE` (MIT), `SECURITY.md`, `CONTRIBUTING.md`, `.env.example`, `package.json` completato, `docs/11` ridotto alla sintesi pubblica |
+| 9 | Rotazione token Turso + aggiornamento Vercel + rebuild (azione utente) | ✅ eseguita 31/10 (§3, I137) |
 
 ## 2. Esito dell'audit pre-pubblicazione (sintesi)
 
@@ -30,22 +33,25 @@
 - **Documentazione**: `docs/11-audit-sicurezza.md` ridotta alla sintesi pubblica (rischi e remediation, senza dettagli operativi); nessun documento espone credenziali, password o chiavi.
 - **Rischio residuo noto e accettato**: chiave MiniMax nel `localStorage` del browser (modello single-user per design, dichiarato in `SECURITY.md`); rate limit in-memory per-istanza (deterrente, documentato); CSP in `Report-Only` (candidato hardening futuro).
 
-## 3. ⚠️ Azione dell'utente PRIMA di rendere pubblico il repo
+## 3. ✅ Rotazione eseguita (31/10/2026, I137)
 
-**Rotazione del token Turso** — il token committato per errore nel 2026 (poi
-rimosso dal tracciamento) è stato dichiarato NON ancora ruotato. Anche se la
-storia con il blob è stata riscritta (§4), GitHub può averne conservato copie
-(cache dei commit accessibili via SHA, fork, clone locali pre-esistenti):
-**la rotazione rende il vecchio token definitivamente inoffensivo**.
+**Il token Turso è stato ruotato e il rebuild su Vercel è stato fatto** —
+dichiarato dall'utente il 31/10/2026: «ho ruotato il token di turso ed ho fatto
+il rebuild su vercel». Anche se la storia con il blob era stata riscritta (§4),
+GitHub poteva averne conservato copie (cache dei commit accessibili via SHA,
+fork, clone locali pre-esistenti): **la rotazione rende il vecchio token
+definitivamente inoffensivo** e chiude l'ultimo prerequisito tecnico prima
+dell'apertura del repo (§5).
+
+Procedura applicata (checklist registrata in I136, eseguita il 31/10):
 
 1. Console Turso → il tuo database → **Tokens** → «Create» (nuovo token);
 2. Vercel → progetto → Settings → Environment Variables → `TURSO_AUTH_TOKEN` →
-   aggiorna col nuovo valore (ambito Production) → **Redeploy**;
-3. `.env` locale: aggiorna `TURSO_AUTH_TOKEN` (se usi Turso in locale);
-4. verifica: apri la dashboard di produzione, dati in arrivo; `bun test` in
-   locale rimane verde;
-5. (consigliato) crea anche un token **read-only** separato se intendi usare
-   letture diagnostica da strumenti esterni.
+   aggiornato col nuovo valore (ambito Production) → **Redeploy** (eseguito);
+3. verifica: la produzione serve l'ultima versione dopo il rebuild e la suite
+   locale resta verde (644/644, audit 690/690);
+4. (consigliato, opzionale) un token **read-only** separato per letture di
+   diagnostica da strumenti esterni.
 
 ## 4. Riscrittura della storia (eseguita in I136)
 
@@ -57,12 +63,12 @@ nella storia e il force-push su `origin/main` ha allineato il remote. Conseguenz
 dichiarate: (a) gli hash dei commit citati nei messaggi/changelog precedenti si
 riferiscono alla storia pre-riscrittura (restano descrittivi); (b) eventuali
 clone/fork pre-esistenti conservano la vecchia storia — ulteriore motivo per la
-rotazione di §3.
+rotazione di §3, eseguita il 31/10 (I137).
 
 ## 5. Aprire il repository al pubblico (passi GitHub)
 
 1. `Settings` → `General` → `Danger Zone` → **Change repository visibility** →
-   `Make public` (dopo la rotazione di §3);
+   `Make public` (rotazione di §3 eseguita il 31/10);
 2. `Settings` → `General` → dettagli: descrizione, topics (es. `nextjs`,
    `typescript`, `minimax`, `quota-monitor`, `pwa`, `turso`);
 3. `Settings` → `Code security`: attiva **Private Vulnerability Reporting**
@@ -87,3 +93,5 @@ Il check audit I136 fallisce se: manca `LICENSE`/`SECURITY.md`/`CONTRIBUTING.md`
 `.env.example`; il template env contiene un valore segreto reale; i campioni
 reali, le copie delle issue o gli artefatti ambiente tornano nell'indice git.
 Il presidio si aggiunge a quelli I119 (log Prisma, `X-Powered-By`, Caddyfile).
+Il check audit I137 registra inoltre la chiusura della §3 (rotazione eseguita):
+la checklist non può tornare indietro senza lasciare traccia nell'audit.

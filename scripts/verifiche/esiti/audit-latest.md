@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-31T14:01:25.348Z
+# Audit implementazioni — 2026-10-31T14:35:09.659Z
 
-- Verifiche totali: **689** · PASS: **689** · FAIL: **0**
+- Verifiche totali: **690** · PASS: **690** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -693,6 +693,7 @@
 | I136 | i campioni REALI dell'account non entrano nel repo pubblico (I136: fixture sintetica al loro posto) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I136 | le copie locali delle issue GitHub non sono più tracciate (le issue restano online: fonti pubbliche, artefatti HTML fuori dal repo) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I136 | artefatti dell'ambiente di sviluppo (script sandbox, scaffold websocket) fuori dal repo pubblico — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I137 | chiusura della checklist di pubblicazione: l'unica azione utente residua (rotazione token Turso + rebuild Vercel) è registrata come ESEGUITA con la dichiarazione dell'utente — il vecchio token è definitivamente inoffensivo anche di fronte a cache SHA/fork/clone pre-esistenti e il repo non ha più prerequisiti tecnici prima dell'apertura (docs/12 §5) (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (689 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (690 pass, 0 fail, 0 scoperte)

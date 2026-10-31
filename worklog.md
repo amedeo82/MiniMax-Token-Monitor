@@ -1968,3 +1968,21 @@ Stage Summary:
 - Il repo è PRONIO per la pubblicazione: 0 segreti nel codice, storia pulita dalle credenziali, dati personali d'uso fuori dal repo, artefatti ambiente rimossi, licenza e politiche complete
 - L'unica azione che NON posso fare io: ruotare il token Turso (console Turso + Vercel env) — checklist passo-passo in docs/12 §3; DOPO la rotazione il repo può essere reso pubblico (docs/12 §5)
 - Lezione: bun update su una transitiva la PROMUOVE a dependency diretta — rimuovere subito (bun remove) e verificare l'inventario I114
+
+---
+Task ID: 90
+Agent: main (Super Z)
+Task: «ho ruotato il token di turso ed ho fatto il rebuild su vercel» — chiusura della checklist di pubblicazione (I137)
+
+Work Log:
+- VERIFICA ANTI-SESSIONE-PARALLELA (11ª): I136 già IMPLEMENTATO E PUSHATO da sessione parallela — HEAD 6694534 (I136-fix2) 0/0 con origin/main, albero pulito, APP_VERSION I136; verificato integralmente l'esistente invece di rifarlo: file di pubblicazione presenti (LICENSE MIT, SECURITY.md, CONTRIBUTING.md, .env.example solo segnaposto, docs/12), storia git SENZA .env (`git log --all -- .env` vuoto; dd03d16 «Not a valid object name» — filter-branch riuscito; hit authToken/eyJ residui = nomi di variabili e fixture finte, non credenziali), CI SUCCESS su 6694534 (typecheck·lint·test·audit), footer produzione «2026-10-31 · I136» dopo il rebuild dell'utente, suite locale 644/644 (2332 asserzioni) + tsc 0 + lint 0 + audit 689/689 PASS 0 scoperte confermati in locale
+- IL MESSAGGIO UTENTE chiude l'UNICA azione residua (docs/12 §3 di I136): rotazione token Turso + aggiornamento env Vercel + rebuild — il vecchio token (il cui blob era nella storia pre-riscrittura) è ora DEFINITIVAMENTE inoffensivo anche in presenza di cache SHA/fork/clone pre-esistenti; la produzione serve l'ultima versione dopo il rebuild (footer verificato)
+- IMPLEMENTAZIONE (solo docs: nessun src/ toccato salvo il marcatore di versione): docs/12 §3 da «⚠️ Azione dell'utente» a «✅ Rotazione eseguita» con la dichiarazione dell'utente registrata verbatim; §1 riga 9 (rotazione ✅ eseguita 31/10); §4 «ulteriore motivo per la rotazione — eseguita il 31/10 (I137)»; §5 passo 1 allineato; §7 presidio I137; nota d'apertura aggiornata (resta solo la decisione di apertura, §5)
+- AUDIT +1 check I137 → 690/690 PASS 0 scoperte (simbolo «Rotazione eseguita» in docs/12: la checklist non torna indietro senza lasciare traccia); badge audit README 689→690; §Qualità 690 + presidio I137; §Audit sicurezza 140 (rotazione attribuita a I137); indice docs allineato
+- DOCS: docs/04 §3 riga I137 (provenienza: «ho ruotato il token di turso ed ho fatto il rebuild su vercel») + §8 changelog in cima; versione «2026-10-31 · I137»
+- PROTOCOLLO (exit REALE): tsc 0, lint 0, suite 644/644 (2332 asserzioni), audit 690/690 PASS 0 scoperte; audit-latest.md allineato (copia manuale dal report nuovo)
+- CONSEGNA: commit/push, CI, footer produzione «… · I137»
+
+Stage Summary:
+- La checklist di pubblicazione (docs/12) è COMPLETATA al 100%: nessuna azione tecnica residua — l'apertura del repo è ora una pura decisione dell'utente (Settings → Danger Zone → Make public, docs/12 §5)
+- 11ª sessione parallela gestita per via verificativa: zero lavoro rifatto, zero conflitti — l'intera I136 è stata validata dal vivo (storia git, CI, produzione, suite completa) prima di sovrapporvi la chiusura della checklist
