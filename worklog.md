@@ -1986,3 +1986,24 @@ Work Log:
 Stage Summary:
 - La checklist di pubblicazione (docs/12) è COMPLETATA al 100%: nessuna azione tecnica residua — l'apertura del repo è ora una pura decisione dell'utente (Settings → Danger Zone → Make public, docs/12 §5)
 - 11ª sessione parallela gestita per via verificativa: zero lavoro rifatto, zero conflitti — l'intera I136 è stata validata dal vivo (storia git, CI, produzione, suite completa) prima di sovrapporvi la chiusura della checklist
+
+---
+Task ID: 91
+Agent: main (Super Z)
+Task: «possiamo migliorare la documentazione del progetto è creare un file readme navigabile a sezioni e con indice al posto del file attuale monolitico?» — README navigabile (I138)
+
+Work Log:
+- VERIFICA ANTI-SESSIONE-PARALLELA (12ª): HEAD 3570937 (I137) 0/0 con origin/main; 29 file «modificati» nel working tree = SOLI mode-change 644→755 con 0 insertions/0 deletions — il rumore di piattaforma già visto in I109, NON una sessione parallela vera; neutralizzato con `git config core.fileMode false` (albero pulito, nessun contenuto toccato)
+- DECISIONI DEL CLARIFY (risposte testuali dell'utente): sezioni comprimibili <details> NO — tutto visibile, markdown puro; intro inglese SÌ 3-4 righe (il repo sta per diventare pubblico); struttura e contenuto sui default raccomandati (README unico con indice; tutto il contenuto conservato)
+- DIAGNOSI DEL MONOLITE: 419 righe; paragrafi su RIGA SINGOLA fino a 4.413 caratteri (presidio audit §Qualità 4.413, bullet polling/evoluzioni 2.923, suite test 2.797) — nessun indice, nessuna gerarchia sotto i ##
+- INVENTARIO DEI VINCOLI prima di toccare il file: 17 check audit leggono il README (2 contatori dinamici I105 badge+«verifiche dichiarative» + 15 simboli I105/I106/I107/I112/I113/I123/I134/I135) — tutti i literal preservati; NESSUN test legge il README
+- IMPLEMENTAZIONE (solo README + audit + docs: nessun src/ toccato salvo il marcatore): (1) «🧭 Indice» — tabella 11 sezioni con ancore ESPLICITE <a id="sez-..."> (immuni all'algoritmo di ancoraggio GitHub: emoji/accenti) e contenuto dichiarato; (2) back-link «⬆ torna all'indice» a chiusura di ogni sezione — navigazione bidirezionale; (3) smontaggio dei monoliti: bullet polling → bullet + 7 sub-bullet I125–I131; kiosk I87 → +2 sub-bullet I132/I133; analisi lungo periodo I26 → +4 sub-bullet I124/I128–I130; suite test → intro + 8 aree (parser/tempo, demo/proiezioni, kiosk/viste, rete/PWA, server/persistenza, UI, sicurezza, igiene); presidio audit → TABELLA «Dal → Presidio permanente» I114–I138; (4) «Persistenza server» promossa da ### a ## con 8 sottosezioni (scelta motore, default incorporato, serverless, schema+gate, installazione, attivazione I110, manutenzione I111, verifica ramo); (5) NUOVA sezione «Sicurezza, licenza e contributi» (SECURITY.md Private Vulnerability Reporting, CONTRIBUTING.md, LICENSE MIT, docs/12); (6) intro inglese 🇬🇧 post-header con link demo/avvio rapido + nota «documentazione in italiano»; (7) CONTENUTO CONSERVATO AL 100%: nessun bullet eliminato
+- ALLINEAMENTI DI PASSAGGIO: commento albero «Questa documentazione (01–11)» → «(01–12)» (stantio da I136) con check I105 aggiornato di conseguenza; paragrafo I110 aggiornato (diceva ancora «ruotalo quando possibile»: ora registra rotazione eseguita + storia riscritta, rimando docs/12); typo «anutenzione-cron]» → «[manutenzione-cron]»
+- AUDIT +3 check I138 → 693/693 PASS 0 scoperte (simboli «## 🧭 Indice», «id="sez-», «torna all'indice»); badge audit README 690→693 + «693 verifiche dichiarative» (contatori I105 auto-allineati)
+- DOCS: docs/04 §3 riga I138 (provenienza: richiesta utente + decisioni clarify) + §8 changelog in cima; versione «2026-10-31 · I138»
+- PROTOCOLLO (exit REALE): tsc 0, lint 0, suite 644/644 (2332 asserzioni), audit 693/693 PASS 0 scoperte; audit-latest.md allineato (copia manuale)
+- CONSEGNA: commit SOLO sui file I138 (mai git add -A: rispetto del working tree condiviso con i mode-change di piattaforma), push, CI, footer produzione «… · I138»
+
+Stage Summary:
+- Il README è navigabile: indice con 11 sezioni, ancore esplicite, back-link, e i tre paragrafi-monolite (fino a 4.413 caratteri su riga singola) ora sono sub-bullet e tabella — il contenuto è conservato al 100%
+- Lezione: prima di ristrutturare un file presidato dall'audit, inventariare TUTTI i check che lo leggono (17 su README) e preservare i literal; i contatori (badge, «verifiche dichiarative») sono dinamici e vanno aggiornati al nuovo totale

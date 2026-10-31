@@ -586,7 +586,7 @@ const CHECKS = [
   check.simbolo("I105", "README.md", "644 test / 2332 asserzioni", "contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test)"),
   check.simbolo("I123", "README.md", "Suite test automatica\\*\\*: 644 test / 2332 asserzioni", "contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896"),
   check.simbolo("I123", "README.md", "test-644_pass", "badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560"),
-  check.simbolo("I105", "README.md", "01–11", "indice documentazione README completo (docs/11 incluso)"),
+  check.simbolo("I105", "README.md", "01–12", "indice documentazione README completo (docs/12 incluso — I138 aggiorna il commento dell'albero, rimasto a 01–11 da I136)"),
   check.simbolo("I105", "README.md", "docs/08-analisi-codebase-miglioramenti\\.md", "docs/08 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "docs/09-analisi-database-alternativi\\.md", "docs/09 presente nella tabella indice del README"),
   check.simbolo("I105", "README.md", "changelog canonico", "README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione"),
@@ -984,6 +984,10 @@ const CHECKS = [
   check.nonTracciato("I136", "(\\.zscripts|examples)/.*", "artefatti dell'ambiente di sviluppo (script sandbox, scaffold websocket) fuori dal repo pubblico"),
   /* --- I137 — chiusura checklist pubblicazione: rotazione token eseguita --- */
   check.simbolo("I137", "docs/12-pubblicazione-github.md", "Rotazione eseguita", "chiusura della checklist di pubblicazione: l'unica azione utente residua (rotazione token Turso + rebuild Vercel) è registrata come ESEGUITA con la dichiarazione dell'utente — il vecchio token è definitivamente inoffensivo anche di fronte a cache SHA/fork/clone pre-esistenti e il repo non ha più prerequisiti tecnici prima dell'apertura (docs/12 §5)"),
+  /* --- I138 — README navigabile a sezioni con indice --- */
+  check.simbolo("I138", "README.md", "## 🧭 Indice", "il README monolitico ha un INDICE navigabile in cima: 11 sezioni linkate con il loro contenuto dichiarato — il lettore salta direttamente al capitolo senza scroll all'infinito"),
+  check.simbolo("I138", "README.md", 'id="sez-', "ancore esplicite <a id=\"sez-...\"> su ogni sezione principale: i link dell'indice NON dipendono dall'algoritmo di ancoraggio GitHub (emoji, accenti, punteggiatura) e non si rompono rinominando un titolo"),
+  check.simbolo("I138", "README.md", "torna all'indice", "navigazione bidirezionale: ogni sezione principale chiude con «⬆ torna all'indice» — dall'indice al capitolo e ritorno, mai più di un click di distanza"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

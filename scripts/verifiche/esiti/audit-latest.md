@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-31T14:35:09.659Z
+# Audit implementazioni — 2026-10-31T15:07:13.372Z
 
-- Verifiche totali: **690** · PASS: **690** · FAIL: **0**
+- Verifiche totali: **693** · PASS: **693** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -364,7 +364,7 @@
 | I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
 | I123 | contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896 (README.md) | simbolo | PASS | — |
 | I123 | badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560 (README.md) | simbolo | PASS | — |
-| I105 | indice documentazione README completo (docs/11 incluso) (README.md) | simbolo | PASS | — |
+| I105 | indice documentazione README completo (docs/12 incluso — I138 aggiorna il commento dell'albero, rimasto a 01–11 da I136) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | docs/09 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
@@ -694,6 +694,9 @@
 | I136 | le copie locali delle issue GitHub non sono più tracciate (le issue restano online: fonti pubbliche, artefatti HTML fuori dal repo) — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I136 | artefatti dell'ambiente di sviluppo (script sandbox, scaffold websocket) fuori dal repo pubblico — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I137 | chiusura della checklist di pubblicazione: l'unica azione utente residua (rotazione token Turso + rebuild Vercel) è registrata come ESEGUITA con la dichiarazione dell'utente — il vecchio token è definitivamente inoffensivo anche di fronte a cache SHA/fork/clone pre-esistenti e il repo non ha più prerequisiti tecnici prima dell'apertura (docs/12 §5) (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I138 | il README monolitico ha un INDICE navigabile in cima: 11 sezioni linkate con il loro contenuto dichiarato — il lettore salta direttamente al capitolo senza scroll all'infinito (README.md) | simbolo | PASS | — |
+| I138 | ancore esplicite <a id="sez-..."> su ogni sezione principale: i link dell'indice NON dipendono dall'algoritmo di ancoraggio GitHub (emoji, accenti, punteggiatura) e non si rompono rinominando un titolo (README.md) | simbolo | PASS | — |
+| I138 | navigazione bidirezionale: ogni sezione principale chiude con «⬆ torna all'indice» — dall'indice al capitolo e ritorno, mai più di un click di distanza (README.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (690 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (693 pass, 0 fail, 0 scoperte)

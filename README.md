@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://minimax-token-monitor.vercel.app/)
 [![Test 644 pass](https://img.shields.io/badge/test-644_pass-31C48D)](tests)
-[![Audit 690 PASS](https://img.shields.io/badge/audit-690_PASS-31C48D)](scripts/verifiche)
+[![Audit 693 PASS](https://img.shields.io/badge/audit-693_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31C48D)](LICENSE)
@@ -31,6 +31,12 @@ reali incolla la tua Subscription Key nelle Impostazioni. La puoi provare anche 
 
 </div>
 
+> 🇬🇧 **English** — MiniMax Usage Monitor is a real-time dashboard for the MiniMax
+> Token Plan / M Plan: live quota, reset countdowns, usage analytics and alerts, with
+> every timestamp in the **Europe/Rome** timezone. Try the [live demo](https://minimax-token-monitor.vercel.app/)
+> (simulated data) or run it locally in one minute — see [Avvio rapido](#sez-avvio).
+> ℹ️ All project documentation is written in **Italian**.
+
 ---
 
 Dashboard interattiva per monitorare in tempo reale il consumo del piano a token MiniMax
@@ -44,6 +50,26 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 ---
 
+<a id="sez-indice"></a>
+## 🧭 Indice
+
+| | Sezione | Contenuto |
+|---|---------|-----------|
+| 1 | [📸 Screenshot](#sez-screenshot) | le 6 superfici dell'app in immagini |
+| 2 | [Stato del progetto](#sez-stato) | fase attuale, verifiche empiriche V1–V6/V8 |
+| 3 | [Funzionalità](#sez-funzionalita) | monitoraggio, analisi, persistenza, qualità |
+| 4 | [Avvio rapido](#sez-avvio) | locale, demo, chiave reale, import JSON |
+| 5 | [Persistenza server](#sez-persistenza) | SQLite / Turso / Vercel + manutenzione automatica |
+| 6 | [Regole del piano](#sez-regole) | sintesi operativa delle finestre (verdetto V8) |
+| 7 | [Indice della documentazione](#sez-documentazione) | docs/01–12: quando consultare cosa |
+| 8 | [Stack](#sez-stack) | tecnologie e scelte |
+| 9 | [Struttura del repository](#sez-struttura) | mappa del codice + versione/changelog |
+| 10 | [Verifiche empiriche](#sez-verifiche) | toolkit riproducibile |
+| 11 | [Sicurezza, licenza e contributi](#sez-sicurezza) | SECURITY.md, CONTRIBUTING.md, LICENSE |
+
+---
+
+<a id="sez-screenshot"></a>
 ## 📸 Screenshot
 
 | Dashboard — anelli, countdown e avvisi (tema scuro di progetto) | Grafico storico, KPI e verdetto di proiezione |
@@ -66,8 +92,11 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 > resta invece leggibile anche in demo. La sezione completa è visibile nel tour GIF
 > in cima alla pagina.
 
+[⬆ torna all'indice](#sez-indice)
+
 ---
 
+<a id="sez-stato"></a>
 ## Stato del progetto
 
 > **Fase attuale: core + estensioni di analisi/monitoraggio/persistenza completate e verificate
@@ -85,31 +114,49 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 >
 > Dettagli e checklist aggiornata: [`docs/04-stato-avanzamento.md`](docs/04-stato-avanzamento.md)
 
+[⬆ torna all'indice](#sez-indice)
+
 ---
 
+<a id="sez-funzionalita"></a>
 ## Funzionalità
 
-**Monitoraggio delle quote**
+### Monitoraggio delle quote
+
 - Anelli e barre per ogni finestra del piano (5h / settimanale / 24h video) con badge di stato e countdown vivi (Europe/Rome); anelli principali con **colore continuo HSL + glow dinamico + count-up** (I65)
 - **Avvisi di soglia per finestra** (I28): banner fisso, toast e notifiche del browser quando la quota scende sotto le soglie — attenzione e critiche configurabili **indipendentemente** per finestra 5 ore / 24 ore (video) / settimanale (default 25% / 10%) e al reset delle finestre; con **notifiche a tab chiuso via Service Worker** (I52/ADR-14)
 - **Registro eventi**: timeline locale (reset rilevati, soglie superate, errori di rilevamento) raggruppata per giorno, con **filtri per tipo, ricerca testuale e periodo** (I77), export e svuotamento (locale + archivio server)
-- Polling automatico configurabile con **backoff esponenziale con jitter** (I51: su errore il ritardo cresce fino a 10 min e rispetta il Retry-After dell'API; il proxy ritenta gli errori transitori), **fallback automatico sull'endpoint alternativo `coding_plan/remains`** (I18: se il primario sparisce — 404/405/410/501 o risposta non-JSON — il rilevamento continua senza intervento, con evento nel registro), import manuale di una risposta JSON, modalità demo. **I125 — la demo è fedele alle finestre verificate dell'API**: stessa allineamento dell'analisi (blocchi fissi UTC 00/05/10/15/20 per la 5h, lunedì 00:00 UTC per la settimanale, 24h a mezzanotte per il video), reset visibile ai confini (curva a sega nello storico, evento di reset nel registro), percentuali in [0,100] — matrice demo↔API a 30 campi con 0 falliti (`verifica-i48-demo-vs-api.ts`). **I126 — la demo non è più il default**: al primo avvio (nessuna chiave salvata) il monitor mostra la scheda di configurazione («Inserisci la chiave» / «Prova la demo») e la modalità demo si attiva SOLO con una scelta esplicita; salvare le impostazioni senza chiave non ri-attiva più la demo automaticamente. **I127 — la proiezione usa il ritmo della finestra in corso**: verdetto d'esaurimento, pace e card «Esaurimento previsto» si basano sui rilevamenti della FINESTRA ATTIVA (blocco fisso UTC corrente per la 5h, settimana corrente per la settimanale) quando ce ne sono almeno due — la media di lungo periodo resta come fallback e la base è sempre dichiarata («Al ritmo della finestra in corso» vs «Al ritmo medio di lungo periodo»); la strip Prevedibilità avverte «campione ridotto (indice fragile)» con meno di 7 cicli completati. **I128 — l'evoluzione dell'indice Prevedibilità è visibile**: la strip mostra il percorso dell'indice man mano che il campione cresce (chip «n → indice» cumulativi per k = 3..n, ultimo Δ e salto massimo) — Δ piccoli = lettura stabilizzata, salti ampi = lettura ancora dominata dai cicli recenti; **I129 — stessa lettura per ritmo medio e spreco medio**: due righe «Evoluzione del ritmo medio» (%/h) e «Evoluzione dello spreco medio» (residuo al reset) con media cumulativa per k = 1..n, ultimo Δ e salti max in colore neutro; **I130 — la famiglia evoluzione è completa col consumo medio**: riga «Evoluzione del consumo medio» (punti percento) sul drawdown massimo di ogni ciclo — il consumo nullo (0) resta nel campione a differenza del ritmo, e il drawdown è robusto ai recuperi interni al ciclo (una risalita non è consumo mancato); **I131 — le righe di evoluzione leggono come sparkline**: la sequenza di chip «n → valore» (troncata a 8 con «…») è sostituita da una sparkline svg inline che mostra la FORMA di TUTTI i punti senza troncamento, con la chip finale che conserva il valore corrente esatto e i valori intermedi accessibili nell'aria-label
+- Polling automatico configurabile con **backoff esponenziale con jitter** (I51: su errore il ritardo cresce fino a 10 min e rispetta il Retry-After dell'API; il proxy ritenta gli errori transitori), **fallback automatico sull'endpoint alternativo `coding_plan/remains`** (I18: se il primario sparisce — 404/405/410/501 o risposta non-JSON — il rilevamento continua senza intervento, con evento nel registro), import manuale di una risposta JSON, modalità demo:
+  - **I125 — la demo è fedele alle finestre verificate dell'API**: stesso allineamento dell'analisi (blocchi fissi UTC 00/05/10/15/20 per la 5h, lunedì 00:00 UTC per la settimanale, 24h a mezzanotte per il video), reset visibile ai confini (curva a sega nello storico, evento di reset nel registro), percentuali in [0,100] — matrice demo↔API a 30 campi con 0 falliti (`verifica-i48-demo-vs-api.ts`)
+  - **I126 — la demo non è più il default**: al primo avvio (nessuna chiave salvata) il monitor mostra la scheda di configurazione («Inserisci la chiave» / «Prova la demo») e la modalità demo si attiva SOLO con una scelta esplicita; salvare le impostazioni senza chiave non ri-attiva più la demo automaticamente
+  - **I127 — la proiezione usa il ritmo della finestra in corso**: verdetto d'esaurimento, pace e card «Esaurimento previsto» si basano sui rilevamenti della FINESTRA ATTIVA (blocco fisso UTC corrente per la 5h, settimana corrente per la settimanale) quando ce ne sono almeno due — la media di lungo periodo resta come fallback e la base è sempre dichiarata («Al ritmo della finestra in corso» vs «Al ritmo medio di lungo periodo»); la strip Prevedibilità avverte «campione ridotto (indice fragile)» con meno di 7 cicli completati
+  - **I128 — l'evoluzione dell'indice Prevedibilità è visibile**: la strip mostra il percorso dell'indice man mano che il campione cresce (chip «n → indice» cumulativi per k = 3..n, ultimo Δ e salto massimo) — Δ piccoli = lettura stabilizzata, salti ampi = lettura ancora dominata dai cicli recenti
+  - **I129 — stessa lettura per ritmo medio e spreco medio**: due righe «Evoluzione del ritmo medio» (%/h) e «Evoluzione dello spreco medio» (residuo al reset) con media cumulativa per k = 1..n, ultimo Δ e salti max in colore neutro
+  - **I130 — la famiglia evoluzione è completa col consumo medio**: riga «Evoluzione del consumo medio» (punti percento) sul drawdown massimo di ogni ciclo — il consumo nullo (0) resta nel campione a differenza del ritmo, e il drawdown è robusto ai recuperi interni al ciclo (una risalita non è consumo mancato)
+  - **I131 — le righe di evoluzione leggono come sparkline**: la sequenza di chip «n → valore» (troncata a 8 con «…») è sostituita da una sparkline svg inline che mostra la FORMA di TUTTI i punti senza troncamento, con la chip finale che conserva il valore corrente esatto e i valori intermedi accessibili nell'aria-label
 - **PWA installabile con cache offline** (I52): manifest, icone, shell e ultimo snapshot validi in cache; il Service Worker conserva la chiave SOLO in IndexedDB (mai in cache/log)
 - **Titolo e favicon dinamici** (I67): residuo 5h nel titolo del tab e mini-ring colorato come favicon
 - **Navigazione interna sempre visibile** (I66/I85): 8 sezioni ancorate con evidenza della sezione visibile (scrollspy), barra **fissata in alto sotto l'header durante tutto lo scrolling**; **su telefono diventa barra fissa in basso** (I74) con gli stessi target e la stessa sezione attiva
 - **Selettore intervallo temporale** (I69): preset 6h/24h/3g/7g/30g/tutto che restringono grafico, statistiche, ritmo e analisi (la diagnostica resta sull'intero storico)
 - **Error boundary per sezione** (I76): un crash in un pannello non porta più giù la pagina — skeleton di fallback con «Riprova» per ogni sezione
 - **Modalità compatta / widget** (I73): apri `/?compact=1` per solo anelli + countdown + ritmo (schermi secondari, compatibile con la PWA)
-- **Modalità kiosk/TV** (I87): apri `/?kiosk=1` (o il toggle Monitor nell'header) per la vista da monitor dedicato — schermate Quote/Grafico/Analisi con **rotazione automatica** configurabile (15 s–5 min) e **dimming notturno** (22:00–06:59, Europe/Rome); barra di controllo sticky a fondo pagina con uscita sempre disponibile (bottone o Esc), stato conservato tra le visite. **I132 — la rotazione è sempre visibile**: il kiosk non eredita più i rami vuoti della dashboard senza dati (primo fetch, errore API, quota esaurita) — mostra lo stato d'attesa «Kiosk attivo — in attesa dei dati» e le schermate compaiono al primo snapshot; la barra aggiunge il **countdown «prossima schermata tra Ns»** (foglia a 1 Hz, zero re-render di pagina) come riscontro continuo del timer, veritiero anche dopo un cambio schermata manuale. **I133 — selettore più comprensibile**: l'etichetta è «Rotazione tra schermate» (prima il solo «Rotazione» non diceva cosa ruotasse) e il selettore spiega se stesso — hint visibile con rotazione attiva («ciclo automatico: Quote → Grafico → Analisi, poi ricomincia»), hint con rotazione spenta («cambio schermata solo coi bottoni»), title esplicativo sull'intervallo; terminologia «schermata» unificata in tutta la barra
+- **Modalità kiosk/TV** (I87): apri `/?kiosk=1` (o il toggle Monitor nell'header) per la vista da monitor dedicato — schermate Quote/Grafico/Analisi con **rotazione automatica** configurabile (15 s–5 min) e **dimming notturno** (22:00–06:59, Europe/Rome); barra di controllo sticky a fondo pagina con uscita sempre disponibile (bottone o Esc), stato conservato tra le visite:
+  - **I132 — la rotazione è sempre visibile**: il kiosk non eredita più i rami vuoti della dashboard senza dati (primo fetch, errore API, quota esaurita) — mostra lo stato d'attesa «Kiosk attivo — in attesa dei dati» e le schermate compaiono al primo snapshot; la barra aggiunge il **countdown «prossima schermata tra Ns»** (foglia a 1 Hz, zero re-render di pagina) come riscontro continuo del timer, veritiero anche dopo un cambio schermata manuale
+  - **I133 — selettore più comprensibile**: l'etichetta è «Rotazione tra schermate» (prima il solo «Rotazione» non diceva cosa ruotasse) e il selettore spiega se stesso — hint visibile con rotazione attiva («ciclo automatico: Quote → Grafico → Analisi, poi ricomincia»), hint con rotazione spenta («cambio schermata solo coi bottoni»), title esplicativo sull'intervallo; terminologia «schermata» unificata in tutta la barra
 - **Tema chiaro opzionale** (I78): toggle sole/luna nell'header o tab «Aspetto» delle impostazioni (Sistema/Chiaro/Scuro, default scuro invariato); il tema scuro resta quello di progetto, il JSON grezzo resta scuro anche in chiaro
 - **Accessibilità sistematica** (I79): contrasto WCAG AA misurato con probe automatico su entrambi i temi (0 fallimenti), annunci `aria-live` degli aggiornamenti del polling, focus visibile da tastiera sulla navigazione, descrizioni testuali `sr-only`/`aria-label` per heatmap, calendario e orologio dei reset
 - **Report settimanale stampabile** (I75): voce «Stampa report settimanale» nel menu Esporta → il foglio contiene SOLO il report (verdetto lineare+EWMA, cicli e spreco, consumo per giorno, calendario); Ctrl+P diretto produce comunque una pagina leggibile senza cromo
 
-**Analisi di utilizzo**
+### Analisi di utilizzo
+
 - Grafico storico della quota (finestra 5h o settimanale) con consumo medio in %/h, **media mobile** attivabile (SMA-10) e **overlay dei cicli** (fasce alternate per finestra + marker dei reset rilevati)
 - **Verdetto di proiezione**: confronto tra esaurimento stimato (al ritmo attuale) e orario di reset — capisci subito se la quota durerà fino al reset o si esaurirà prima
 - **Pace e quota sprecata** (I31): ritmo attuale vs ritmo di pareggio (%/h che azzererebbe la quota al reset), residuo previsto alla ricarica (= quota che andrà sprecata) e fermo tecnico stimato quando l'esaurimento anticipa il reset
-- **Analisi di lungo periodo** (I26): cicli di finestra 5h e settimanali con durata/consumo/ritmo medi, tabella degli ultimi cicli e consumo medio per giorno della settimana (calcolati su fino a 10.000 punti dal server). **I124**: i cicli sono allineati alle FINESTRE UFFICIALI MiniMax (blocchi orari fissi UTC 00/05/10/15/20 di ogni giorno, semantica cron — verdetto V8 riconfermato sui dati con il confine esatto 16:59:28→17:04:29 Roma del 19/10 e il reset delle 20:00 UTC del 16/10; lunedì 00:00 UTC per la settimanale) con colonna «Reset finestra»: ogni ciclo si chiude al suo reset anche senza rilevamenti successivi (le finestre proseguono il conteggio lato MiniMax a prescindere dal campionamento) e i punti demo sono esclusi da tutte le analisi. **I128**: la strip Prevedibilità mostra l'EVOLUZIONE dell'indice al crescere del campione (ricalcolo cumulativo per k = 3..n cicli completati con la stessa formula, chip «n → indice», ultimo Δ e salti max) — il contesto operativo del caveat «campione ridotto»; **I129**: la stessa lettura per il ritmo medio (%/h) e lo spreco medio (residuo al reset), con media cumulativa per k = 1..n e Δ neutro; **I130**: la terza metrica della sezione cicli ottiene la stessa lettura — «Evoluzione del consumo medio» sul drawdown massimo per ciclo (start − minimo osservato), con consumo nullo (0) ancora nel campione e l'ultimo punto garantito in test coincidente col KPI «Consumo medio»
+- **Analisi di lungo periodo** (I26): cicli di finestra 5h e settimanali con durata/consumo/ritmo medi, tabella degli ultimi cicli e consumo medio per giorno della settimana (calcolati su fino a 10.000 punti dal server):
+  - **I124 — finestre ufficiali**: i cicli sono allineati alle FINESTRE UFFICIALI MiniMax (blocchi orari fissi UTC 00/05/10/15/20 di ogni giorno, semantica cron — verdetto V8 riconfermato sui dati con il confine esatto 16:59:28→17:04:29 Roma del 19/10 e il reset delle 20:00 UTC del 16/10; lunedì 00:00 UTC per la settimanale) con colonna «Reset finestra»: ogni ciclo si chiude al suo reset anche senza rilevamenti successivi (le finestre proseguono il conteggio lato MiniMax a prescindere dal campionamento) e i punti demo sono esclusi da tutte le analisi
+  - **I128 — evoluzione dell'indice**: la strip Prevedibilità mostra l'EVOLUZIONE dell'indice al crescere del campione (ricalcolo cumulativo per k = 3..n cicli completati con la stessa formula, chip «n → indice», ultimo Δ e salti max) — il contesto operativo del caveat «campione ridotto»
+  - **I129 — evoluzione delle medie**: la stessa lettura per il ritmo medio (%/h) e lo spreco medio (residuo al reset), con media cumulativa per k = 1..n e Δ neutro
+  - **I130 — evoluzione del consumo medio**: la terza metrica della sezione cicli ottiene la stessa lettura — «Evoluzione del consumo medio» sul drawdown massimo per ciclo (start − minimo osservato), con consumo nullo (0) ancora nel campione e l'ultimo punto garantito in test coincidente col KPI «Consumo medio»
 - **Heatmap ore × giorno** (I32): quando si consuma davvero — griglia 7×24 (Europe/Rome) con selettore finestra, ora di picco e intensità proporzionale al consumo
 - **Spreco per ciclo e prevedibilità** (I57/I63): quanto quota ogni reset butta via (media/mediana/peggiore/% cicli puliti) e quanto sono regolari le durate dei cicli (indice 0–100)
 - **Calendario del consumo** (I58): griglia stile GitHub delle ultime settimane (Europe/Rome, DST-safe), settimana corrente = ultima colonna
@@ -129,55 +176,75 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 - **Diagnostica persistenza** (I107): `GET /api/persistenza` read-only senza chiave — modalità attiva (SQLite/Turso), host sanificato senza credenziali, test di connessione reale e conteggi per tabella, resa nel pannello **Impostazioni → Dati → Persistenza server**
 - **Manutenzione database** (I111): `GET /api/manutenzione` read-only senza chiave — rapporto di salute e quota (storage PRAGMA, livello ok/attenzione/critica sul free tier, integrità `quick_check`, velocità 24 h, proiezione scritture); `POST` protetto I95 con azioni `pulizia`/`vacuum`/`manutenzione`/`rimuovi-demo` (ritenuta + cap FIFO, byte recuperati dichiarati; I122: DELETE selettivo dei punti demo — falsi reset — con backup e dryRun); **cron notturno automatico** 02:30 UTC (`vercel.json`, Bearer `CRON_SECRET`); **registro delle esecuzioni** (I117): ogni ciclo — riuscito o fallito — lascia la prova duratura nel database e il `GET` espone `ultimeEsecuzioni`, visualizzata nell'app nel pannello **Impostazioni → Dati → Registro manutenzione** (I118) — procedure complete in `docs/10`
 
-**Persistenza durevole** (F7/F8, offline-first)
+### Persistenza durevole (F7/F8, offline-first)
+
 - Storico replicato su **SQLite server-side** (fino a 10.000 punti / 90 giorni): sopravvive a cache svuotate e cambio dispositivo, con merge automatico all'avvio
 - **Archivio eventi** oltre il diario locale di 200 voci (fino a 5.000 eventi / 180 giorni), stesso schema di sincronizzazione
 - **Downsampling orario** (I68): tabella derivata `DownsampledPoint` (min/max/media/ultimo per ora UTC × sorgente) mantenuta al volo e ricostruibile con backfill — la grana fine resta intatta
 
-**Qualità** (I50/I55)
-- **Suite test automatica**: 644 test / 2332 asserzioni (`bun test`) su parser, tempo, cicli, **cicli a finestre ufficiali con casi reali di produzione (I124)**, **fedeltà demo alle finestre verificate (I125)**, **demo opt-in: default FALSE e niente forzamento silenzioso al salvataggio (I126)**, **proiezione sulla finestra corrente (ritmo di sessione) e caveat campione ridotto nella Prevedibilità (I127)**, **evoluzione dell'indice Prevedibilità al crescere del campione (I128)**, **evoluzione di ritmo medio e spreco medio per ciclo (I129)**, **evoluzione del consumo medio per ciclo — drawdown robusto ai recuperi e consumo nullo nel campione (I130)**, **geometria della sparkline: y invertita, serie piatta, scala min/max (I131)**, **rotazione kiosk: intervallo con clamp, epoch del prossimo cambio e countdown della barra (I132)**, **selettore kiosk comprensibile: etichetta «Rotazione tra schermate», hint ciclo/spento, title intervallo (I133)**, eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, modalità compatta, **kiosk (I87)**, **multi-regione (I53)**, anomalie/campionamento/EWMA, fallback endpoint, **flusso di stampa (I75)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **contratti HTTP di archivi/proxy/summary (I99)**, **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **manutenzione database con e2e su entrambe le codifiche DateTime (I111), registro delle esecuzioni con e2e motore reale (I117) e rimozione selettiva dei punti demo con backup/dryRun (I122)**, **campionatore passivo (I49)**, parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel + I118 pannello Registro manutenzione con testing-library + happy-dom)**, **livello di log Prisma per ambiente e anti-fingerprinting X-Powered-By (I119, audit sicurezza)**, **token admin lato client: header sulle 6 scritture, sonda di identità 401/400 e storage a prova di guasto (I120, chiusura §5.2 dell'audit) e perimetro completo con la POST del proxy usage (I121)**, **marcatura source lungo tutta la catena storici + azione «Svuota storico locale» (I124)**, **demo ancorata alle finestre verificate + piano attuale documentato dalle fonti ufficiali (I125)**
-- **Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 690 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**; dal I114 presidia anche le decisioni sulle dipendenze (eslint 10 adottato, typescript su 5.9.x in attesa del supporto typescript-eslint a TS 7.1+, inventario dichiarato↔installato via `scripts/verifiche/audit-deps-inventario.mjs`; dal I115 presidia il major prisma 7 (adapter obbligatorio anche sul `file:` locale, URL fuori dallo schema, `prisma.config.ts`, flag CLI `--to-schema`; dal I116 presidia la rigenerazione del client nel build — `postinstall` + script `build` — dopo l'errore di deploy Vercel col client stantio dell'era prisma 6; dal I117 presidia il registro delle esecuzioni della manutenzione; dal I118 presidia il pannello di visualizzazione del registro nell'app; dal I119 presidia l'audit sicurezza: niente fingerprinting, log Prisma dipendenti dall'ambiente, avvertimento SSRF sul Caddyfile, report docs/11 presente; dal I120 presidia il token admin client: modulo, header sulle 6 scritture, sonda senza scritture reali, test di contratto e di componente; dal I121 presidia il perimetro COMPLETO del token: la POST del proxy usage allega l'header — verifica statica sul sorgente; dal I122 presidia l'azione di manutenzione «rimuovi-demo» (lib, schema, route, test, e2e motore reale); dal I123 presidia il cleanup esplicito in OGNI test di componente — bomba d'ordine QuotaRing disarmata; dal I124 presidia l'analisi a finestre ufficiali (segmentazione, allineamenti UTC verificati sui dati di produzione, colonna «Reset finestra», esclusione demo su tutte le superfici d'analisi, marcatura source end-to-end, azione «Svuota storico locale»); dal I125 presidia la fedeltà demo alle finestre verificate (blocco fisso UTC, settimana lunedì 00:00 UTC, clamp percentuali, curva a sega, matrice I48 con G13/G9, sezioni docs 01 §11.3 / 02 §11); dal I126 presidia il default demo opt-in (FALSE), l'assenza del forzamento demo al salvataggio, il primo avvio senza fetch/dialog e la needsSetup gated su mounted; dal I127 presidia la proiezione di sessione (computeSessionTrend su blocco fisso UTC corrente/settimana corrente), l'etichetta esplicita della base nel verdetto e nella pace, e il caveat «campione ridotto» della Prevedibilità; dal I128 presidia l'evoluzione dell'indice Prevedibilità (serie cumulativa evoluzionePrevedibilita, riga «Evoluzione dell'indice» nella strip, wiring memoizzato); dal I129 presidia l'evoluzione delle medie per ciclo (evoluzioneMedia generica, EvoluzioneMediaLine con Δ neutro, wiring ritmo+spreco); dal I130 presidia l'evoluzione del consumo medio (memo evoConsumo sul drawdown `c.consumed` senza filtro null, riga «Evoluzione del consumo medio», coerenza col KPI avgConsumed in test); dal I131 presidia la sparkline delle righe di evoluzione (geometria pura `puntiSparkline`, componente `Sparkline` con wiring su ENTRAMBE le righe senza troncamento, file test dedicato); dal I132 presidia il fix kiosk (helper puri `intervalloRotazioneMs`/`prossimaRotazioneEpoch` con clamp, `CountdownRotazione` nella barra, branch kiosk FUORI dal branch snapshot, file test dedicato); dal I133 presidia la chiarezza del selettore kiosk («Rotazione tra schermate» invece del solo «Rotazione», hint del ciclo automatico e dello stato spento, title esplicativo dell'intervallo, countdown allineato a «prossima schermata tra»); dal I134 presidia la pipeline degli asset visivi del README (cattura demo opt-in I126-aware con click esplicito su «Prova la demo» e screenshot della modalità kiosk); dal I135 presidia la copertura visiva completa della sezione Screenshot (la Diagnostica ha la sua immagine: nessun PNG generato dalla pipeline resta orfano fuori dal README); dal I136 presidia la preparazione alla pubblicazione pubblica (LICENSE, SECURITY.md, CONTRIBUTING.md, template env senza segreti, campioni reali/artefatti ambiente fuori dall'indice); dal I137 presidia la chiusura della checklist di pubblicazione (la rotazione del token Turso è registrata come eseguita — nessun prerequisito tecnico residuo prima dell'apertura del repo)
+### Qualità (I50/I55)
+
+#### Suite test automatica
+
+**Suite test automatica**: 644 test / 2332 asserzioni (`bun test`), su 66 file tra `tests/lib/` e `tests/components/` — ripartizione per area:
+
+- **Parser, tempo e finestre**: parser, tempo, cicli, **cicli a finestre ufficiali con casi reali di produzione (I124)**, **fedeltà demo alle finestre verificate (I125)**
+- **Demo e proiezioni**: **demo opt-in: default FALSE e niente forzamento silenzioso al salvataggio (I126)**, **proiezione sulla finestra corrente (ritmo di sessione) e caveat campione ridotto nella Prevedibilità (I127)**, **evoluzione dell'indice Prevedibilità al crescere del campione (I128)**, **evoluzione di ritmo medio e spreco medio per ciclo (I129)**, **evoluzione del consumo medio per ciclo — drawdown robusto ai recuperi e consumo nullo nel campione (I130)**, **geometria della sparkline: y invertita, serie piatta, scala min/max (I131)**
+- **Kiosk e viste**: **rotazione kiosk: intervallo con clamp, epoch del prossimo cambio e countdown della barra (I132)**, **selettore kiosk comprensibile: etichetta «Rotazione tra schermate», hint ciclo/spento, title intervallo (I133)**, **kiosk (I87)**, modalità compatta
+- **Rete, eventi e PWA**: eventi, backoff, **rete/visibilità del poller (I100)**, **banner aggiornamento PWA (I101)**, **downsampling (I68)**, filtri intervallo/eventi, fallback endpoint
+- **Server e persistenza**: **multi-regione (I53)**, **storico per-modello (I82)**, **punto flat general (I91)**, **normalizzazione risposte archivio (I92)**, **fetta recente delle GET di archivio (I93, route-level con db mockato)**, **quota storage con persistJson (I98)**, **contratti HTTP di archivi/proxy/summary (I99)**, **factory della persistenza portabile Turso/SQLite (I106)**, **diagnostica persistenza e pannello Impostazioni→Dati (I107)**, **gate dello schema incorporato su tutte le rotte DB (I107-fix4)**, **manutenzione database con e2e su entrambe le codifiche DateTime (I111), registro delle esecuzioni con e2e motore reale (I117) e rimozione selettiva dei punti demo con backup/dryRun (I122)**, **campionatore passivo (I49)**
+- **UI e componenti**: parità TS↔Service Worker **e componenti UI (I81: QuotaRing, SectionNav, SectionBoundary, EventLog + I74 BottomNav + I78 ThemeToggle + I87 KioskBar + I53 RegionAltPanel + I118 pannello Registro manutenzione con testing-library + happy-dom)**, **orologio condiviso 1 Hz e foglie vive del render (I96)**, **flusso di stampa (I75)**, anomalie/campionamento/EWMA
+- **Sicurezza**: **guard ADMIN_TOKEN + rate limit + header sicurezza (I95)**, **livello di log Prisma per ambiente e anti-fingerprinting X-Powered-By (I119, audit sicurezza)**, **token admin lato client: header sulle 6 scritture, sonda di identità 401/400 e storage a prova di guasto (I120, chiusura §5.2 dell'audit) e perimetro completo con la POST del proxy usage (I121)**
+- **Igiene dei dati**: **marcatura source lungo tutta la catena storici + azione «Svuota storico locale» (I124)**, **demo ancorata alle finestre verificate + piano attuale documentato dalle fonti ufficiali (I125)**
+
+#### Audit di riconciliazione
+
+**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 693 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
+
+| Dal | Presidio permanente |
+|-----|---------------------|
+| I114 | decisioni sulle dipendenze: eslint 10 adottato, typescript su 5.9.x in attesa del supporto typescript-eslint a TS 7.1+, inventario dichiarato↔installato via `scripts/verifiche/audit-deps-inventario.mjs` |
+| I115 | major prisma 7: adapter obbligatorio anche sul `file:` locale, URL fuori dallo schema, `prisma.config.ts`, flag CLI `--to-schema` |
+| I116 | rigenerazione del client nel build (`postinstall` + script `build`) dopo l'errore di deploy Vercel col client stantio dell'era prisma 6 |
+| I117 | registro delle esecuzioni della manutenzione |
+| I118 | pannello di visualizzazione del registro nell'app |
+| I119 | audit sicurezza: niente fingerprinting, log Prisma dipendenti dall'ambiente, avvertimento SSRF sul Caddyfile, report docs/11 presente |
+| I120 | token admin client: modulo, header sulle 6 scritture, sonda senza scritture reali, test di contratto e di componente |
+| I121 | perimetro COMPLETO del token: la POST del proxy usage allega l'header — verifica statica sul sorgente |
+| I122 | azione di manutenzione «rimuovi-demo» (lib, schema, route, test, e2e motore reale) |
+| I123 | cleanup esplicito in OGNI test di componente — bomba d'ordine QuotaRing disarmata |
+| I124 | analisi a finestre ufficiali (segmentazione, allineamenti UTC verificati sui dati di produzione, colonna «Reset finestra», esclusione demo su tutte le superfici d'analisi, marcatura source end-to-end, azione «Svuota storico locale») |
+| I125 | fedeltà demo alle finestre verificate (blocco fisso UTC, settimana lunedì 00:00 UTC, clamp percentuali, curva a sega, matrice I48 con G13/G9, sezioni docs 01 §11.3 / 02 §11) |
+| I126 | default demo opt-in (FALSE), assenza del forzamento demo al salvataggio, primo avvio senza fetch/dialog, needsSetup gated su mounted |
+| I127 | proiezione di sessione (computeSessionTrend su blocco fisso UTC corrente/settimana corrente), etichetta esplicita della base nel verdetto e nella pace, caveat «campione ridotto» della Prevedibilità |
+| I128 | evoluzione dell'indice Prevedibilità (serie cumulativa evoluzionePrevedibilita, riga «Evoluzione dell'indice» nella strip, wiring memoizzato) |
+| I129 | evoluzione delle medie per ciclo (evoluzioneMedia generica, EvoluzioneMediaLine con Δ neutro, wiring ritmo+spreco) |
+| I130 | evoluzione del consumo medio (memo evoConsumo sul drawdown `c.consumed` senza filtro null, riga «Evoluzione del consumo medio», coerenza col KPI avgConsumed in test) |
+| I131 | sparkline delle righe di evoluzione (geometria pura `puntiSparkline`, componente `Sparkline` con wiring su ENTRAMBE le righe senza troncamento, file test dedicato) |
+| I132 | fix kiosk (helper puri `intervalloRotazioneMs`/`prossimaRotazioneEpoch` con clamp, `CountdownRotazione` nella barra, branch kiosk FUORI dal branch snapshot, file test dedicato) |
+| I133 | chiarezza del selettore kiosk («Rotazione tra schermate» invece del solo «Rotazione», hint del ciclo automatico e dello stato spento, title esplicativo dell'intervallo, countdown allineato a «prossima schermata tra») |
+| I134 | pipeline degli asset visivi del README (cattura demo opt-in I126-aware con click esplicito su «Prova la demo» e screenshot della modalità kiosk) |
+| I135 | copertura visiva completa della sezione Screenshot (la Diagnostica ha la sua immagine: nessun PNG generato dalla pipeline resta orfano fuori dal README) |
+| I136 | preparazione alla pubblicazione pubblica (LICENSE, SECURITY.md, CONTRIBUTING.md, template env senza segreti, campioni reali/artefatti ambiente fuori dall'indice) |
+| I137 | chiusura della checklist di pubblicazione (la rotazione del token Turso è registrata come eseguita — nessun prerequisito tecnico residuo prima dell'apertura del repo) |
+| I138 | README navigabile a sezioni: indice con ancore esplicite e link di ritorno all'indice — la struttura del README non può regredire a file monolitico |
+
+#### Audit di sicurezza
+
 - **Audit di sicurezza (I119, `docs/11-audit-sicurezza.md`)**: revisione white-box completa — segreti (codice, bundle client, file tracciati, **storia git**), SQL/XSS/command injection, auth/authz con timing-safe, rate limiting/DoS, SSRF, CORS/CSRF, crypto, service worker, dipendenze (`bun audit`: produzione a ZERO), configurazioni. **3 vulnerabilità gestite** (credenziali nella storia git — riscrittura della storia in I136 + rotazione token in I137; log query in produzione; `X-Powered-By`) e presidi permanenti via audit+test: la sintesi pubblica è in docs/11, la preparazione alla pubblicazione in `docs/12`
 - **Pubblicazione pubblica (I136, `docs/12-pubblicazione-github.md`)**: audit pre-pubblicazione completo (segreti/PII/dipendenze/storia), licenza MIT, SECURITY.md con Private Vulnerability Reporting, CONTRIBUTING.md, `.env.example`, campioni reali fuori dal repo (fixture sintetica al loro posto), artefatti ambiente rimossi, storia git riscritta per le credenziali dell'era dd03d16 — l'unica azione utente (rotazione token Turso + rebuild Vercel) è stata eseguita il 31/10 e registrata in I137: resta solo la decisione di apertura del repo (docs/12 §5)
+
+#### Ultime qualità
+
 - **Accessibilità sistematica** (I79/I83/I84/**I102**): aria-live, sr-only, focus visibile su nav e skip-link «Salta al contenuto», probe 0 FAIL su 74+ campioni
 - **Verifiche di coerenza riproducibili** (I48/I54): `verifica-i48-demo-vs-api.ts` (matrice campo per campo demo ↔ API reale con invarianti programmatiche — dal I125 **30 campi** con gli allineamenti verificati: G9 settimanale a lunedì 00:00 UTC CHIUSA, G13 blocco fisso della finestra breve NUOVA) e `verifica-i54-live-vs-demo.mjs` (matrice «live ⊇ demo» a 29 dimensioni con evidenze statiche) — esiti su file in `scripts/verifiche/esiti/` a nome stabile
 - **Campagna campionatore V8 (I49/I56)**: `analisi-reset-timezone.mjs` (verdetto «blocchi fissi UTC» offset 0 ms sul campione reale del 09/10 — evidenza commessa `esiti/v8-fuso-reset-latest.md`; dal I136 il campione reale NON è più nel repo: nel repo c'è la fixture sintetica `campione-fixture.jsonl`) + esiti freschi V4/V5/V6 con chiave reale — la chiave non è MAI presente nel campione né negli esiti
 
----
-
-## Indice della documentazione
-
-| File | Contenuto | Quando consultarlo |
-|------|-----------|--------------------|
-| [`docs/01-api-minimax-ricerca.md`](docs/01-api-minimax-ricerca.md) | Tutte le scoperte sulle API MiniMax: endpoint confermati, autenticazione, chiavi, regioni, regole del piano, semantica dei campi, strategie (esterne) per il consumo token | Prima di toccare qualsiasi cosa riguardi le chiamate API |
-| [`docs/02-analisi-json-quota.md`](docs/02-analisi-json-quota.md) | Analisi completa della risposta JSON di quota: schema dei campi, verifiche matematiche sulle unità di misura, conversioni timestamp Europe/Rome, formule derivate | Prima di modificare parser, tipi o logica temporale |
-| [`docs/03-piano-implementazione.md`](docs/03-piano-implementazione.md) | Architettura, mappa del codice, modelli dati, flussi, gestione errori, sicurezza, fasi di lavoro con criteri di accettazione | Prima di implementare nuove funzionalità |
-| [`docs/04-stato-avanzamento.md`](docs/04-stato-avanzamento.md) | Tracking dello stato di avanzamento: checklist attività, registro decisioni (ADR), verifiche empiriche da completare, changelog | **All'inizio e alla fine di ogni sessione di lavoro** |
-| [`docs/05-verifiche-empiriche.md`](docs/05-verifiche-empiriche.md) | Runbook delle verifiche empiriche V1–V6 con il toolkit `scripts/verifiche/`: prerequisiti, comandi, verdetti automatici, piano di esecuzione in una giornata, registro delle esecuzioni | Prima di eseguire o interpretare le verifiche V1–V6 |
-| [`docs/06-abbellimenti-dashboard.md`](docs/06-abbellimenti-dashboard.md) | Catalogo degli abbellimenti UI I57–I67 (spreco per ciclo, calendario, ritmo %/h, orologio dei reset, istogramma, salute del monitor, prevedibilità, anelli continui, nav sticky con scrollspy, identità del tab) | Prima di toccare anelli, analisi di lungo periodo o navigazione |
-| [`docs/07-analisi-miglioramenti-aggiuntivi.md`](docs/07-analisi-miglioramenti-aggiuntivi.md) | Catalogo dei miglioramenti I68–I82 (downsampling, selettore intervallo, anomalie, campionamento, EWMA, modalità compatta, nav mobile, vista stampa, error boundary, filtri eventi, tema chiaro, audit a11y, `/api/summary`, test di componente, multi-modello) — **15 di 15 implementate** | Prima di estendere analisi o UX; le note di implementazione rimandano a `docs/03` §5.x |
-| [`docs/08-analisi-codebase-miglioramenti.md`](docs/08-analisi-codebase-miglioramenti.md) | Analisi della codebase (14/10) e backlog dei miglioramenti I94–I106: 13 proposte con problema/proposta/impatto/rischio/accettazione, piano a 3 ondate, decisioni del clarify (§7) | Prima di proporre o implementare miglioramenti: una proposta già catalogata NON va riproposta |
-| [`docs/09-analisi-database-alternativi.md`](docs/09-analisi-database-alternativi.md) | Analisi dei database alternativi (15/10): 10 candidati in 3 famiglie con ricerca web datata (fonti in §9), profilo dati misurato, 7 criteri, matrice di confronto, scenari locale/cloud/ibrido, raccomandazione (strada primaria SQLite/libSQL confermata; I107 pannello «Persistenza»; I108 Postgres opzionale Neon/Supabase), decisioni clarify (§8) + **proposta I109 «Turso Sync/embedded replicas» con verifica empirica locale 7/7 PASS (§10, decisione D5 aperta)** | Prima di scegliere o implementare provider di persistenza: la strada è decisa salvo nuova decisione del §8 |
-| [`docs/10-manutenzione-database.md`](docs/10-manutenzione-database.md) | Procedure di manutenzione del database (17/10, I111): limiti del free tier Turso con fonti datate (§2), architettura della manutenzione nel progetto (§3), le due codifiche DateTime (§4, probe empirica), procedure P1–P8 — cron notturno, integrità, ritenuta/cap, VACUUM e freelist, monitoraggio quota, proiezione scritture, database locale e registro delle esecuzioni del cron (I117) (§5), configurazione env con clamp (§6), runbook operativo con checklist e escalation (§7), verifiche (§8), stime e onestà dei limiti (§9) | Per la salute e la quota del database: setup del cron, controlli periodici, verifica del cron a distanza di settimane (P8), cosa fare a livello attenzione/critica |
-| [`docs/11-audit-sicurezza.md`](docs/11-audit-sicurezza.md) | Audit di sicurezza (17/10, I119; **sintesi pubblica I136**): perimetro e metodologia (§1), 24 aree di test (§2), sintesi dei risultati con gravità e remediation (§3), esiti per area (§4), presidi permanenti (§5), checklist di ripetizione (§6) | Prima di ogni rilascio sensibile e come punto di partenza dei prossimi audit; la segnalazione di vulnerabilità segue `SECURITY.md` |
-| [`docs/12-pubblicazione-github.md`](docs/12-pubblicazione-github.md) | Pubblicazione su GitHub (31/10, I136; chiusura I137): esito dell'audit pre-pubblicazione (§2), rotazione token Turso ESEGUITA (§3), riscrittura della storia (§4), passi per aprire il repo (§5), distribuzione per chi clona (§6), presidi attivati (§7) | Prima di rendere pubblico il repo e per distribuire il progetto su altre piattaforme |
-
-> **Protocollo per le prossime sessioni**: leggere prima `docs/04-stato-avanzamento.md`
-> (e questo README), lavorare, poi aggiornare lo stato e il changelog. In più
-> appendere una riga di registro in `worklog.md`. Così non si ripete mai la ricerca.
+[⬆ torna all'indice](#sez-indice)
 
 ---
 
-## Stack
-
-- **Next.js 16** (App Router) + **React 19** + **TypeScript 5**
-- **Tailwind CSS 4** + **shadcn/ui** (Radix UI) + **lucide-react**
-- **Recharts** per il grafico storico
-- **Prisma 6 + SQLite** (`db/custom.db`) in locale, **persistenza portabile** (I106): su deployment serverless (Vercel) lo stesso schema gira su **Turso** via driver adapter libsql, selezionato dall'ambiente (fallback automatico a SQLite in assenza di env) — storico + archivio eventi
-- **sonner** per i toast di avviso
-- **localStorage** per impostazioni e mirror client (fonte primaria per la UI, sync offline-first con il server)
-- Proxy server-side (`/api/minimax/usage`) per evitare CORS e proteggere la chiave
-
+<a id="sez-avvio"></a>
 ## Avvio rapido
 
 ```bash
@@ -199,7 +266,14 @@ Alla prima apertura la dashboard parte in **modalità demo**. Per usare i dati r
 In alternativa, senza chiave: **Impostazioni → "Incolla una risposta JSON"** per
 analizzare una risposta reale catturata altrove (curl, browser, CLI `mmx quota`).
 
-### Persistenza server: locale SQLite, deployment Turso (I106)
+[⬆ torna all'indice](#sez-indice)
+
+---
+
+<a id="sez-persistenza"></a>
+## Persistenza server: locale SQLite, deployment Turso (I106)
+
+### Scelta del motore
 
 Lo schema Prisma è unico; il motore si sceglie con l'**ambiente** (`src/lib/db-factory.ts`):
 
@@ -214,6 +288,8 @@ mostra modalità, host sanificato (mai token né credenziali — restano nell'am
 server), esito del test di connessione e conteggi per tabella, via `GET /api/persistenza`
 (read-only).
 
+### Default locale incorporato (I107-fix)
+
 Il default locale è **incorporato nel codice** (I107-fix): `urlPersistenzaLocale()` usa
 `DATABASE_URL` se presente, altrimenti `db/custom.db` come percorso assoluto risolto dal
 CWD — dal I115 (Prisma 7) l'URL esplicito viaggia nella **config dell'adapter libsql**
@@ -225,12 +301,16 @@ erano risolti contro `prisma/schema.prisma`: l'assoluto è corretto sotto entram
 semantiche). La factory prepara inoltre la **directory padre** del
 file (I107-fix2): SQLite non crea le cartelle e un clone fresco è senza `db/` (gitignored).
 
+### Serverless senza env Turso (I107-fix2/fix3)
+
 **Serverless senza env Turso** (I107-fix2/fix3): su Vercel il filesystem del deployment è
 read-only e il default dal CWD moriva al primo `$queryRaw` con «Error code 14: Unable to
 open the database file» (SQLITE_CANTOPEN). Con `VERCEL=1` il default va quindi in
 `/tmp/db/custom.db` (scrivibile) e il pannello «Persistenza» funziona — ma il file è
 **effimero** (lo dichiara il pannello stesso): per la persistenza duratura su Vercel
 servono `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN`.
+
+### Schema incorporato e gate sulle rotte (I107-fix3/fix4)
 
 **Schema incorporato** (I107-fix3): il DDL delle 4 tabelle vive nel codice
 (`src/lib/schema-persistenza.ts`, esatto per costruzione — generato con `prisma migrate
@@ -252,6 +332,8 @@ summary — oltre alla diagnostica) attendono `preparaSchema(db)` prima della pr
 il gate **riprova il bootstrap a passate intere** finché una passata non chiude senza errori:
 l'attesa è condivisa (cache per client) e dopo il primo avvio costa un microtask.
 
+### Installazione del deployment persistente
+
 L'installazione del deployment persistente è in due passi (token **mai** commesso né stampato):
 
 ```bash
@@ -264,10 +346,12 @@ node scripts/verifiche/db-push-turso.mjs
 #    poi ridistribuisci: il server parte sull'archivio remoto.
 ```
 
+### Attivazione verificata (I110)
+
 **Attivazione verificata** (I110, 16/10/2026): le credenziali vivono nell'ambiente locale
 (`.env` con le due variabili — gitignored, **mai nell'indice git**: il check audit `nonTracciato`
-lo presidia; il token è rimasto nella storia git di un commit provvisorio → ruotalo da
-`turso db tokens create <db>` quando possibile). La probe
+lo presidia; il token è rimasto nella storia git di un commit provvisorio → ruotato e storia
+riscritta in I136, vedi `docs/12`). La probe
 `scripts/verifiche/verifica-i110-turso-attivo.ts` passa dalla **factory reale di produzione**
 (`creaPrismaClient` + `preparaSchema`) e verifica 7/7 sul database cloud: selezione ambiente →
 «turso», DDL incorporato applicato a Turso (zero migrazione anche nel cloud), `SELECT 1`
@@ -278,6 +362,8 @@ database Turso (il pannello Impostazioni → Dati mostra «Turso (libsql)»); pe
 resta il passo 2 qui sopra. La suite è inoltre **indipendente dall'ambiente**: il file di test
 della factory dichiara il proprio baseline (`baselineAssente`), quindi la presenza del `.env`
 non altera più i test (regressione CI del 16/10 risolta).
+
+### Manutenzione automatica del database (I111)
 
 **Manutenzione automatica del database** (I111, procedure complete in
 [`docs/10-manutenzione-database.md`](docs/10-manutenzione-database.md)): con la persistenza su
@@ -303,10 +389,17 @@ storage/quota/integrità + righe con innesco, esito, durata e dettaglio), oppure
 `GET /api/manutenzione` → campo `ultimeEsecuzioni`, e nei runtime logs la riga compatta
 `[manutenzione-cron]` porta i numeri del rapporto, non solo lo status code (docs/10 §5 P8).
 
+### Verifica del ramo adattato
+
 Verifica del ramo adattato (scrivi → leggi → dedup → SQL raw, su db temporaneo):
 `bun scripts/verifiche/verifica-i106.mjs` (esito in `scripts/verifiche/esiti/i106-persistenza-latest.md`;
 con le env Turso impostate esegue invece la lettura read-only del database remoto).
 
+[⬆ torna all'indice](#sez-indice)
+
+---
+
+<a id="sez-regole"></a>
 ## Regole del piano — sintesi operativa
 
 | Finestra | Vale per | Durata | Inizio |
@@ -316,10 +409,59 @@ con le env Turso impostate esegue invece la lettura read-only del database remot
 
 - I modelli non video richiedono quota residua in **entrambe** le finestre; il video **solo** in quella settimanale.
 - Le due finestre si resettano **indipendentemente**; nessun carry-over.
-- **Empirica (V8, 12/10)**: le finestre NON partono col primo utilizzo (come dicono le docs ufficiali) ma sono **blocchi fissi UTC** pre-armati al confine di griglia — 5h ancorate alla mezzanotte UTC del giorno, video 24h a mezzanotte, settimanale lunedì 00:00 UTC; lo start del blocco successivo è sempre prevedibile (`docs/02` §5).
-- **Fonte della verità**: le percentuali (`*_remaining_percent`), non i conteggi (`*_usage_count` che spesso valgono 0 o indicano il **residuo**, non il consumato — vedi `docs/02` §3).
-- Il dettaglio in **token assoluti** non è integrato: l'unico metodo programmatico consuma quota (ADR-8); usa la console ufficiale <https://platform.minimax.io/console/usage> (vedi `docs/01` §6).
+- **Empirica (V8, 12/10)**: le finestre NON partono col primo utilizzo (come dicono le docs ufficiali) ma sono **blocchi fissi UTC** pre-armati al confine di griglia — 5h
+  ancorate alla mezzanotte UTC del giorno, video 24h a mezzanotte, settimanale lunedì 00:00 UTC; lo start del blocco successivo è sempre prevedibile (`docs/02` §5).
+- **Fonte della verità**: le percentuali (`*_remaining_percent`), non i conteggi (`*_usage_count` che spesso valgono 0 o indicano il **residuo**, non il consumato — vedi
+  `docs/02` §3).
+- Il dettaglio in **token assoluti** non è integrato: l'unico metodo programmatico consuma quota (ADR-8); usa la console ufficiale
+  <https://platform.minimax.io/console/usage> (vedi `docs/01` §6).
 
+[⬆ torna all'indice](#sez-indice)
+
+---
+
+<a id="sez-documentazione"></a>
+## Indice della documentazione
+
+| File | Contenuto | Quando consultarlo |
+|------|-----------|--------------------|
+| [`docs/01-api-minimax-ricerca.md`](docs/01-api-minimax-ricerca.md) | Tutte le scoperte sulle API MiniMax: endpoint confermati, autenticazione, chiavi, regioni, regole del piano, semantica dei campi, strategie (esterne) per il consumo token | Prima di toccare qualsiasi cosa riguardi le chiamate API |
+| [`docs/02-analisi-json-quota.md`](docs/02-analisi-json-quota.md) | Analisi completa della risposta JSON di quota: schema dei campi, verifiche matematiche sulle unità di misura, conversioni timestamp Europe/Rome, formule derivate | Prima di modificare parser, tipi o logica temporale |
+| [`docs/03-piano-implementazione.md`](docs/03-piano-implementazione.md) | Architettura, mappa del codice, modelli dati, flussi, gestione errori, sicurezza, fasi di lavoro con criteri di accettazione | Prima di implementare nuove funzionalità |
+| [`docs/04-stato-avanzamento.md`](docs/04-stato-avanzamento.md) | Tracking dello stato di avanzamento: checklist attività, registro decisioni (ADR), verifiche empiriche da completare, changelog | **All'inizio e alla fine di ogni sessione di lavoro** |
+| [`docs/05-verifiche-empiriche.md`](docs/05-verifiche-empiriche.md) | Runbook delle verifiche empiriche V1–V6 con il toolkit `scripts/verifiche/`: prerequisiti, comandi, verdetti automatici, piano di esecuzione in una giornata, registro delle esecuzioni | Prima di eseguire o interpretare le verifiche V1–V6 |
+| [`docs/06-abbellimenti-dashboard.md`](docs/06-abbellimenti-dashboard.md) | Catalogo degli abbellimenti UI I57–I67 (spreco per ciclo, calendario, ritmo %/h, orologio dei reset, istogramma, salute del monitor, prevedibilità, anelli continui, nav sticky con scrollspy, identità del tab) | Prima di toccare anelli, analisi di lungo periodo o navigazione |
+| [`docs/07-analisi-miglioramenti-aggiuntivi.md`](docs/07-analisi-miglioramenti-aggiuntivi.md) | Catalogo dei miglioramenti I68–I82 (downsampling, selettore intervallo, anomalie, campionamento, EWMA, modalità compatta, nav mobile, vista stampa, error boundary, filtri eventi, tema chiaro, audit a11y, `/api/summary`, test di componente, multi-modello) — **15 di 15 implementate** | Prima di estendere analisi o UX; le note di implementazione rimandano a `docs/03` §5.x |
+| [`docs/08-analisi-codebase-miglioramenti.md`](docs/08-analisi-codebase-miglioramenti.md) | Analisi della codebase (14/10) e backlog dei miglioramenti I94–I106: 13 proposte con problema/proposta/impatto/rischio/accettazione, piano a 3 ondate, decisioni del clarify (§7) | Prima di proporre o implementare miglioramenti: una proposta già catalogata NON va riproposta |
+| [`docs/09-analisi-database-alternativi.md`](docs/09-analisi-database-alternativi.md) | Analisi dei database alternativi (15/10): 10 candidati in 3 famiglie con ricerca web datata (fonti in §9), profilo dati misurato, 7 criteri, matrice di confronto, scenari locale/cloud/ibrido, raccomandazione (strada primaria SQLite/libSQL confermata; I107 pannello «Persistenza»; I108 Postgres opzionale Neon/Supabase), decisioni clarify (§8) + **proposta I109 «Turso Sync/embedded replicas» con verifica empirica locale 7/7 PASS (§10, decisione D5 aperta)** | Prima di scegliere o implementare provider di persistenza: la strada è decisa salvo nuova decisione del §8 |
+| [`docs/10-manutenzione-database.md`](docs/10-manutenzione-database.md) | Procedure di manutenzione del database (17/10, I111): limiti del free tier Turso con fonti datate (§2), architettura della manutenzione nel progetto (§3), le due codifiche DateTime (§4, probe empirica), procedure P1–P8 — cron notturno, integrità, ritenuta/cap, VACUUM e freelist, monitoraggio quota, proiezione scritture, database locale e registro delle esecuzioni del cron (I117) (§5), configurazione env con clamp (§6), runbook operativo con checklist e escalation (§7), verifiche (§8), stime e onestà dei limiti (§9) | Per la salute e la quota del database: setup del cron, controlli periodici, verifica del cron a distanza di settimane (P8), cosa fare a livello attenzione/critica |
+| [`docs/11-audit-sicurezza.md`](docs/11-audit-sicurezza.md) | Audit di sicurezza (17/10, I119; **sintesi pubblica I136**): perimetro e metodologia (§1), 24 aree di test (§2), sintesi dei risultati con gravità e remediation (§3), esiti per area (§4), presidi permanenti (§5), checklist di ripetizione (§6) | Prima di ogni rilascio sensibile e come punto di partenza dei prossimi audit; la segnalazione di vulnerabilità segue `SECURITY.md` |
+| [`docs/12-pubblicazione-github.md`](docs/12-pubblicazione-github.md) | Pubblicazione su GitHub (31/10, I136; chiusura I137): esito dell'audit pre-pubblicazione (§2), rotazione token Turso ESEGUITA (§3), riscrittura della storia (§4), passi per aprire il repo (§5), distribuzione per chi clona (§6), presidi attivati (§7) | Prima di rendere pubblico il repo e per distribuire il progetto su altre piattaforme |
+
+> **Protocollo per le prossime sessioni**: leggere prima `docs/04-stato-avanzamento.md`
+> (e questo README), lavorare, poi aggiornare lo stato e il changelog. In più
+> appendere una riga di registro in `worklog.md`. Così non si ripete mai la ricerca.
+
+[⬆ torna all'indice](#sez-indice)
+
+---
+
+<a id="sez-stack"></a>
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript 5**
+- **Tailwind CSS 4** + **shadcn/ui** (Radix UI) + **lucide-react**
+- **Recharts** per il grafico storico
+- **Prisma 6 + SQLite** (`db/custom.db`) in locale, **persistenza portabile** (I106): su deployment serverless (Vercel) lo stesso schema gira su **Turso** via driver adapter libsql, selezionato dall'ambiente (fallback automatico a SQLite in assenza di env) — storico + archivio eventi
+- **sonner** per i toast di avviso
+- **localStorage** per impostazioni e mirror client (fonte primaria per la UI, sync offline-first con il server)
+- Proxy server-side (`/api/minimax/usage`) per evitare CORS e proteggere la chiave
+
+[⬆ torna all'indice](#sez-indice)
+
+---
+
+<a id="sez-struttura"></a>
 ## Struttura del repository (parti rilevanti)
 
 ```
@@ -365,7 +507,8 @@ src/
     ├── usage-events.ts              # Avvisi soglia per finestra (I28), reset, registro eventi
     ├── model-history.ts             # I82: storico per-modello (localStorage + sync)
     ├── server-history.ts / server-events.ts / server-model-history.ts  # Sync offline-first I16/I27/I82
-    ├── api-schemi.ts / api-protezione.ts / admin-token.ts              # I103 schemi zod body · I95 guard ADMIN_TOKEN + rate limit · I120 token admin client (header scritture + sonda)
+    ├── api-schemi.ts / api-protezione.ts / admin-token.ts              # I103 schemi zod body · I95 guard ADMIN_TOKEN + rate limit · I120 token admin client (header
+                                                                      #   scritture + sonda)
     ├── orologio.ts (components/orologio-roma.tsx)                      # I96 orologio condiviso 1 Hz e foglie vive del render
     ├── cycles.ts                    # I26/I32/I57/I58/I61/I63/I64: cicli, heatmap, calendario, distribuzione
     ├── rate.ts / rate-anomalies.ts / ewma.ts / sampling.ts / health.ts  # I59/I70/I72/I71/I62
@@ -382,7 +525,7 @@ prisma/schema.prisma                 # UsagePoint + UsageEventRecord + Downsampl
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
 tests/                               # Suite bun: lib/ (53 file) + components/ (13 componenti) = 644 test / 2332 asserzioni
-docs/          # Questa documentazione (01–11)
+docs/          # Questa documentazione (01–12)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro
@@ -405,6 +548,11 @@ va introdotto) un CHANGELOG.md duplicato.
 > riattivata nel footer (`APP_VERSION`), kiosk I45 riattivato come item proprio **I87**
 > (modalità `?kiosk=1`).
 
+[⬆ torna all'indice](#sez-indice)
+
+---
+
+<a id="sez-verifiche"></a>
 ## Verifiche empiriche (toolkit)
 
 ```bash
@@ -417,3 +565,24 @@ Le verifiche V1–V6 (semantica stato `2`, rolling 5h, reset senza uso, equivale
 procedura completa, piano di esecuzione e registro delle esecuzioni nel runbook
 [`docs/05`](docs/05-verifiche-empiriche.md). La chiave si passa con la variabile
 d'ambiente `MM_SUBSCRIPTION_KEY` (mai nei log né in chat).
+
+[⬆ torna all'indice](#sez-indice)
+
+---
+
+<a id="sez-sicurezza"></a>
+## Sicurezza, licenza e contributi
+
+- **Sicurezza**: le vulnerabilità NON si segnalano in issue pubbliche — usa il canale
+  privato **GitHub Private Vulnerability Reporting** descritto in
+  [`SECURITY.md`](SECURITY.md); la sintesi pubblica dell'audit di sicurezza è in
+  [`docs/11-audit-sicurezza.md`](docs/11-audit-sicurezza.md).
+- **Contributi**: benvenuti — leggere prima [`CONTRIBUTING.md`](CONTRIBUTING.md)
+  (prerequisiti, protocollo di qualità tsc/lint/test/audit, regole sui segreti).
+- **Licenza**: [MIT](LICENSE) — usa, modifica e distribuisci liberamente, con
+  attribuzione.
+- **Pubblicazione e distribuzione**: la checklist completa (storia git, rotazione
+  credenziali, passi di apertura) è in
+  [`docs/12-pubblicazione-github.md`](docs/12-pubblicazione-github.md).
+
+[⬆ torna all'indice](#sez-indice)
