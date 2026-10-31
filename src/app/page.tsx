@@ -225,8 +225,8 @@ export default function DashboardPage() {
      vista corrente della rotazione (quote/grafico/analisi). */
   const [kioskState, setKioskState] = React.useState<KioskState>(KIOSK_DEFAULTS);
   const [kioskView, setKioskView] = React.useState<KioskView>("quote");
-  /* I132 — epoch del PROSSIMO cambio vista programmato: alimenta il countdown
-     nella barra kiosk («prossima vista tra Ns»), unica evidenza visibile che il
+  /* I132 — epoch del PROSSIMO cambio schermata programmato: alimenta il countdown
+     nella barra kiosk («prossima schermata tra Ns»), unica evidenza visibile che il
      timer gira mentre la rotazione è attiva. null = rotazione spenta o non
      ancora armata. Scritture SOLO dal microtask iniziale dell'effetto rotazione
      e dalla sua callback dell'intervallo — mai setState sincrono nel corpo
@@ -415,11 +415,11 @@ export default function DashboardPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [kioskAttivo]);
 
-  /* Rotazione automatica delle viste (solo con la rotazione attiva).
+  /* Rotazione automatica tra le schermate (solo con la rotazione attiva).
      I132 — il timer arma anche il countdown della barra: il microtask iniziale
      (pattern I90) fissa la prima scadenza, la callback dell'intervallo la
-     riprogramma a ogni cambio vista così il countdown resta veritiero; il
-     cambio vista MANUALE non riparte (il setInterval conserva la sua fase e il
+     riprogramma a ogni cambio schermata così il countdown resta veritiero; il
+     cambio schermata MANUALE non riparte (il setInterval conserva la sua fase e il
      countdown la segue). */
   React.useEffect(() => {
     if (!kioskAttivo || !kioskState.rotation) return;
@@ -1432,15 +1432,15 @@ export default function DashboardPage() {
                 </>
               ) : (
                 /* I132 — stato d'attesa del kiosk senza snapshot: la rotazione
-                   continua a girare (la barra mostra la vista attiva e il
-                   countdown) e le viste compaiono da sole al primo dato. */
+                   continua a girare (la barra mostra la schermata attiva e il
+                   countdown) e le schermate compaiono da sole al primo dato. */
                 <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center">
                   <Monitor className="size-10 text-zinc-700" />
                   <p className="text-sm font-medium text-zinc-400">Kiosk attivo — in attesa dei dati</p>
                   <p className="max-w-md text-xs leading-relaxed text-zinc-600">
                     {loading
                       ? "Sincronizzazione in corso…"
-                      : "Nessuno snapshot disponibile: le viste compariranno appena il monitor riceve i dati. Rotazione e comandi nella barra restano attivi."}
+                      : "Nessuno snapshot disponibile: le schermate compariranno appena il monitor riceve i dati. La rotazione tra schermate e i comandi nella barra restano attivi."}
                   </p>
                   {loading ? <RefreshCw className="size-4 animate-spin text-zinc-600" /> : null}
                 </div>

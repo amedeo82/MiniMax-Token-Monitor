@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-31T11:39:05.912Z
+# Audit implementazioni — 2026-10-31T12:01:48.698Z
 
-- Verifiche totali: **671** · PASS: **671** · FAIL: **0**
+- Verifiche totali: **676** · PASS: **676** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -672,9 +672,14 @@
 | I131 | wiring: ENTRAMBE le righe (PrevedibilitaEvoLine I128 e EvoluzioneMediaLine I129/I130) passano dalla sparkline — slice(-8) e il troncamento «…» rimossi; resta la chip finale «n → valore» col punto corrente esatto (src/components/analysis-panel.tsx) | simbolo | PASS | — |
 | I131 | test I131: normalizzazione [0,50,100] → x 2/48/94 e y 22/12/2 (invertita), serie piatta [5,5,5,5] → y=h/2 con x distribuita, <2 punti → [], viewport custom (200×40, pad 5) su [70,92,48] → y 20/5/35 (scala min/max, NON primo/ultimo) | file | PASS | — |
 | I132 | helper PURO estratto dal Math.max(5, …) inlinea I87 di page.tsx: intervallo in ms con clamp KIOSK_ROTATION_MIN_SECONDS=5, testato su tutti i valori del selettore (15/30/60/120/300) e sul clamp (0, negativi, 2 → 5s) (src/lib/kiosk.ts) | simbolo | PASS | — |
-| I132 | countdown «prossima vista tra Ns» nella barra: foglia VIVA abbonata all'orologio 1 Hz I96 (la pagina non re-renderizza al secondo), visibile SOLO con rotazione attiva — riscontro continuo che il timer gira anche con intervalli fino a 5 minuti (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
+| I132 | countdown «prossima schermata tra Ns» nella barra (testo I133, era «prossima vista tra Ns»): foglia VIVA abbonata all'orologio 1 Hz I96 (la pagina non re-renderizza al secondo), visibile SOLO con rotazione attiva — riscontro continuo che il timer gira anche con intervalli fino a 5 minuti (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
 | I132 | branch kiosk FUORI dal branch «snapshot ?»: senza dati (primo fetch, errore API, quota esaurita) il kiosk mostra lo stato d'attesa «Kiosk attivo — in attesa dei dati» invece dei rami loading/null che lasciavano l'area centrale VUOTA — la causa del bug «la rotazione non ha alcun effetto»: lo stato kioskView cambiava ma lo schermo no (src/app/page.tsx) | simbolo | PASS | — |
-| I132 | test I132: intervalloRotazioneMs sui valori del selettore e clamp al minimo, prossimaRotazioneEpoch (matematica chiusa + coerenza now + intervallo), test componente countdown (armato → «prossima vista tra d+s», null → assente, rotazione spenta → assente) | file | PASS | — |
+| I132 | test I132: intervalloRotazioneMs sui valori del selettore e clamp al minimo, prossimaRotazioneEpoch (matematica chiusa + coerenza now + intervallo), test componente countdown (armato → «prossima schermata tra d+s» dal testo I133, null → assente, rotazione spenta → assente) | file | PASS | — |
+| I133 | etichetta esplicita al posto del solo «Rotazione»: dice CHE COSA ruota (le schermate/visuali Quote → Grafico → Analisi), richiesta utente «scriverei rotazione tra schermate, rotazioni tra visuali al posto di rotazione» (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
+| I133 | hint visibile con rotazione attiva: rende leggibile a colpo d'occhio il funzionamento del selettore (ordine di rotazione e ripetizione) — informazione che prima non compariva da nessuna parte nella UI (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
+| I133 | hint con rotazione disattivata: distingue lo stato spento (solo cambio manuale coi bottoni a fianco) dal ciclo automatico (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
+| I133 | title esplicativo sul selettore dell'intervallo + aria-label «Intervallo di rotazione delle schermate»: il selettore spiega se stesso (src/components/kiosk-bar.tsx) | simbolo | PASS | — |
+| I133 | test di componente: etichetta esplicita + aria-label switch, hint ciclo/spento mutuamente esclusi, title del selettore, countdown allineato a «prossima schermata tra» (tests/components/kiosk-bar.test.tsx) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (671 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (676 pass, 0 fail, 0 scoperte)

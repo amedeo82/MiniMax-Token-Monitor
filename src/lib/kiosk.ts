@@ -34,7 +34,7 @@ export function nextKioskView(v: KioskView): KioskView {
 export interface KioskState {
   /** Kiosk attivo (sopravvive al reload — criterio di accettazione). */
   enabled: boolean;
-  /** Rotazione automatica tra le viste (opzionale, default OFF). */
+  /** Rotazione automatica tra le schermate (opzionale, default OFF). */
   rotation: boolean;
   /** Intervallo di rotazione in secondi. */
   rotationSeconds: number;

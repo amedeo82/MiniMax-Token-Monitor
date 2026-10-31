@@ -7,9 +7,17 @@
  * («mt-auto» + «sticky bottom-0») così il bottone di uscita resta SEMPRE
  * disponibile a qualunque scroll — criterio di accettazione esplicito.
  *
- * Contenuto: indicatore di modalità, cambio vista manuale (Quote / Grafico /
- * Analisi), rotazione automatica con intervallo configurabile, dimming
- * notturno (22:00–06:59 Europe/Rome) e uscita (bottone o Esc).
+ * Contenuto: indicatore di modalità, cambio schermata manuale (Quote /
+ * Grafico / Analisi), rotazione automatica tra schermate con intervallo
+ * configurabile, dimming notturno (22:00–06:59 Europe/Rome) e uscita
+ * (bottone o Esc).
+ *
+ * I133 — chiarezza del selettore: l'etichetta era il solo «Rotazione», che non
+ * diceva CHE COSA ruotasse né cosa succedesse quando è spento. Ora: etichetta
+ * esplicita «Rotazione tra schermate», hint visibile del funzionamento nei due
+ * stati (ciclo automatico con l'ordine delle schermate / solo cambio manuale)
+ * e title esplicativo sul selettore dell'intervallo. Terminologia unificata
+ * «schermata» (le visuali Quote → Grafico → Analisi) anche nel countdown.
  *
  * Su schermi stretti la barra va a capo (flex-wrap) senza overflow.
  */
@@ -37,11 +45,12 @@ interface KioskBarProps {
 }
 
 /**
- * I132 — Countdown della rotazione («prossima vista tra 12s»): foglia VIVA che
- * si abbona all'orologio condiviso a 1 Hz (I96) — la pagina NON re-renderizza
- * al secondo, solo questo span. È l'unica evidenza continua che il timer della
- * rotazione gira: con un intervallo lungo (fino a 5 minuti) prima l'utente non
- * aveva alcun riscontro finché il cambio vista non avveniva.
+ * I132 — Countdown della rotazione («prossima schermata tra 12s»): foglia VIVA
+ * che si abbona all'orologio condiviso a 1 Hz (I96) — la pagina NON
+ * re-renderizza al secondo, solo questo span. È l'unica evidenza continua che
+ * il timer della rotazione gira: con un intervallo lungo (fino a 5 minuti)
+ * prima l'utente non aveva alcun riscontro finché il cambio schermata non
+ * avveniva. I133 — «vista» → «schermata» per uniformità col selettore.
  */
 function CountdownRotazione({ scade }: { scade: number | null }) {
   const adesso = useOrologio();
@@ -50,9 +59,9 @@ function CountdownRotazione({ scade }: { scade: number | null }) {
   return (
     <span
       className="hidden font-mono text-[10px] text-zinc-500 lg:inline"
-      aria-label="Prossima rotazione vista"
+      aria-label="Prossima rotazione schermata"
     >
-      prossima vista tra {formatCountdown(Math.max(0, scade - base))}
+      prossima schermata tra {formatCountdown(Math.max(0, scade - base))}
     </span>
   );
 }
@@ -68,8 +77,8 @@ export function KioskBar({ state, view, nightDimActive, prossimaRotazione = null
         </span>
         <span className="font-mono text-[10px] text-zinc-600">v {APP_VERSION}</span>
 
-        {/* Cambio vista manuale (disponibile anche con la rotazione attiva) */}
-        <div className="flex items-center gap-1" role="group" aria-label="Vista kiosk">
+        {/* Cambio schermata manuale (disponibile anche con la rotazione attiva) */}
+        <div className="flex items-center gap-1" role="group" aria-label="Schermata kiosk">
           {KIOSK_VIEWS.map((v) => (
             <Button
               key={v.key}
@@ -88,18 +97,29 @@ export function KioskBar({ state, view, nightDimActive, prossimaRotazione = null
           ))}
         </div>
 
-        {/* Rotazione automatica tra le viste */}
+        {/* I133 — Rotazione tra schermate: etichetta esplicita (prima solo
+            «Rotazione», non diceva cosa ruotasse) + hint del funzionamento. */}
         <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-400">
           <RotateCw className={`size-3.5 ${state.rotation ? "text-rose-300" : "text-zinc-500"}`} />
-          <span className="hidden sm:inline">Rotazione</span>
+          <span className="hidden sm:inline">Rotazione tra schermate</span>
           <Switch
             checked={state.rotation}
             onCheckedChange={(v) => onPrefs({ rotation: v })}
-            aria-label="Rotazione automatica delle viste"
+            aria-label="Rotazione automatica tra le schermate (Quote → Grafico → Analisi)"
           />
         </label>
 
-        {/* Intervallo di rotazione (solo con la rotazione attiva) */}
+        {/* I133 — hint del funzionamento nei due stati: l'informazione che
+            mancava (cosa ruota, in che ordine, cosa succede quando è spento).
+            Nascosto sugli schermi stretti come le altre etichette (flex-wrap). */}
+        <span className={`hidden text-[10px] xl:inline ${state.rotation ? "text-zinc-500" : "text-zinc-600"}`}>
+          {state.rotation
+            ? "ciclo automatico: Quote → Grafico → Analisi, poi ricomincia"
+            : "rotazione spenta: cambio schermata solo coi bottoni"}
+        </span>
+
+        {/* Intervallo di rotazione (solo con la rotazione attiva);
+            I133 — aria-label esplicita + title che spiega il selettore. */}
         {state.rotation ? (
           <Select
             value={String(state.rotationSeconds)}
@@ -107,7 +127,8 @@ export function KioskBar({ state, view, nightDimActive, prossimaRotazione = null
           >
             <SelectTrigger
               size="sm"
-              aria-label="Intervallo di rotazione"
+              aria-label="Intervallo di rotazione delle schermate"
+              title="Ogni quanto cambia la schermata durante la rotazione automatica"
               className="h-8 w-[128px] border-white/10 bg-white/[0.04] text-xs text-zinc-300"
             >
               <SelectValue />
@@ -122,9 +143,9 @@ export function KioskBar({ state, view, nightDimActive, prossimaRotazione = null
           </Select>
         ) : null}
 
-        {/* I132 — countdown del prossimo cambio vista (solo con la rotazione attiva):
-            riscontro continuo che il timer gira anche quando il cambio vista è
-            lontano (fino a 5 minuti) o lo schermo è nello stato d'attesa dati. */}
+        {/* I132 — countdown del prossimo cambio schermata (solo con la rotazione
+            attiva): riscontro continuo che il timer gira anche quando il cambio
+            è lontano (fino a 5 minuti) o lo schermo è nello stato d'attesa dati. */}
         {state.rotation ? <CountdownRotazione scade={prossimaRotazione} /> : null}
 
         {/* Dimming notturno (22:00–06:59 Europe/Rome) */}

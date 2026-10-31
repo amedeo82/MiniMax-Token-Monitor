@@ -2,8 +2,13 @@
  * I87 — Test di componente: KioskBar (barra di controllo della modalità kiosk/TV).
  *
  * La barra è il sostituto del footer mentre il kiosk è attivo: sticky a fondo
- * pagina, cambio vista manuale, rotazione con intervallo, dimming notturno e
- * uscita sempre disponibile (bottone + Esc).
+ * pagina, cambio schermata manuale, rotazione tra schermate con intervallo,
+ * dimming notturno e uscita sempre disponibile (bottone + Esc).
+ *
+ * I133 — selettore più comprensibile: etichetta esplicita «Rotazione tra
+ * schermate», hint del funzionamento nei due stati (ciclo automatico con
+ * l'ordine / solo cambio manuale), title esplicativo sull'intervallo,
+ * terminologia «schermata» unificata anche nel countdown.
  */
 import "./setup-dom";
 import { describe, test, expect, beforeEach } from "bun:test";
@@ -18,9 +23,9 @@ beforeEach(() => {
 const stato: KioskState = { ...KIOSK_DEFAULTS, enabled: true, rotation: true };
 
 describe("I87 componenti: KioskBar", () => {
-  test("renderizza le 3 viste con aria-pressed sulla vista attiva", () => {
+  test("renderizza le 3 schermate con aria-pressed su quella attiva", () => {
     render(<KioskBar state={stato} view="grafico" nightDimActive={false} onView={() => {}} onPrefs={() => {}} onExit={() => {}} />);
-    const gruppo = screen.getByRole("group", { name: "Vista kiosk" });
+    const gruppo = screen.getByRole("group", { name: "Schermata kiosk" });
     expect(gruppo).toBeDefined();
     for (const v of KIOSK_VIEWS) {
       const btn = screen.getByRole("button", { name: v.label });
@@ -46,7 +51,7 @@ describe("I87 componenti: KioskBar", () => {
 
   test("rotazione attiva: il selettore dell'intervallo è presente", () => {
     render(<KioskBar state={stato} view="quote" nightDimActive={false} onView={() => {}} onPrefs={() => {}} onExit={() => {}} />);
-    expect(screen.getByLabelText("Intervallo di rotazione")).toBeDefined();
+    expect(screen.getByLabelText("Intervallo di rotazione delle schermate")).toBeDefined();
   });
 
   test("rotazione spenta: nessun selettore dell'intervallo", () => {
@@ -60,7 +65,7 @@ describe("I87 componenti: KioskBar", () => {
         onExit={() => {}}
       />,
     );
-    expect(screen.queryByLabelText("Intervallo di rotazione")).toBeNull();
+    expect(screen.queryByLabelText("Intervallo di rotazione delle schermate")).toBeNull();
   });
 
   test("i due switch chiamano onPrefs (rotazione e dimming) — Radix role=switch", () => {
@@ -75,7 +80,7 @@ describe("I87 componenti: KioskBar", () => {
         onExit={() => {}}
       />,
     );
-    fireEvent.click(screen.getByRole("switch", { name: "Rotazione automatica delle viste" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Rotazione automatica tra le schermate (Quote → Grafico → Analisi)" }));
     fireEvent.click(screen.getByRole("switch", { name: "Dimming notturno automatico (22:00–06:59)" }));
     expect(patch).toEqual([{ rotation: true }, { nightDim: true }]);
   });
@@ -90,7 +95,7 @@ describe("I87 componenti: KioskBar", () => {
 
   /* --------------------------- I132 — countdown rotazione --------------------------- */
 
-  test("I132: rotazione attiva + scadenza armata → countdown «prossima vista tra»", () => {
+  test("I132: rotazione attiva + scadenza armata → countdown «prossima schermata tra»", () => {
     render(
       <KioskBar
         state={stato}
@@ -102,12 +107,12 @@ describe("I87 componenti: KioskBar", () => {
         onExit={() => {}}
       />,
     );
-    expect(screen.getByLabelText("Prossima rotazione vista").textContent).toMatch(/^prossima vista tra \d+s$/);
+    expect(screen.getByLabelText("Prossima rotazione schermata").textContent).toMatch(/^prossima schermata tra \d+s$/);
   });
 
   test("I132: rotazione attiva ma scadenza non armata (null) → nessun countdown", () => {
     render(<KioskBar state={stato} view="quote" nightDimActive={false} prossimaRotazione={null} onView={() => {}} onPrefs={() => {}} onExit={() => {}} />);
-    expect(screen.queryByLabelText("Prossima rotazione vista")).toBeNull();
+    expect(screen.queryByLabelText("Prossima rotazione schermata")).toBeNull();
   });
 
   test("I132: rotazione spenta → nessun countdown anche con scadenza passata via prop", () => {
@@ -122,6 +127,45 @@ describe("I87 componenti: KioskBar", () => {
         onExit={() => {}}
       />,
     );
-    expect(screen.queryByLabelText("Prossima rotazione vista")).toBeNull();
+    expect(screen.queryByLabelText("Prossima rotazione schermata")).toBeNull();
+  });
+
+  /* ---------------- I133 — selettore rotazione più comprensibile ---------------- */
+
+  test("I133: etichetta esplicita «Rotazione tra schermate» e switch descritto", () => {
+    render(<KioskBar state={stato} view="quote" nightDimActive={false} onView={() => {}} onPrefs={() => {}} onExit={() => {}} />);
+    // l'etichetta visibile dice COSA ruota (le schermate), non solo «Rotazione»
+    expect(screen.getByText("Rotazione tra schermate")).toBeDefined();
+    // l'aria-label dello switch dichiara anche l'ordine del ciclo
+    expect(screen.getByRole("switch", { name: "Rotazione automatica tra le schermate (Quote → Grafico → Analisi)" })).toBeDefined();
+  });
+
+  test("I133: rotazione attiva → hint del ciclo automatico, nessun hint «spento»", () => {
+    render(<KioskBar state={stato} view="quote" nightDimActive={false} onView={() => {}} onPrefs={() => {}} onExit={() => {}} />);
+    // con la rotazione attiva il selettore spiega l'ordine e la ripetizione
+    expect(screen.getByText("ciclo automatico: Quote → Grafico → Analisi, poi ricomincia")).toBeDefined();
+    expect(screen.queryByText("rotazione spenta: cambio schermata solo coi bottoni")).toBeNull();
+  });
+
+  test("I133: rotazione spenta → hint del solo cambio manuale, nessun hint di ciclo", () => {
+    render(
+      <KioskBar
+        state={{ ...stato, rotation: false }}
+        view="quote"
+        nightDimActive={false}
+        onView={() => {}}
+        onPrefs={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    // con la rotazione disattivata è chiaro che le schermate cambiano solo a mano
+    expect(screen.getByText("rotazione spenta: cambio schermata solo coi bottoni")).toBeDefined();
+    expect(screen.queryByText("ciclo automatico: Quote → Grafico → Analisi, poi ricomincia")).toBeNull();
+  });
+
+  test("I133: il selettore dell'intervallo spiega cosa fa (title)", () => {
+    render(<KioskBar state={stato} view="quote" nightDimActive={false} onView={() => {}} onPrefs={() => {}} onExit={() => {}} />);
+    const trigger = screen.getByLabelText("Intervallo di rotazione delle schermate");
+    expect(trigger.getAttribute("title")).toBe("Ogni quanto cambia la schermata durante la rotazione automatica");
   });
 });
