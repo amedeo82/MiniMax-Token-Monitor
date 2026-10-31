@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-31T13:27:44.849Z
+# Audit implementazioni — 2026-10-31T14:01:25.348Z
 
-- Verifiche totali: **680** · PASS: **680** · FAIL: **0**
+- Verifiche totali: **689** · PASS: **689** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -281,7 +281,7 @@
 | I54 | script di verifica riproducibile (evidenze statiche su file) (scripts/verifiche/verifica-i54-live-vs-demo.mjs) | simbolo | PASS | — |
 | I54 | assenze richieste verificate esplicitamente (nessun fork nel parser/kiosk) (scripts/verifiche/verifica-i54-live-vs-demo.mjs) | simbolo | PASS | — |
 | I54 | esito persistente a nome stabile | file | PASS | — |
-| I49 | analizzatore fuso reset ri-creato + file campione commesso come prova grezza (205 righe: 122 del 09/10 recuperate + 83 fresche) | file | PASS | — |
+| I49 | analizzatore fuso reset ri-creato + FIXTURE sintetica commessa (I136: i campioni reali NON sono più nel repo — gitignored, pre-pubblicazione GitHub; il verdetto V8 storico resta l'evidenza del campione reale) | file | PASS | — |
 | I56 | verdetto V8 «blocchi fissi UTC» su esito stabile a nome persistente | file | PASS | — |
 | I56 | esiti rapidi con chiave reale commessi (V4/V5/V6, 12/10) | file | PASS | — |
 | I88 | descrittore originale catturato (happy-dom window===globalThis: il delete eliminava la proprietà own PER SEMRE) (tests/lib/kiosk.test.ts) | simbolo | PASS | — |
@@ -684,6 +684,15 @@
 | I134 | cattura della modalità kiosk/TV (?kiosk=1) con stato kiosk seminato (rotazione attiva a 30 s): lo screenshot mostra la barra I133 («Rotazione tra schermate» + hint del ciclo) e il countdown I132 («prossima schermata tra Ns»), verificati nel body prima dello scatto (scripts/github-assets.py) | simbolo | PASS | — |
 | I134 | lo screenshot della modalità kiosk è referenziato nel README: la funzionalità di punta I87/I132/I133 ha ora una visuale nella sezione Screenshot, accanto ai 4 PNG della dashboard (README.md) | simbolo | PASS | — |
 | I135 | l'ultimo asset orfano di docs/assets è referenziato: la sezione Screenshot mostra la Diagnostica del monitor con la SUA immagine (orologio dei reset sui blocchi UTC, salute, anomalie del ritmo) invece di usare sezione-analisi.png con didascalia Diagnostica — nessun PNG generato dalla pipeline resta fuori dal README (README.md) | simbolo | PASS | — |
+| I136 | licenza MIT: senza licenza il repo pubblico è «all rights reserved» — nessuno può legalmente usare/distribuire il progetto | file | PASS | — |
+| I136 | testo MIT (permessiva standard per tool di monitoraggio open source) (LICENSE) | simbolo | PASS | — |
+| I136 | politica di sicurezza pubblica: canale di segnalazione (GitHub Private Vulnerability Reporting), versioni supportate, perimetro chiave-nel-browser | file | PASS | — |
+| I136 | guida al contributo: prerequisiti bun/node, protocollo qualità (tsc/lint/test/audit), regole segreti | file | PASS | — |
+| I136 | template delle variabili d'ambiente (nessun valore reale) per chi clona e distribuisce | file | PASS | — |
+| I136 | il template non contiene NESSUN valore segreto reale (JWT MiniMax, chiavi sk-, blocchi PEM) — assenza richiesta (.env.example) | assenza | PASS | — |
+| I136 | i campioni REALI dell'account non entrano nel repo pubblico (I136: fixture sintetica al loro posto) — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I136 | le copie locali delle issue GitHub non sono più tracciate (le issue restano online: fonti pubbliche, artefatti HTML fuori dal repo) — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I136 | artefatti dell'ambiente di sviluppo (script sandbox, scaffold websocket) fuori dal repo pubblico — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (680 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (689 pass, 0 fail, 0 scoperte)

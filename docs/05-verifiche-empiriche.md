@@ -328,6 +328,10 @@ con `--durata` breve.
 marcato nel proxy e lo ha smontato a campagna chiusa (I56), committando
 `scripts/verifiche/campione-live.jsonl` come prova grezza — con la scoperta che il file del
 09/10 (122 campioni, creduto perso col rollback) era sopravvissuto su disco.
+**Aggiornamento I136 (pre-pubblicazione GitHub)**: il campione reale non è più nel repo
+(gitignored, resta in locale); l'analizzatore usa di default la fixture sintetica
+`campione-fixture.jsonl` e accetta `--input <file>` per un campione locale; le evidenze
+commesse della campagna reale (`esiti/v8-fuso-reset-latest.md`, V4/V5/V6) restano valide.
 
 ---
 

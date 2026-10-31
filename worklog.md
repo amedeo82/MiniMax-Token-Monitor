@@ -1945,3 +1945,26 @@ Work Log:
 Stage Summary:
 - La sezione Screenshot del README copre ora TUTTE le superfici del progetto (dashboard, grafico, analisi, diagnostica, compatta, kiosk) e nessun asset generato dalla pipeline può restare orfano senza rompere l'audit
 - Chiuso il loop aperto da I134: le 4 proposte erano tutte operative, ma l'asset diagnostica era stato rigenerato senza destinazione — ora ha la sua riga e un presidio permanente
+
+---
+Task ID: 89
+Agent: main (Super Z)
+Task: «controlla lo stato del repo e verifica che sia pronto per poter essere eventualmente reso pubblico su github... un controllo di sicurezza e poi tutta la documentazione necessaria per poter pubblicare» (I136)
+
+Work Log:
+- VERIFICA ANTI-SESSIONE-PARALLELA: HEAD a2ece38 (I135) 0/0 con origin/main, albero pulito — nessun episodio
+- DECISIONI DEL CLARIFY (risposte testuali dell'utente): token Turso «No, non ancora» ruotato; licenza MIT; campioni reali RIMUOVERLI; artefatti ambiente RIMUOVERE TUTTI; docs/11 RIDURRE DETTAGLI; segnalazioni via GitHub Security advisory
+- AUDIT SEGRETI: 0 nei file tracciati (pattern chiavi/JWT/PEM/Bearer su 300+ file con mascheratura in lettura; pagine issue88/99 = salvataggi ANONIMI di issue pubbliche GitHub: visitor-payload di telemetria pubblica, NO csrf-token, user-login vuoto; .chiave-sessione gitignored caricata in sicurezza da sessione-v2.sh; test settings usano placeholder «eyJhbGciOi.Key»)
+- AUDIT PII: nessuna nei file tracciati (email autore solo nei metadati commit — normale); campione-live.jsonl: SOLO d'uso senza identificatori (struttura verificata campo per campo)
+- AUDIT DIPENDENZE: 6 vul (1 high happy-dom dev-only) → bun update happy-dom 21.0.4 (high RISOLTO, suite 644/644) + fast-uri 4.2.3; fast-uri promossa per errore a dependency diretta → bun remove (torna transitiva), inventario I114 coerente; 5 advisory residue (fast-uri 2+2, minimatch/eslint): catene DEV-ONLY senza fix upstream, produzione a ZERO
+- SCOPERTA CRITICA CONFERMATA: commit dd03d16 (16/10, «Add database URL and auth token to .env file») raggiungibile da main — chiunque cloni legge URL+token Turso con git show; I110 aveva raccomandato la rotazione lasciandola all'utente
+- IMPLEMENTAZIONE: (1) fixture sintetica campione-fixture.jsonl (24 righe, stessi campi, finestre coerenti coi blocchi UTC I125; analizzatore V8: transizioni sulla griglia ✓, ADR-13-R2 ✓ — esito stabile v8-fuso-reset-latest.md RIPRISTINATO dopo il run di verifica); (2) campione-live.jsonl git rm --cached + gitignore (resta in locale); (3) rimossi 16 artefatti: .zscripts (9), examples/websocket (2), mini-services (.gitkeep), tests/*.sh container (3), scripts/issue88-99 (4) — docs/01 torna veritiera; (4) docs/11 RISCRITTO in sintesi pubblica (perimetro/verdetti/remediation, zero dettagli operativi); (5) NUOVI: LICENSE MIT (2026 Amedeo Vecchi), SECURITY.md (Private Vulnerability Reporting, versioni supportate, modello di sicurezza), CONTRIBUTING.md (prerequisiti, protocollo, regole), .env.example (segnaposto puri), docs/12-pubblicazione-github.md (audit §2, rotazione token §3 AZIONE UTENTE, storia §4, apertura repo §5, distribuzione §6, presidi §7); (6) package.json +description/license/author/repository/homepage/bugs; (7) analisi-reset-timezone.mjs default → fixture; (8) README: badge license+security, badge audit 689, note campione, docs/11+12 nell'indice, §Qualità I136; (9) note docs/03+docs/05; (10) src/lib/campione.ts: runbook anti-ricaduta (NON commettere più campioni reali)
+- STORIA GIT RISCRITTA: git filter-branch --index-filter 'git rm --cached --ignore-unmatch .env' --prune-empty su TUTTI i commit → il commit dd03d16 NON esiste più nella storia; force push su origin/main; dichiarato in docs/12 §4: clone/fork pre-esistenti conservano la vecchia storia → la ROTAZIONE resta l'azione decisiva
+- AUDIT +9 check I136 → 689/689 PASS 0 scoperte (LICENSE, MIT, SECURITY.md, CONTRIBUTING.md, .env.example, assenza segreti nel template, nonTracciato campione-live/issue/zscripts-examples); check I49 allineato alla fixture
+- PROTOCOLLO (exit REALE): tsc 0, lint 0, suite 644/644 (2332 asserzioni), audit 689/689 PASS 0 scoperte; audit-latest.md allineato (copia manuale)
+- CONSEGNA: commit + force push (storia riscritta), CI SUCCESS, footer produzione «… · I136»
+
+Stage Summary:
+- Il repo è PRONIO per la pubblicazione: 0 segreti nel codice, storia pulita dalle credenziali, dati personali d'uso fuori dal repo, artefatti ambiente rimossi, licenza e politiche complete
+- L'unica azione che NON posso fare io: ruotare il token Turso (console Turso + Vercel env) — checklist passo-passo in docs/12 §3; DOPO la rotazione il repo può essere reso pubblico (docs/12 §5)
+- Lezione: bun update su una transitiva la PROMUOVE a dependency diretta — rimuovere subito (bun remove) e verificare l'inventario I114

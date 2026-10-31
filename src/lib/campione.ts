@@ -19,7 +19,10 @@ import type { Region } from "@/lib/minimax";
  *
  * Protocollo di chiusura campagna (come da runbook `docs/05` §11):
  * 1. rimuovere il blocco marcato in `src/app/api/minimax/usage/route.ts`;
- * 2. committare `scripts/verifiche/campione-live.jsonl` (prova grezza della campagna);
+ * 2. NON commettere `campione-live.jsonl`: dal I136 i campioni reali NON entrano nel
+ *    repo (gitignored, pre-pubblicazione GitHub) — nel repo vive solo la fixture
+ *    sintetica `campione-fixture.jsonl`; il file reale resta in locale per le
+ *    verifiche manuali (`--input` su analisi-reset-timezone.mjs);
  * 3. aggiornare `docs/04` §4 (V8) e `docs/02` §5 con il verdetto.
  */
 

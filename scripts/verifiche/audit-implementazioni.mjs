@@ -489,7 +489,7 @@ const CHECKS = [
   check.simbolo("I54", "scripts/verifiche/verifica-i54-live-vs-demo.mjs", "tipo: \"assenza\"", "assenze richieste verificate esplicitamente (nessun fork nel parser/kiosk)"),
   check.file("I54", "scripts/verifiche/esiti/i54-live-vs-demo-latest.md", "esito persistente a nome stabile"),
   /* --- I49/I56 — campagna campionatore V8 con chiave reale (docs/03 §5.23, docs/05 §11) --- */
-  check.files("I49", ["scripts/verifiche/analisi-reset-timezone.mjs", "scripts/verifiche/campione-live.jsonl"], "analizzatore fuso reset ri-creato + file campione commesso come prova grezza (205 righe: 122 del 09/10 recuperate + 83 fresche)"),
+  check.files("I49", ["scripts/verifiche/analisi-reset-timezone.mjs", "scripts/verifiche/campione-fixture.jsonl"], "analizzatore fuso reset ri-creato + FIXTURE sintetica commessa (I136: i campioni reali NON sono più nel repo — gitignored, pre-pubblicazione GitHub; il verdetto V8 storico resta l'evidenza del campione reale)"),
   check.file("I56", "scripts/verifiche/esiti/v8-fuso-reset-latest.md", "verdetto V8 «blocchi fissi UTC» su esito stabile a nome persistente"),
   check.files("I56", ["scripts/verifiche/esiti/v4-2026-10-12T12-56-18.json", "scripts/verifiche/esiti/v5-2026-10-12T12-56-24.json", "scripts/verifiche/esiti/v6-2026-10-12T13-19-29.json"], "esiti rapidi con chiave reale commessi (V4/V5/V6, 12/10)"),
   /* --- I88 — fix bug latente test-infra: localStorage distrutto dal cleanup kiosk --- */
@@ -972,6 +972,16 @@ const CHECKS = [
   check.simbolo("I134", "README.md", "modalita-kiosk\\.png", "lo screenshot della modalità kiosk è referenziato nel README: la funzionalità di punta I87/I132/I133 ha ora una visuale nella sezione Screenshot, accanto ai 4 PNG della dashboard"),
   /* --- I135 — asset orfano chiuso: la Diagnostica ha la sua immagine nel README --- */
   check.simbolo("I135", "README.md", "sezione-diagnostica\\.png", "l'ultimo asset orfano di docs/assets è referenziato: la sezione Screenshot mostra la Diagnostica del monitor con la SUA immagine (orologio dei reset sui blocchi UTC, salute, anomalie del ritmo) invece di usare sezione-analisi.png con didascalia Diagnostica — nessun PNG generato dalla pipeline resta fuori dal README"),
+  /* --- I136 — pre-pubblicazione GitHub: licenza, politiche, template env, igiene repo --- */
+  check.file("I136", "LICENSE", "licenza MIT: senza licenza il repo pubblico è «all rights reserved» — nessuno può legalmente usare/distribuire il progetto"),
+  check.simbolo("I136", "LICENSE", "MIT License", "testo MIT (permessiva standard per tool di monitoraggio open source)"),
+  check.file("I136", "SECURITY.md", "politica di sicurezza pubblica: canale di segnalazione (GitHub Private Vulnerability Reporting), versioni supportate, perimetro chiave-nel-browser"),
+  check.file("I136", "CONTRIBUTING.md", "guida al contributo: prerequisiti bun/node, protocollo qualità (tsc/lint/test/audit), regole segreti"),
+  check.file("I136", ".env.example", "template delle variabili d'ambiente (nessun valore reale) per chi clona e distribuisce"),
+  check.assenza("I136", ".env.example", "eyJ|sk-[A-Za-z0-9]{20}|-----BEGIN", "il template non contiene NESSUN valore segreto reale (JWT MiniMax, chiavi sk-, blocchi PEM)"),
+  check.nonTracciato("I136", "scripts/verifiche/campione-live\\.jsonl", "i campioni REALI dell'account non entrano nel repo pubblico (I136: fixture sintetica al loro posto)"),
+  check.nonTracciato("I136", "scripts/issue(88|99)\\.(json|html)", "le copie locali delle issue GitHub non sono più tracciate (le issue restano online: fonti pubbliche, artefatti HTML fuori dal repo)"),
+  check.nonTracciato("I136", "(\\.zscripts|examples)/.*", "artefatti dell'ambiente di sviluppo (script sandbox, scaffold websocket) fuori dal repo pubblico"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

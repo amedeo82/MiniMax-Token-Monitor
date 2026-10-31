@@ -137,7 +137,11 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 > dormiento con check condizionale (wiring ammesso solo col blocco marcato). Il file
 > `campione-live.jsonl` (205 righe: 122 del 09/10 RECUPERATE su disco + 83 fresche) è
 > commesso come prova della campagna; verdetto V8 «blocchi fissi UTC» in `docs/02` §5 e
-> `docs/04` §4. Gli altri residui dell'era 08/10 sono stati riconciliati: route Task 7
+> `docs/04` §4. **Aggiornamento I136 (pre-pubblicazione GitHub)**: il campione reale NON è
+> più nel repo (gitignored, resta in locale — dati d'uso reali dell'account, senza
+> identificatori ma personali); nel repo vive la fixture sintetica
+> `campione-fixture.jsonl` usata di default dall'analizzatore, e il check audit I49
+> presidia la non-ricaduta. Gli altri residui dell'era 08/10 sono stati riconciliati: route Task 7
 > `api/verifiche` e scaffold `api/route.ts` RIMOSSI (coerenza ADR-13-R), versione I46
 > riattivata nel footer, kiosk I45 riattivato come item proprio **I87**.
 

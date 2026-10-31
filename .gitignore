@@ -60,6 +60,11 @@ tool-results/
 scripts/verifiche/.chiave-sessione
 scripts/verifiche/sessione-*.log
 
+# I136 — pre-pubblicazione: i campioni REALI dell'account non entrano nel repo
+# pubblico (nessun identificatore, ma restano dati d'uso personali). Nel repo c'è
+# la fixture sintetica campione-fixture.jsonl; questo file vive solo in locale.
+scripts/verifiche/campione-live.jsonl
+
 # frame intermedi della GIF README (Task 41, non deliverable)
 scripts/gif-frames/
 

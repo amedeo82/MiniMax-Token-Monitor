@@ -3,7 +3,9 @@
  * analisi-reset-timezone.mjs — I49/I56 · analisi del fuso di reset delle finestre (V8).
  *
  * Ri-creazione (12/10/2026) dell'analizzatore perito col secondo rollback: legge i campioni
- * grezzi del campionatore passivo (I49, ADR-13-R2) su `scripts/verifiche/campione-live.jsonl`
+ * grezzi del campionatore passivo (I49, ADR-13-R2): di default la FIXTURE sintetica
+ * `scripts/verifiche/campione-fixture.jsonl` (I136: i campioni reali non sono più nel repo,
+ * usare --input per un campione locale `campione-live.jsonl` gitignored)
  * e risponde alla domanda V8: **le finestre sono «rolling» ancorate al primo utilizzo o
  * «blocchi fissi» allineati a confini UTC?**
  *
@@ -38,7 +40,7 @@ import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ESITI_DIR = join(SCRIPT_DIR, "esiti");
-const DEFAULT_INPUT = join(SCRIPT_DIR, "campione-live.jsonl");
+const DEFAULT_INPUT = join(SCRIPT_DIR, "campione-fixture.jsonl");
 
 const MS_MIN = 60_000, MS_H = 3_600_000, MS_DAY = 86_400_000;
 const GRIGLIE = {
