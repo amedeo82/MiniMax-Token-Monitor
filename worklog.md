@@ -2007,3 +2007,22 @@ Work Log:
 Stage Summary:
 - Il README è navigabile: indice con 11 sezioni, ancore esplicite, back-link, e i tre paragrafi-monolite (fino a 4.413 caratteri su riga singola) ora sono sub-bullet e tabella — il contenuto è conservato al 100%
 - Lezione: prima di ristrutturare un file presidato dall'audit, inventariare TUTTI i check che lo leggono (17 su README) e preservare i literal; i contatori (badge, «verifiche dichiarative») sono dinamici e vanno aggiornati al nuovo totale
+
+---
+Task ID: 92
+Agent: main (Super Z)
+Task: «documenta questa analisi in docs/13-analisi-raccolta-background.md ed aggiorna la documentazione del progetto» — analisi raccolta in background + limiti tier free (I139)
+
+Work Log:
+- VERIFICA ANTI-SESSIONE-PARALLELA (13ª): HEAD a6156f9 (I138) 0/0 con origin/main, working tree pulito — nessuna sessione parallela
+- RICERCA (sessione precedente, resoconto consegnato in chat): limiti verificati sui documenti ufficiali con data di consultazione 05/11 — Vercel Hobby: cron 1 volta/giorno (±59 min, UTC; espressioni sotto-daily falliscono al deploy), funzioni 1M invocazioni/mese, 100 GB trasferimento, 4 CPU-hrs Active CPU, superamento → pausa senza addebiti; Turso Free: 10M scritture / 500M letture / 5 GB / 100 DB, nessun cold start; GitHub: repo pubblico senza limiti di traffico rilevanti, Actions gratis nei repo pubblici (6h/job; schedule min 5 min best-effort, run persi possibili, disattivazione a 60 giorni di inattività), Pages statico soltanto (vietato SaaS); cron-job.org gratis fino a 60 esecuzioni/ora
+- VOLUMI CALCOLATI CON SCRIPT (1 riga UsagePoint + ~6 ModelUsagePoint per rilevazione, ~150–200 B/riga): a 5 min → 288 corse/giorno, scritture ~61.300/mese (0,61% di 10M), storage ~9,6 MB/mese (5 GB = 43 anni), invocazioni 0,88% di 1M, ~14,6 h Actions/mese; a 15 min (cadenza raccomandata) tutto sotto lo 0,3%; a 1 ora 0,05% — né Turso né Vercel sono il vincolo, l'unico limite duro è il cron Hobby 1/giorno
+- VERIFICA DEL CODICE ATTUALE: il BROWSER è il motore della raccolta — chiave in localStorage → POST /api/minimax/usage (proxy retry I51 + fallback I18) → persist POST /api/history (guard I95, upsert UsagePoint); l'unico cron server-side è /api/manutenzione/cron alle 02:30 UTC (I111), che NON raccoglie dati: conferma della domanda dell'utente
+- IMPLEMENTAZIONE (solo docs: nessun src/ salvo il marcatore): NUOVO docs/13-analisi-raccolta-background.md (§1 comportamento attuale; §2 limiti Vercel/Turso/GitHub con tabelle; §3 volumi; §4 opzioni scheduling A Actions ⭐ / B cron-job.org / C Vercel Cron / D Pro; §5 architettura consigliata per I140+; §6 risposta «ospitare su GitHub»; §7 fonti datate 05/11; §8 domande utente verbatim); docs/04 §3 riga I139 + §8 changelog in cima; versione «2026-11-05 · I139»; README (badge audit 693→696, indice sezione 7 «01–13», riga docs/13 nella tabella documentazione, presidio I139, albero «01–13»); audit +3 check I139 → 696/696 (simboli «Raccolta in background» e «GitHub Actions» in docs/13, «13-analisi-raccolta-background» in README); check I105 «01–12»→«01–13»
+- NESSUN CODICE DI RACCOLTA INTRODOTTO: l'implementazione (route /api/raccolta + RACCOLTA_TOKEN stile I95 + chiave MiniMax lato ENV come decisione di progetto + workflow Actions */15) resta descritta in docs/13 §5 come item futuro su autorizzazione dell'utente
+- PROTOCOLLO (exit REALE): tsc 0, lint 0, suite 644/644 (2332 asserzioni), audit 696/696 PASS 0 scoperte; audit-latest.md allineato (copia manuale)
+- CONSEGNA: commit SOLO sui file I139 (mai git add -A: rispetto del working tree condiviso), push, CI, footer produzione «… · I139»
+
+Stage Summary:
+- docs/13 chiude la domanda «senza visitatori i dati non si aggiornano»: SÌ, verificato nel codice; né Turso né Vercel sono il limite (<1% anche a 5 min); il collo di bottiglia è il cron Hobby 1/giorno → GitHub Actions gratuito nel repo pubblico è l'opzione raccomandata, con idempotenza sul timestamp per assorbire i ritardi best-effort
+- Lezione: i numeri dei tier free vanno citati con la data di consultazione (docs/10 §2 era del 17/10 e Turso ha già cambiato i numeri) — docs/13 §7 registra la data e aggiorna docs/10

@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-10-31T15:07:13.372Z
+# Audit implementazioni — 2026-11-05T14:29:59.123Z
 
-- Verifiche totali: **693** · PASS: **693** · FAIL: **0**
+- Verifiche totali: **696** · PASS: **696** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -364,7 +364,7 @@
 | I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
 | I123 | contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896 (README.md) | simbolo | PASS | — |
 | I123 | badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560 (README.md) | simbolo | PASS | — |
-| I105 | indice documentazione README completo (docs/12 incluso — I138 aggiorna il commento dell'albero, rimasto a 01–11 da I136) (README.md) | simbolo | PASS | — |
+| I105 | indice documentazione README completo (docs/13 incluso — I139 aggiorna il commento dell'albero, rimasto a 01–12 da I138) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | docs/09 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
@@ -697,6 +697,9 @@
 | I138 | il README monolitico ha un INDICE navigabile in cima: 11 sezioni linkate con il loro contenuto dichiarato — il lettore salta direttamente al capitolo senza scroll all'infinito (README.md) | simbolo | PASS | — |
 | I138 | ancore esplicite <a id="sez-..."> su ogni sezione principale: i link dell'indice NON dipendono dall'algoritmo di ancoraggio GitHub (emoji, accenti, punteggiatura) e non si rompono rinominando un titolo (README.md) | simbolo | PASS | — |
 | I138 | navigazione bidirezionale: ogni sezione principale chiude con «⬆ torna all'indice» — dall'indice al capitolo e ritorno, mai più di un click di distanza (README.md) | simbolo | PASS | — |
+| I139 | l'analisi «i dati si aggiornano senza visitatori?» ha un documento proprio: comportamento attuale verificato nel codice (il browser è il motore della raccolta), limiti free verificati con fonti datate, volumi calcolati, opzioni di scheduling e architettura consigliata per l'implementazione futura (docs/13-analisi-raccolta-background.md) | simbolo | PASS | — |
+| I139 | docs/13 compara le opzioni di scheduling con i limiti verbatim (Vercel Cron Hobby una volta al giorno ±59 min; GitHub Actions gratuito nei repo pubblici ma best-effort con disattivazione a 60 giorni di inattività; cron-job.org fino a 60 esecuzioni/ora) e chiude l'ambito di GitHub Pages (statico soltanto, non adatto all'app) (docs/13-analisi-raccolta-background.md) | simbolo | PASS | — |
+| I139 | docs/13 è raggiungibile dal README (tabella §Indice della documentazione): nessun documento nasce fuori dalla mappa (README.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (693 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (696 pass, 0 fail, 0 scoperte)

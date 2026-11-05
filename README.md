@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://minimax-token-monitor.vercel.app/)
 [![Test 644 pass](https://img.shields.io/badge/test-644_pass-31C48D)](tests)
-[![Audit 693 PASS](https://img.shields.io/badge/audit-693_PASS-31C48D)](scripts/verifiche)
+[![Audit 696 PASS](https://img.shields.io/badge/audit-696_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31C48D)](LICENSE)
@@ -61,7 +61,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | 4 | [Avvio rapido](#sez-avvio) | locale, demo, chiave reale, import JSON |
 | 5 | [Persistenza server](#sez-persistenza) | SQLite / Turso / Vercel + manutenzione automatica |
 | 6 | [Regole del piano](#sez-regole) | sintesi operativa delle finestre (verdetto V8) |
-| 7 | [Indice della documentazione](#sez-documentazione) | docs/01–12: quando consultare cosa |
+| 7 | [Indice della documentazione](#sez-documentazione) | docs/01–13: quando consultare cosa |
 | 8 | [Stack](#sez-stack) | tecnologie e scelte |
 | 9 | [Struttura del repository](#sez-struttura) | mappa del codice + versione/changelog |
 | 10 | [Verifiche empiriche](#sez-verifiche) | toolkit riproducibile |
@@ -199,7 +199,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 #### Audit di riconciliazione
 
-**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 693 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
+**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 696 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
 
 | Dal | Presidio permanente |
 |-----|---------------------|
@@ -228,6 +228,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | I136 | preparazione alla pubblicazione pubblica (LICENSE, SECURITY.md, CONTRIBUTING.md, template env senza segreti, campioni reali/artefatti ambiente fuori dall'indice) |
 | I137 | chiusura della checklist di pubblicazione (la rotazione del token Turso è registrata come eseguita — nessun prerequisito tecnico residuo prima dell'apertura del repo) |
 | I138 | README navigabile a sezioni: indice con ancore esplicite e link di ritorno all'indice — la struttura del README non può regredire a file monolitico |
+| I139 | analisi raccolta in background documentata in docs/13 con limiti dei tier free datati (§7) — i numeri dei servizi cloud non si citano senza data di consultazione e l'aggiornamento senza visitatori si discute con i volumi calcolati, non a sensazione |
 
 #### Audit di sicurezza
 
@@ -437,6 +438,7 @@ con le env Turso impostate esegue invece la lettura read-only del database remot
 | [`docs/10-manutenzione-database.md`](docs/10-manutenzione-database.md) | Procedure di manutenzione del database (17/10, I111): limiti del free tier Turso con fonti datate (§2), architettura della manutenzione nel progetto (§3), le due codifiche DateTime (§4, probe empirica), procedure P1–P8 — cron notturno, integrità, ritenuta/cap, VACUUM e freelist, monitoraggio quota, proiezione scritture, database locale e registro delle esecuzioni del cron (I117) (§5), configurazione env con clamp (§6), runbook operativo con checklist e escalation (§7), verifiche (§8), stime e onestà dei limiti (§9) | Per la salute e la quota del database: setup del cron, controlli periodici, verifica del cron a distanza di settimane (P8), cosa fare a livello attenzione/critica |
 | [`docs/11-audit-sicurezza.md`](docs/11-audit-sicurezza.md) | Audit di sicurezza (17/10, I119; **sintesi pubblica I136**): perimetro e metodologia (§1), 24 aree di test (§2), sintesi dei risultati con gravità e remediation (§3), esiti per area (§4), presidi permanenti (§5), checklist di ripetizione (§6) | Prima di ogni rilascio sensibile e come punto di partenza dei prossimi audit; la segnalazione di vulnerabilità segue `SECURITY.md` |
 | [`docs/12-pubblicazione-github.md`](docs/12-pubblicazione-github.md) | Pubblicazione su GitHub (31/10, I136; chiusura I137): esito dell'audit pre-pubblicazione (§2), rotazione token Turso ESEGUITA (§3), riscrittura della storia (§4), passi per aprire il repo (§5), distribuzione per chi clona (§6), presidi attivati (§7) | Prima di rendere pubblico il repo e per distribuire il progetto su altre piattaforme |
+| [`docs/13-analisi-raccolta-background.md`](docs/13-analisi-raccolta-background.md) | Analisi raccolta in background (05/11, I139): comportamento attuale verificato nel codice — il browser è il motore della raccolta (§1), limiti free Vercel/Turso/GitHub verificati con fonti datate (§2), volumi calcolati a 5 min/15 min/1 h — meno dell'1% dei budget (§3), opzioni di scheduling con GitHub Actions raccomandata (§4), architettura consigliata per l'implementazione futura (§5), risposta «ospitare su GitHub» (§6), fonti (§7) | Prima di pianificare la raccolta server-side (I140+) o di ragionare su scheduler e limiti free |
 
 > **Protocollo per le prossime sessioni**: leggere prima `docs/04-stato-avanzamento.md`
 > (e questo README), lavorare, poi aggiornare lo stato e il changelog. In più
@@ -525,7 +527,7 @@ prisma/schema.prisma                 # UsagePoint + UsageEventRecord + Downsampl
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
 tests/                               # Suite bun: lib/ (53 file) + components/ (13 componenti) = 644 test / 2332 asserzioni
-docs/          # Questa documentazione (01–12)
+docs/          # Questa documentazione (01–13)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro
