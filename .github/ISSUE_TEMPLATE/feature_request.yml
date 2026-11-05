@@ -1,0 +1,39 @@
+---
+name: "Proposta di funzionalità"
+description: "Idea o miglioramento per la dashboard, le analisi o le API"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie per la proposta! 🙏
+        Nota: questo progetto segue il protocollo di sviluppo
+        **suggerimento → autorizzazione → implementazione documentata** — ogni
+        item accettato viene implementato con test e registrato nella
+        documentazione (`docs/04`). Le proposte già analizzate sono in
+        `docs/06-abbellimenti-dashboard.md` e `docs/07-analisi-miglioramenti-aggiuntivi.md`.
+  - type: textarea
+    id: problema
+    attributes:
+      label: "Problema o caso d'uso"
+      description: "Quale bisogno reale hai? Che fai oggi senza questa funzionalità?"
+    validations:
+      required: true
+  - type: textarea
+    id: soluzione
+    attributes:
+      label: "Soluzione proposta"
+      description: "Cosa dovrebbe succedere, con che priorità."
+    validations:
+      required: true
+  - type: textarea
+    id: alternative
+    attributes:
+      label: "Alternative considerate"
+      description: "Altri modi per risolvere lo stesso bisogno."
+  - type: input
+    id: versione
+    attributes:
+      label: "Versione (footer dell'app)"
+      description: "Formato «AAAA-MM-GG · Ixxx» — utile per capire lo stato dell'app."
+      placeholder: "es. 2026-11-05 · I140"

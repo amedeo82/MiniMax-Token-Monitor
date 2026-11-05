@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Vulnerabilità di sicurezza"
+    url: https://github.com/amedeo82/MiniMax-Token-Monitor/security/advisories/new
+    about: "Segnalazione PRIVATA (GitHub Private Vulnerability Reporting) — mai in una issue pubblica. Vedi SECURITY.md."
+  - name: "Documentazione del progetto (docs/01–13)"
+    url: https://github.com/amedeo82/MiniMax-Token-Monitor/tree/main/docs
+    about: "Analisi, audit di sicurezza e decisioni di progetto: controlla qui prima di aprire una issue."
+  - name: "Domande sull'installazione / deployment"
+    url: https://github.com/amedeo82/MiniMax-Token-Monitor#avvio-rapido
+    about: "Avvio rapido, persistenza (Turso/SQLite) e deployment su Vercel sono coperti dal README."

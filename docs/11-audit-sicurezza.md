@@ -95,3 +95,42 @@ licenza e politiche di pubblicazione (`docs/12` §7).
 5. SQL raw: solo tagged template/`Prisma.sql` — mai stringhe dinamiche con input;
 6. ogni nuovo `dangerouslySetInnerHTML`: rivedere questo documento prima;
 7. dopo la rotazione del token Turso (`docs/12` §3): archiviare l'azione.
+
+## 7. Re-audit completo pre-apertura (05/11/2026, I140)
+
+Seconda passata completa su TUTTE le 24 aree di §2, eseguita il 05/11/2026
+(I140) come controllo finale prima dell'eventuale apertura del repo al
+pubblico — richiesta dell'utente: «controllami se il repo è sicuro per poter
+essere reso pubblico». Metodologia identica all'audit I119/I136 (white-box:
+pattern di segreti sui file tracciati, storia git, siti SQL, XSS, injection,
+matrice guard, header, probe HTTP read-only in produzione, dipendenze), con
+verifica anche delle protezioni GitHub del repo (`docs/12` §8).
+
+| Esito | Area | Dettaglio |
+|-------|------|-----------|
+| ✅ | Superficie d'attacco | invariata: 8 route API, nessun nuovo endpoint da I119 |
+| ✅ | Segreti nei file tracciati | 0 pattern (unico hit: hash di integrità sha512 in `bun.lock`, falso positivo) |
+| ✅ | Storia git | nessun commit tocca `.env`/`.pem`/`.key`; artefatti rimossi in I136 mai ricomparsi |
+| ✅ | Env pubbliche al client | nessuna `NEXT_PUBLIC_*` |
+| ✅ | SQL injection | nessun `$queryRawUnsafe`/`$executeRawUnsafe` con input; DDL e `VACUUM` costanti; filtri con `Prisma.sql`/`Prisma.join` |
+| ✅ | XSS | unico `dangerouslySetInnerHTML` (highlight JSON) con escape `&`/`<` a monte, confermato |
+| ✅ | Command/path injection | nessun `eval`/`exec`/`spawn`; nessun `fs` nelle route API |
+| ✅ | SSRF | l'unico `fetch` server-side usa la allowlist fissa degli endpoint MiniMax (eu/cn) |
+| ✅ | Auth/authz | guard `ADMIN_TOKEN`+timing-safe su tutte le scritture; cron con `CRON_SECRET`; letture read-only |
+| ✅ | Rate limit / DoS | `sottoLimiteScritture` 120/min/IP attivo; il volumetrico resta dell'edge |
+| ✅ | Crypto | nessun md5/sha1; `Math.random` solo in demo e jitter backoff (mai in contesti di sicurezza) |
+| ✅ | CORS/CSRF | nessun header CORS custom (same-origin di default) |
+| ✅ | Header di sicurezza | confermati in produzione (probe): nosniff, frame SAMEORIGIN, referrer, permissions-policy, HSTS; `X-Powered-By` assente; CSP Report-Only |
+| ✅ | Log | log Prisma dipendenti dall'ambiente (I119, intatto) |
+| ✅ | Service worker | nessun segreto in cache; dati offline dal `localStorage` di pagina (per design) |
+| ⚠️→✅ | **Dipendenze** | **1 SCOPERTA E FIXATA in I140**: `bun audit --production` segnalava 4 advisory (2 moderate, 2 low) in `fast-uri` 3.1.8 via `prisma` CLI → `@prisma/dev` → `ajv` (catena di BUILD, mai importata dal runtime — verificato). Fix: `overrides` `fast-uri@^3.1.9` (versione patchata del 19/10/2026) in `package.json` → **0 vulnerabilità** |
+| ✅ | Versioni framework | Next 16.4.2, React 19.3.1, TypeScript 5.9.3, Prisma 7.10.1 — correnti |
+| ✅ | Probe contratti HTTP | GET `/api/summary` 200 (read-only), POST `/api/history` senza token **401**, cron senza secret **401** |
+| ✅ | PII nei file tracciati | solo l'identità git dell'autore (worklog Task 30/31, `package.json` author) — già pubblica per design |
+| ✅ | Igiene gitignore | `.env*`, chiave di sessione, esiti (tranne `audit-latest.md`) — intatti |
+
+**Esito complessivo: PASS** — nessuna scoperta residua; l'unico riscontro
+(advisory `fast-uri` in catena di build) è stato fixato nella stessa consegna
+con override dichiarato. Le protezioni del repository GitHub (branch protection,
+secret scanning, PVR) sono documentate in `docs/12` §8: tre di esse diventano
+disponibili solo al passaggio a repo pubblico.

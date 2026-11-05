@@ -95,3 +95,36 @@ reali, le copie delle issue o gli artefatti ambiente tornano nell'indice git.
 Il presidio si aggiunge a quelli I119 (log Prisma, `X-Powered-By`, Caddyfile).
 Il check audit I137 registra inoltre la chiusura della §3 (rotazione eseguita):
 la checklist non può tornare indietro senza lasciare traccia nell'audit.
+
+## 8. Verifiche di protezione pre-apertura (05/11/2026, I140)
+
+Verifica e applicazione delle protezioni del repository e delle GitHub Actions,
+con il re-audit di sicurezza completo in `docs/11` §7. State rilevate via API
+REST con token admin del proprietario; i tre canali non disponibili sul repo
+**privato** con piano free diventano attivabili al passaggio a pubblico.
+
+| Impostazione | Stato rilevato | Azione I140 | Stato finale |
+|--------------|----------------|-------------|--------------|
+| Visibilità repo | privata | nessuna (decisione dell'utente, §5) | privata |
+| `GITHUB_TOKEN` nei workflow | `default_workflow_permissions: read`, auto-approvazione PR `false` | già ottimale — verificato, nessuna modifica | ✅ read-only |
+| Actions abilitate | sì, `allowed_actions: all` | mantenuto: la CI usa 2 action esterne (`actions/checkout`, `oven-sh/setup-bun`); mitigazioni: token read-only + approvazione richiesta ai PR da fork di nuovi contributor | ✅ |
+| Dependabot security updates | non attivo | **attivato via API (PATCH, 200)** | ✅ `enabled: true` |
+| Dependabot version updates | già presente (`.github/dependabot.yml`, settimanale npm+actions) | — | ✅ |
+| Branch protection su `main` | **non disponibile** su repo privato con piano free (API 403) | post-apertura (procedura sotto) | ⏳ dopo apertura |
+| Secret scanning + push protection | **non disponibile** su repo privato con piano free (API 422) | post-apertura | ⏳ dopo apertura |
+| Private Vulnerability Reporting | non attivabile via API in questo stato (404) | post-apertura | ⏳ dopo apertura |
+
+Procedura di attivazione DOPO il passaggio a pubblico (una sola volta,
+`Settings` → `Branches` → `Add branch protection rule` su `main`):
+
+1. **Branch protection**: attiva la regola con «Require a pull request before
+   merging» SOLO se cambi workflow (con push diretti su `main` lasciala
+   disattivata); attiva invece «Do not allow force pushes» e «Do not allow
+   deletions» — bloccano le operazioni distruttive senza toccare il workflow
+   attuale; opzionale «Require status checks» con `typecheck · lint · test · audit`;
+2. **Secret scanning**: su repo pubblico è gratuito — `Settings` → `Code
+   security and analysis` → attiva «Secret scanning» e «Push protection»;
+3. **Private Vulnerability Reporting**: stesso pannello, «Privately report
+   security vulnerabilities» (canale già dichiarato in `SECURITY.md`);
+4. opzionale: `allowed_actions` da «all» a «Select actions» con
+   `actions/checkout` e `oven-sh/setup-bun` in allowlist.

@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-11-05T14:29:59.123Z
+# Audit implementazioni — 2026-11-05T15:06:30.060Z
 
-- Verifiche totali: **696** · PASS: **696** · FAIL: **0**
+- Verifiche totali: **708** · PASS: **708** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -700,6 +700,18 @@
 | I139 | l'analisi «i dati si aggiornano senza visitatori?» ha un documento proprio: comportamento attuale verificato nel codice (il browser è il motore della raccolta), limiti free verificati con fonti datate, volumi calcolati, opzioni di scheduling e architettura consigliata per l'implementazione futura (docs/13-analisi-raccolta-background.md) | simbolo | PASS | — |
 | I139 | docs/13 compara le opzioni di scheduling con i limiti verbatim (Vercel Cron Hobby una volta al giorno ±59 min; GitHub Actions gratuito nei repo pubblici ma best-effort con disattivazione a 60 giorni di inattività; cron-job.org fino a 60 esecuzioni/ora) e chiude l'ambito di GitHub Pages (statico soltanto, non adatto all'app) (docs/13-analisi-raccolta-background.md) | simbolo | PASS | — |
 | I139 | docs/13 è raggiungibile dal README (tabella §Indice della documentazione): nessun documento nasce fuori dalla mappa (README.md) | simbolo | PASS | — |
+| I140 | codice di condotta (Contributor Covenant 2.1): il repo dichiara le regole di comportamento prima che servano | file | PASS | — |
+| I140 | il codice di condotta dichiara la propria base (Contributor Covenant 2.1 con linee guida di enforcement): testo standard riconoscibile, non ad hoc (CODE_OF_CONDUCT.md) | simbolo | PASS | — |
+| I140 | template issue bug: versione del footer obbligatoria, ambiente e modalità dichiarati, avviso privacy sui log | file | PASS | — |
+| I140 | template issue proposta: caso d'uso obbligatorio e protocollo «suggerimento → autorizzazione → implementazione» citato | file | PASS | — |
+| I140 | template PR con la checklist del protocollo qualità (tsc/lint/test/audit/bun audit + docs/04 + APP_VERSION + niente segreti) | file | PASS | — |
+| I140 | documento di supporto: canali (demo live, README, docs, issue, PVR), checklist pre-issue e tempi di risposta | file | PASS | — |
+| I140 | FUNDING.yml punta al profilo GitHub Sponsors del maintainer (verificato attivo): il bottone «Sponsor» non è un link morto (.github/FUNDING.yml) | simbolo | PASS | — |
+| I140 | docs/12 §8 registra lo stato delle protezioni repo/Actions: ciò che è già ottimale (GITHUB_TOKEN read-only), ciò che è stato applicato (Dependabot security updates) e ciò che si attiva al passaggio a pubblico (branch protection, secret scanning, PVR) con la procedura pronta (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I140 | l'attivazione delle security updates automatiche è registrata: il canale non può essere disattivato silenziosamente prima dell'apertura (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I140 | docs/11 §7: la seconda passata completa sulle 24 aree (05/11/2026) è registrata con esito per area — l'audit non è un evento unico del 17/10 (docs/11-audit-sicurezza.md) | simbolo | PASS | — |
+| I140 | presidio del fix dipendenze: l'override fast-uri ^3.1.9 (versione patchata delle 4 advisory, catena prisma CLI/ajv build-only) resta dichiarato in package.json — la produzione non torna ad advisory silenziosamente (package.json) | simbolo | PASS | — |
+| I140 | i file di community sono raggiungibili dal README (sezione «Sicurezza, licenza e contributi»): nessun file nasce fuori dalla mappa (README.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (696 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (708 pass, 0 fail, 0 scoperte)

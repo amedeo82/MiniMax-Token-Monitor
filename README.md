@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://minimax-token-monitor.vercel.app/)
 [![Test 644 pass](https://img.shields.io/badge/test-644_pass-31C48D)](tests)
-[![Audit 696 PASS](https://img.shields.io/badge/audit-696_PASS-31C48D)](scripts/verifiche)
+[![Audit 708 PASS](https://img.shields.io/badge/audit-708_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31C48D)](LICENSE)
@@ -65,7 +65,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | 8 | [Stack](#sez-stack) | tecnologie e scelte |
 | 9 | [Struttura del repository](#sez-struttura) | mappa del codice + versione/changelog |
 | 10 | [Verifiche empiriche](#sez-verifiche) | toolkit riproducibile |
-| 11 | [Sicurezza, licenza e contributi](#sez-sicurezza) | SECURITY.md, CONTRIBUTING.md, LICENSE |
+| 11 | [Sicurezza, licenza e contributi](#sez-sicurezza) | SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SUPPORT.md, LICENSE, template issue/PR, FUNDING |
 
 ---
 
@@ -199,7 +199,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 #### Audit di riconciliazione
 
-**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 696 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
+**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 708 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
 
 | Dal | Presidio permanente |
 |-----|---------------------|
@@ -229,6 +229,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | I137 | chiusura della checklist di pubblicazione (la rotazione del token Turso è registrata come eseguita — nessun prerequisito tecnico residuo prima dell'apertura del repo) |
 | I138 | README navigabile a sezioni: indice con ancore esplicite e link di ritorno all'indice — la struttura del README non può regredire a file monolitico |
 | I139 | analisi raccolta in background documentata in docs/13 con limiti dei tier free datati (§7) — i numeri dei servizi cloud non si citano senza data di consultazione e l'aggiornamento senza visitatori si discute con i volumi calcolati, non a sensazione |
+| I140 | re-audit completo pre-apertura in docs/11 §7 con il fix dipendenze presidiato (override `fast-uri` in package.json: la produzione non torna ad advisory silenziosamente), 7 file di community presidiati (COC, template issue/PR, SUPPORT, FUNDING) e protezioni del repo registrate in docs/12 §8 |
 
 #### Audit di sicurezza
 
@@ -577,14 +578,23 @@ d'ambiente `MM_SUBSCRIPTION_KEY` (mai nei log né in chat).
 
 - **Sicurezza**: le vulnerabilità NON si segnalano in issue pubbliche — usa il canale
   privato **GitHub Private Vulnerability Reporting** descritto in
-  [`SECURITY.md`](SECURITY.md); la sintesi pubblica dell'audit di sicurezza è in
+  [`SECURITY.md`](SECURITY.md); la sintesi pubblica dell'audit di sicurezza (e del
+  re-audit completo pre-apertura, docs/11 §7) è in
   [`docs/11-audit-sicurezza.md`](docs/11-audit-sicurezza.md).
 - **Contributi**: benvenuti — leggere prima [`CONTRIBUTING.md`](CONTRIBUTING.md)
-  (prerequisiti, protocollo di qualità tsc/lint/test/audit, regole sui segreti).
+  (prerequisiti, protocollo di qualità tsc/lint/test/audit, regole sui segreti);
+  le issue usano i template automatici (bug, proposta di funzionalità) e le PR
+  la checklist del protocollo.
+- **Community**: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) (Contributor Covenant
+  2.1) e [`SUPPORT.md`](SUPPORT.md) — dove chiedere aiuto e cosa preparare prima
+  di aprire una issue; il bottone «Sponsor» (`.github/FUNDING.yml`) punta al
+  profilo GitHub Sponsors del maintainer.
 - **Licenza**: [MIT](LICENSE) — usa, modifica e distribuisci liberamente, con
   attribuzione.
 - **Pubblicazione e distribuzione**: la checklist completa (storia git, rotazione
   credenziali, passi di apertura) è in
-  [`docs/12-pubblicazione-github.md`](docs/12-pubblicazione-github.md).
+  [`docs/12-pubblicazione-github.md`](docs/12-pubblicazione-github.md); le
+  protezioni di repo e Actions verificate/applicate sono in docs/12 §8, con la
+  procedura dei canali che si attivano al passaggio a pubblico.
 
 [⬆ torna all'indice](#sez-indice)

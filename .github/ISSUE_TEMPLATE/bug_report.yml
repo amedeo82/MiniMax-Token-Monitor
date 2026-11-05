@@ -1,0 +1,68 @@
+---
+name: "Segnalazione bug"
+description: "Qualcosa non funziona come dovrebbe nella dashboard o nelle API"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie per la segnalazione! 🙏
+        ⚠️ **Vulnerabilità di sicurezza: NON usare questo form** — apri una
+        segnalazione privata da **Security → Report a vulnerability** (vedi `SECURITY.md`).
+  - type: textarea
+    id: descrizione
+    attributes:
+      label: "Descrizione del problema"
+      description: "Riassunto in 2-3 righe di cosa non va."
+    validations:
+      required: true
+  - type: textarea
+    id: riproduzione
+    attributes:
+      label: "Passi per riprodurre"
+      description: "Passi numerati, dal più generico al più specifico."
+      placeholder: |
+        1. Apri la dashboard in modalità kiosk
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: atteso
+    attributes:
+      label: "Comportamento atteso vs osservato"
+      description: "Cosa ti aspettavi e cosa è successo invece."
+    validations:
+      required: true
+  - type: input
+    id: versione
+    attributes:
+      label: "Versione (footer dell'app)"
+      description: "Formato «AAAA-MM-GG · Ixxx» — la trovi nel footer della pagina e del kiosk."
+      placeholder: "es. 2026-11-05 · I140"
+    validations:
+      required: true
+  - type: dropdown
+    id: ambiente
+    attributes:
+      label: "Ambiente"
+      options:
+        - "Produzione (Vercel)"
+        - "Locale (bun dev)"
+        - "Altro / self-hosted"
+    validations:
+      required: true
+  - type: dropdown
+    id: modalita
+    attributes:
+      label: "Modalità di utilizzo"
+      options:
+        - "Dati reali (chiave MiniMax in Impostazioni)"
+        - "Modalità demo (dati simulati)"
+        - "Il problema non dipende dalla modalità"
+    validations:
+      required: true
+  - type: textarea
+    id: contesto
+    attributes:
+      label: "Screenshot / log della console"
+      description: "Se pertinenti. ⚠️ Occlude SEMPRE chiavi e token prima di incollare log o screenshot."
