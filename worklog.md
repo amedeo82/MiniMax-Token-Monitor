@@ -2064,3 +2064,20 @@ Work Log:
 Stage Summary:
 - Il repo è pubblico con le protezioni che il piano free negava in privato: branch protection (no force-push/deletion, check CI richiesto), secret scanning + push protection e PVR attivi — la «decisione dell'utente» di docs/12 §5 è chiusa, registrata verbatim e presidiata dall'audit (+7 check)
 - Lezione: subito dopo un cambio di visibilità GitHub risponde 403 «Repository has been locked» ad alcune chiamate di configurazione (branch protection) mentre accetta altre PATCH (security_and_analysis) — i retry post-lock vanno pianificati: non è un errore di permessi
+
+---
+Task ID: 95
+Agent: main (Super Z)
+Task: «sistema, confermo A, confermo B» — chiusura della verifica congiunta post-apertura + dissoluzione del commit anomalo (I142)
+
+Work Log:
+- VERIFICA ANTI-SESSIONE-PARALLELA (16ª): HEAD 6e08e3c AHEAD 1 su origin/main (248882b, I141) — l'unico scostamento è il commit accidentale descritto sotto, NON una sessione parallela (I141 confermata ultima consegna pubblica); CI SUCCESS su 248882b (API Actions: completed/success), footer produzione «2026-11-05 · I141» (curl), README pubblico con badge e «715 verifiche dichiarative» (fetch anonimo del sorgente raw), repo pubblico con banner Public (GET anonimo)
+- ANOMALIA e FIX: il commit locale 6e08e3c (mai pushato, messaggio = UUID di sessione, 05/11 ore 15:41 dopo il push I141) aveva tracciato i due script API dell'apertura (apertura-pubblica-i141.sh, protezione-post-apertura-i141.sh) che il worklog Task 94 dichiara esplicitamente NON tracciati perché estraggono il token admin dal remote locale — il «sistema» dell'utente NON diventa rename+push (i file non appartengono al repo) ma DISSOLUZIONE: git reset --soft HEAD~1 + git restore --staged → HEAD 248882b 0/0 con origin/main, script tornati su disco e fuori dall'indice, storia pubblica MAI toccata (nessun force push, nessuna riscrittura remota)
+- CONFERME UI REGISTRATE (docs/12 §5+§8): A = Settings → Code security and analysis (Secret scanning / Push protection / PVR = enabled) CONFERMATO dall'utente, B = Settings → Branches (regola su main attiva) CONFERMATO; banner Public, README+badge e CI verde su 248882b già verificati via API/fetch anonimo — il «lo verifichiamo insieme» di I141 è CHIUSO, nessuna voce della checklist resta aperta
+- IMPLEMENTAZIONE (solo docs, nessun src/ salvo il marcatore): docs/12 (header aggiornato alla CONFERMA; §5 sottosezione NUOVA «Verifica congiunta completata (05/11/2026, I142)» con verbatim + anomalia registrata; §8 checklist UI marcata ✅ CONFERMATA); audit +5 check I142 (2 nonTracciato I97 sui due script API + 2 simboli docs/12 + presidio README); README (badge audit 715→720, «720 verifiche dichiarative», presidio I142, paragrafo pubblicazione aggiornato); docs/04 §3 riga I142 + §8 changelog in cima; versione «2026-11-05 · I142»; audit-latest.md allineato (copia manuale)
+- PROTOCOLLO (exit REALE): tsc 0, lint 0, suite 644/644 (2332 asserzioni), audit 720/720 PASS 0 scoperte
+- CONSEGNA: commit SOLO sui 7 file I142 (mai git add -A: rispetto del working tree condiviso; i due script API restano NON tracciati e il non-tracciamento è presidiato dall'audit), push, CI, footer produzione «… · I142»
+
+Stage Summary:
+- La verifica congiunta della pubblicazione è CHIUSA con le conferme dell'utente registrate verbatim e presidiate dall'audit: docs/12 non ha più voci pendenti — il ciclo «suggerimento → autorizzazione → implementazione» resta aperto solo sulla discussione «se e come» della raccolta dati (docs/13 §5)
+- Lezione: un commit accidentale con messaggio-UUID (creato dopo il push di una consegna) è stato intercettato PRIMA del push dalla verifica anti-sessione-parallela e dallo stato ahead-1; il presidio check.nonTracciato (I97) rende il recupero permanente — anche un futuro re-commit accidentale dei due script API verrebbe fermato dall'audit con esito FAIL

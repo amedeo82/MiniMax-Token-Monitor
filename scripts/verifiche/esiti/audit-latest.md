@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-11-05T15:37:56.100Z
+# Audit implementazioni — 2026-11-05T16:16:09.087Z
 
-- Verifiche totali: **715** · PASS: **715** · FAIL: **0**
+- Verifiche totali: **720** · PASS: **720** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -719,6 +719,11 @@
 | I141 | il canale di segnalazione privata dichiarato in SECURITY.md è operativo (PUT 204): il contatto di sicurezza del repo pubblico non è solo una promessa (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
 | I141 | la verifica post-pubblicazione ispeziona ciò che il pubblico vede davvero (clone senza credenziali: storia senza .env/.pem/.key, unico hit lo sha512 di bun.lock) invece di fidarsi del solo working tree locale (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
 | I141 | il presidio dell'apertura pubblica è raggiungibile dal README (tabella «Dal → Presidio permanente») (README.md) | simbolo | PASS | — |
+| I142 | la conferma UI dell'utente (05/11/2026) è registrata verbatim in docs/12 §5: la parte utente della verifica congiunta I141 non resta affidabile alla memoria (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I142 | docs/12 §5 chiude esplicitamente il «lo verifichiamo insieme» con data, pannelli confermati (A: Code security, B: Branches) e l'anomalia del commit accidentale registrata (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I142 | lo script API dell'apertura (estrazione token admin dal remote, dichiarazione Task 94) resta fuori dall'indice: un commit accidentale non può ripubblicarlo in silenzio — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I142 | il secondo script API post-apertura resta fuori dall'indice: il pattern di estrazione del token non entra nel repo pubblico — nessun file tracciato deve corrispondere | assenza | PASS | — |
+| I142 | il presidio della chiusura della verifica congiunta è raggiungibile dal README (tabella «Dal → Presidio permanente») (README.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (715 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (720 pass, 0 fail, 0 scoperte)

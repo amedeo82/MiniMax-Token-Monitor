@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://minimax-token-monitor.vercel.app/)
 [![Test 644 pass](https://img.shields.io/badge/test-644_pass-31C48D)](tests)
-[![Audit 715 PASS](https://img.shields.io/badge/audit-715_PASS-31C48D)](scripts/verifiche)
+[![Audit 720 PASS](https://img.shields.io/badge/audit-720_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31C48D)](LICENSE)
@@ -199,7 +199,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 #### Audit di riconciliazione
 
-**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 715 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
+**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 720 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
 
 | Dal | Presidio permanente |
 |-----|---------------------|
@@ -231,11 +231,12 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | I139 | analisi raccolta in background documentata in docs/13 con limiti dei tier free datati (§7) — i numeri dei servizi cloud non si citano senza data di consultazione e l'aggiornamento senza visitatori si discute con i volumi calcolati, non a sensazione |
 | I140 | re-audit completo pre-apertura in docs/11 §7 con il fix dipendenze presidiato (override `fast-uri` in package.json: la produzione non torna ad advisory silenziosamente), 7 file di community presidiati (COC, template issue/PR, SUPPORT, FUNDING) e protezioni del repo registrate in docs/12 §8 |
 | I141 | apertura pubblica del repo eseguita e verificata su clone anonimo fresco (storia pubblica senza segreti), branch protection senza force-push/deletion e canali di sicurezza GitHub attivati al passaggio a pubblico (secret scanning, push protection, PVR) |
+| I142 | chiusura della verifica congiunta post-apertura (le conferme UI dell'utente sono registrate verbatim in docs/12 §5) e presidio del non-tracciamento degli script API con estrazione del token (check `nonTracciato`: non rientrano nell'indice senza lasciare traccia nell'audit) |
 
 #### Audit di sicurezza
 
 - **Audit di sicurezza (I119, `docs/11-audit-sicurezza.md`)**: revisione white-box completa — segreti (codice, bundle client, file tracciati, **storia git**), SQL/XSS/command injection, auth/authz con timing-safe, rate limiting/DoS, SSRF, CORS/CSRF, crypto, service worker, dipendenze (`bun audit`: produzione a ZERO), configurazioni. **3 vulnerabilità gestite** (credenziali nella storia git — riscrittura della storia in I136 + rotazione token in I137; log query in produzione; `X-Powered-By`) e presidi permanenti via audit+test: la sintesi pubblica è in docs/11, la preparazione alla pubblicazione in `docs/12`
-- **Pubblicazione pubblica (I136, `docs/12-pubblicazione-github.md`)**: audit pre-pubblicazione completo (segreti/PII/dipendenze/storia), licenza MIT, SECURITY.md con Private Vulnerability Reporting, CONTRIBUTING.md, `.env.example`, campioni reali fuori dal repo (fixture sintetica al loro posto), artefatti ambiente rimossi, storia git riscritta per le credenziali dell'era dd03d16 — l'unica azione utente (rotazione token Turso + rebuild Vercel) è stata eseguita il 31/10 e registrata in I137; l'apertura del repo è stata eseguita il 05/11/2026 e registrata in I141: repo pubblico con branch protection, secret scanning, push protection e PVR attivi, verificato su clone anonimo (docs/12 §5/§8)
+- **Pubblicazione pubblica (I136, `docs/12-pubblicazione-github.md`)**: audit pre-pubblicazione completo (segreti/PII/dipendenze/storia), licenza MIT, SECURITY.md con Private Vulnerability Reporting, CONTRIBUTING.md, `.env.example`, campioni reali fuori dal repo (fixture sintetica al loro posto), artefatti ambiente rimossi, storia git riscritta per le credenziali dell'era dd03d16 — l'unica azione utente (rotazione token Turso + rebuild Vercel) è stata eseguita il 31/10 e registrata in I137; l'apertura del repo è stata eseguita il 05/11/2026 e registrata in I141: repo pubblico con branch protection, secret scanning, push protection e PVR attivi, verificato su clone anonimo (docs/12 §5/§8); la verifica congiunta della UI è stata CONFERMATA dall'utente il 05/11/2026 (I142, docs/12 §5)
 
 #### Ultime qualità
 

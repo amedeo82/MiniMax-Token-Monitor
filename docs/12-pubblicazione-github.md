@@ -9,7 +9,8 @@
 > in §2; l'unica azione utente richiesta prima di aprire il repo (§3, rotazione del
 > token Turso) è stata ESEGUITA il 31/10/2026 e registrata in I137; l'apertura
 > del repo (§5) è stata ESEGUITA il 05/11/2026 (I141): il repo è pubblico, con le
-> protezioni di §8 attivate e la verifica post-pubblicazione registrata.
+> protezioni di §8 attivate e la verifica post-pubblicazione CONFERMATA dall'utente
+> il 05/11/2026 (I142, §5).
 
 ---
 
@@ -104,6 +105,29 @@ committato), con verifica immediata come visitatore anonimo.
 
 La verifica congiunta e lo stato completo delle protezioni sono registrati in §8.
 
+### Verifica congiunta completata (05/11/2026, I142)
+
+**Conferma dell'utente (05/11/2026)**: «sistema, confermo A, confermo B» — con
+«sistema» l'utente autorizza la chiusura dell'anomalia descritta sotto; le due
+conferme riguardano i pannelli della checklist UI: **A** = Settings → Code
+security and analysis (Secret scanning / Push protection / Private Vulnerability
+Reporting = enabled), **B** = Settings → Branches (regola su `main` attiva). Le
+voci restanti della checklist (banner **Public**, README renderizzato con badge,
+CI verde su `248882b`) erano già state verificate via API e da visitatore anonimo
+nella stessa sessione (run CI `completed/success` su `248882b`). Il «lo
+verifichiamo insieme» di I141 è CHIUSO: nessuna voce della checklist resta aperta.
+
+**Anomalia locale risolta in I142**: dopo il push I141 un commit accidentale MAI
+pushato (`6e08e3c`, messaggio = UUID di sessione, 05/11 ore 15:41) aveva portato
+nell'indice i due script API dell'apertura (`apertura-pubblica-i141.sh`,
+`protezione-post-apertura-i141.sh`) — che il worklog Task 94 dichiara
+esplicitamente NON tracciati perché estraggono il token admin dal remote locale.
+Dissoluzione con `git reset --soft HEAD~1` + `git restore --staged`: la storia
+pubblica non è mai stata toccata (`origin/main` sempre su `248882b`, nessun force
+push) e gli script sono tornati allo stato dichiarato (presenti su disco, fuori
+dall'indice). Presidio permanente: due check audit `nonTracciato` (I142, helper
+I97) falliscono se i due script rientrano nell'indice.
+
 ## 6. Distribuire il progetto (per chi clona)
 
 Il README (§ Avvio rapido, § Persistenza) e `.env.example` coprono il percorso
@@ -167,4 +191,6 @@ insieme»): Settings → General (banner **Public**, descrizione, topics) ·
 Settings → Code security and analysis (Secret scanning / Push protection /
 Private Vulnerability Reporting = enabled) · Settings → Branches (regola su
 `main`) · tab **Actions** (CI verde) · tab **Security** (alert Dependabot e
-segnalazioni PVR).
+segnalazioni PVR). **✅ CONFERMATA dall'utente il 05/11/2026** («sistema,
+confermo A, confermo B», verbatim in §5): A = pannello Code security and
+analysis, B = pannello Branches.
