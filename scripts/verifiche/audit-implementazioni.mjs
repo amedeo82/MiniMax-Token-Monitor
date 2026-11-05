@@ -1005,6 +1005,14 @@ const CHECKS = [
   check.simbolo("I140", "docs/11-audit-sicurezza.md", "Re-audit completo pre-apertura", "docs/11 §7: la seconda passata completa sulle 24 aree (05/11/2026) è registrata con esito per area — l'audit non è un evento unico del 17/10"),
   check.simbolo("I140", "package.json", '"fast-uri": "\\^3\\.1\\.9"', "presidio del fix dipendenze: l'override fast-uri ^3.1.9 (versione patchata delle 4 advisory, catena prisma CLI/ajv build-only) resta dichiarato in package.json — la produzione non torna ad advisory silenziosamente"),
   check.simbolo("I140", "README.md", "CODE_OF_CONDUCT", "i file di community sono raggiungibili dal README (sezione «Sicurezza, licenza e contributi»): nessun file nasce fuori dalla mappa"),
+  /* --- I141 — apertura pubblica del repo, protezioni post-apertura, verifica congiunta --- */
+  check.simbolo("I141", "docs/12-pubblicazione-github.md", "Apertura eseguita", "docs/12 §5 registra l'apertura come ESEGUITA (05/11/2026) con l'autorizzazione dell'utente verbatim e gli esiti API — la checklist di pubblicazione non resta aperta a tempo indeterminato"),
+  check.simbolo("I141", "docs/12-pubblicazione-github.md", "Repository has been locked", "il lock transitorio di GitHub durante il cambio di visibilità è registrato (primo PUT branch protection 403, retry riuscito a lock scaduto): nessun esito API viene taciuto"),
+  check.simbolo("I141", "docs/12-pubblicazione-github.md", "no force-push", "la branch protection su main disattiva force push e cancellazioni con il check CI richiesto e enforce_admins off — le operazioni distruttive sul ramo canonico sono bloccate senza toccare il workflow di push diretto"),
+  check.simbolo("I141", "docs/12-pubblicazione-github.md", "push protection attivati", "secret scanning + push protection attivati al passaggio a pubblico: un segreto pushato in futuro viene bloccato a monte, non solo rilevato dopo"),
+  check.simbolo("I141", "docs/12-pubblicazione-github.md", "Private Vulnerability Reporting attivato", "il canale di segnalazione privata dichiarato in SECURITY.md è operativo (PUT 204): il contatto di sicurezza del repo pubblico non è solo una promessa"),
+  check.simbolo("I141", "docs/12-pubblicazione-github.md", "clone anonimo fresco", "la verifica post-pubblicazione ispeziona ciò che il pubblico vede davvero (clone senza credenziali: storia senza .env/.pem/.key, unico hit lo sha512 di bun.lock) invece di fidarsi del solo working tree locale"),
+  check.simbolo("I141", "README.md", "I141", "il presidio dell'apertura pubblica è raggiungibile dal README (tabella «Dal → Presidio permanente»)"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

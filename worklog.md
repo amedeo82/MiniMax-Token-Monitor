@@ -2046,3 +2046,21 @@ Work Log:
 Stage Summary:
 - Il repo è pronto all'apertura dal punto di vista del CODICE (re-audit completo PASS, 1 scoperta fixata in consegna) — i tre canali di protezione GitHub mancanti (branch protection, secret scanning, PVR) non sono una lacuna del progetto ma una caratteristica del piano free su repo privato: si attivano al passaggio a pubblico con la procedura già pronta in docs/12 §8
 - Lezione: `bun update <pkg>` su una dipendenza transitiva può creare risoluzioni spurie a livello root (fast-uri root non richiesta + doppia versione nel lock) — per forzare una versione patchata il posto giusto è l'override dichiarato in package.json: documenta l'intento, è presidiato dall'audit e sopravvive ai re-resolve
+
+---
+Task ID: 94
+Agent: main (Super Z)
+Task: «che ne dici se rendiamo il repo pubblico, lo verifichiamo insieme post pubblicazione e poi pensiamo se e come implementare la raccolta dati?» — apertura pubblica del repo + protezioni post-apertura + verifica congiunta (I141)
+
+Work Log:
+- VERIFICA ANTI-SESSIONE-PARALLELA (15ª): HEAD 0c8d694 (I140) 0/0 con origin/main, working tree pulito, quattro verifiche verdi in locale — nessuna sessione parallela; I139/I140 già consegnati integralmente dalle sessioni precedenti (verificati, non rifatti)
+- APERTURA via API REST (token admin del remote, mai stampato né committato): PATCH private:false → 200 (visibility public, confermata da GET ANONIMO senza token e dal clone pubblico); descrizione aggiornata (200) + topics (i 10 richiesti si fondono con 9 pre-esistenti → 18 finali; «turso» e «vercel» non accettati dalla API nemmeno reiterando il PATCH — quirk cosmetico GitHub, i topic chiave di docs/12 §5 presenti)
+- PROTEZIONI POST-APERTURA (docs/12 §8, esiti registrati in §5 e §8): branch protection su main ATTIVATA (PUT 200 al secondo tentativo: il primo 403 «Repository has been locked» = lock transitorio di GitHub durante il cambio di visibilità) — no force-push, no deletion, check CI «typecheck · lint · test · audit» richiesto, enforce_admins false; secret scanning + push protection ATTIVATI (PATCH 200, entrambi enabled); PVR ATTIVATO (PUT 204 — canale già dichiarato in SECURITY.md); Dependabot alerts già attive (GET 204); allowed_actions «all» mantenuto per la decisione motivata in I140
+- VERIFICA POST-PUBBLICAZIONE (il «lo verifichiamo insieme»): clone ANONIMO fresco dal remote pubblico → 189 commit visibili, storia SENZA .env/.pem/.key (solo .env.example, per design), unico hit pattern JWT = hash sha512 in bun.lock (falso positivo già classificato in I140, riconfermato), remote del clone senza credenziali; CI SUCCESS su 0c8d694 (check «typecheck · lint · test · audit»); footer produzione «2026-11-05 · I140» prima del deploy I141
+- IMPLEMENTAZIONE (solo docs, nessun src/ salvo il marcatore): docs/12 (header aggiornato, §5 «✅ Apertura eseguita» con autorizzazione utente verbatim + esiti API, §8 colonna «Stato finale» a ✅ + esiti post-apertura + checklist UI dell'utente); README (badge audit 708→715, «715 verifiche dichiarative», presidio I141, paragrafo pubblicazione aggiornato — rimosso il «resta solo la decisione di apertura» stantio); audit +7 check I141 → 715/715 PASS 0 scoperte; docs/04 §3 riga I141 + §8 changelog in cima; versione «2026-11-05 · I141»; audit-latest.md allineato (copia manuale)
+- PROTOCOLLO (exit REALE): tsc 0, lint 0, suite 644/644 (2332 asserzioni), audit 715/715 PASS 0 scoperte
+- CONSEGNA: commit SOLO sui 7 file I141 (mai git add -A: rispetto del working tree condiviso), push, CI, footer produzione «… · I141»; gli script API di apertura (apertura-pubblica-i141.sh, protezione-post-apertura-i141.sh) restano NON tracciati: estraggono il token dal remote e non appartengono al repo
+
+Stage Summary:
+- Il repo è pubblico con le protezioni che il piano free negava in privato: branch protection (no force-push/deletion, check CI richiesto), secret scanning + push protection e PVR attivi — la «decisione dell'utente» di docs/12 §5 è chiusa, registrata verbatim e presidiata dall'audit (+7 check)
+- Lezione: subito dopo un cambio di visibilità GitHub risponde 403 «Repository has been locked» ad alcune chiamate di configurazione (branch protection) mentre accetta altre PATCH (security_and_analysis) — i retry post-lock vanno pianificati: non è un errore di permessi

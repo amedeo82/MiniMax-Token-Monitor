@@ -7,8 +7,9 @@
 > o documenti password e vulnerabilità; produci tutta la documentazione necessaria
 > per pubblicare e distribuire il progetto». L'audit pre-pubblicazione è registrato
 > in §2; l'unica azione utente richiesta prima di aprire il repo (§3, rotazione del
-> token Turso) è stata ESEGUITA il 31/10/2026 e registrata in I137: resta solo
-> l'apertura del repo (§5), decisione dell'utente.
+> token Turso) è stata ESEGUITA il 31/10/2026 e registrata in I137; l'apertura
+> del repo (§5) è stata ESEGUITA il 05/11/2026 (I141): il repo è pubblico, con le
+> protezioni di §8 attivate e la verifica post-pubblicazione registrata.
 
 ---
 
@@ -65,19 +66,43 @@ riferiscono alla storia pre-riscrittura (restano descrittivi); (b) eventuali
 clone/fork pre-esistenti conservano la vecchia storia — ulteriore motivo per la
 rotazione di §3, eseguita il 31/10 (I137).
 
-## 5. Aprire il repository al pubblico (passi GitHub)
+## 5. ✅ Apertura eseguita (05/11/2026, I141)
 
-1. `Settings` → `General` → `Danger Zone` → **Change repository visibility** →
-   `Make public` (rotazione di §3 eseguita il 31/10);
-2. `Settings` → `General` → dettagli: descrizione, topics (es. `nextjs`,
-   `typescript`, `minimax`, `quota-monitor`, `pwa`, `turso`);
-3. `Settings` → `Code security`: attiva **Private Vulnerability Reporting**
-   (canale dichiarato in `SECURITY.md`) e Dependabot alerts (il repo ha già
-   `.github/dependabot.yml`);
-4. (consigliato) `Settings` → `Branches` → branch protection su `main`:
-   richiedi i check CI (`typecheck · lint · test · audit`) per il merge;
-5. (consigliato) verifica del repo pubblico come visitatore anonimo: la pagina
-   README, i badge, l'assenza di riferimenti a dati personali.
+**Autorizzazione dell'utente (05/11/2026)**: «che ne dici se rendiamo il repo
+pubblico, lo verifichiamo insieme post pubblicazione e poi pensiamo se e come
+implementare la raccolta dati?». Tutti i prerequisiti erano chiusi (§1–§4 e §8,
+re-audit completo in docs/11 §7): l'apertura è stata eseguita via API REST con
+il token admin del proprietario (estratto dal remote locale, MAI stampato né
+committato), con verifica immediata come visitatore anonimo.
+
+1. **Cambio di visibilità**: `PATCH /repos` con `private:false` → **HTTP 200**,
+   `visibility: public`; confermata da GET **ANONIMO** (senza token: 200,
+   `private: false`) e dal clone pubblico. Il repo è raggiungibile su
+   `https://github.com/amedeo82/MiniMax-Token-Monitor`.
+2. **Descrizione e topics** (punto 2 della checklist): descrizione aggiornata
+   (HTTP 200); i topics richiesti si sono uniti a 9 già presenti → 18 finali;
+   `turso` e `vercel` NON vengono accettati dalla API nemmeno reiterando il
+   PATCH (200 con lista invariata — comportamento non documentato, quirk
+   cosmetico: i topic chiave della lista qui sopra sono tutti presenti).
+3. **Code security**: **Private Vulnerability Reporting attivato** (PUT 204) e
+   Dependabot alerts già attive (GET 204); secret scanning + push protection attivati
+   (PATCH 200, entrambi `enabled` — dettagli in §8).
+4. **Branch protection su `main`** (punto 4 della checklist): attivata via API
+   (PUT 200): **no force-push**, **no deletion**, check CI
+   `typecheck · lint · test · audit` richiesto, `enforce_admins` disattivato
+   (i push diretti del workflow attuale restano possibili). Nota operativa: il
+   PRIMO tentativo è fallito con `403 "Repository has been locked"` — GitHub
+   blocca transitoriamente il repo durante il cambio di visibilità; il retry a
+   lock scaduto è riuscito.
+5. **Verifica del repo pubblico come visitatore anonimo** (punto 5, il «lo
+   verifichiamo insieme» dell'utente): clone anonimo fresco dal remote pubblico
+   → 189 commit visibili, storia SENZA `.env`/`.pem`/`.key` (solo il template
+   `.env.example`, per design), unico hit del pattern JWT = hash di integrità
+   `sha512` in `bun.lock` (falso positivo già classificato in I140); CI SUCCESS
+   su `0c8d694`; footer di produzione «2026-11-05 · I140». La parte di verifica
+   che spetta all'utente nella UI è elencata in §8.
+
+La verifica congiunta e lo stato completo delle protezioni sono registrati in §8.
 
 ## 6. Distribuire il progetto (per chi clona)
 
@@ -105,14 +130,14 @@ REST con token admin del proprietario; i tre canali non disponibili sul repo
 
 | Impostazione | Stato rilevato | Azione I140 | Stato finale |
 |--------------|----------------|-------------|--------------|
-| Visibilità repo | privata | nessuna (decisione dell'utente, §5) | privata |
+| Visibilità repo | privata | eseguita il 05/11/2026 (I141, PATCH 200) | **pubblica** |
 | `GITHUB_TOKEN` nei workflow | `default_workflow_permissions: read`, auto-approvazione PR `false` | già ottimale — verificato, nessuna modifica | ✅ read-only |
 | Actions abilitate | sì, `allowed_actions: all` | mantenuto: la CI usa 2 action esterne (`actions/checkout`, `oven-sh/setup-bun`); mitigazioni: token read-only + approvazione richiesta ai PR da fork di nuovi contributor | ✅ |
 | Dependabot security updates | non attivo | **attivato via API (PATCH, 200)** | ✅ `enabled: true` |
 | Dependabot version updates | già presente (`.github/dependabot.yml`, settimanale npm+actions) | — | ✅ |
-| Branch protection su `main` | **non disponibile** su repo privato con piano free (API 403) | post-apertura (procedura sotto) | ⏳ dopo apertura |
-| Secret scanning + push protection | **non disponibile** su repo privato con piano free (API 422) | post-apertura | ⏳ dopo apertura |
-| Private Vulnerability Reporting | non attivabile via API in questo stato (404) | post-apertura | ⏳ dopo apertura |
+| Branch protection su `main` | **non disponibile** su repo privato con piano free (API 403) | attivata il 05/11/2026 (I141, PUT 200 al secondo tentativo) | ✅ no force-push, no deletion, check CI richiesto, `enforce_admins` off |
+| Secret scanning + push protection | **non disponibile** su repo privato con piano free (API 422) | attivati il 05/11/2026 (I141, PATCH 200) | ✅ entrambi `enabled` |
+| Private Vulnerability Reporting | non attivabile via API in questo stato (404) | attivato il 05/11/2026 (I141, PUT 204) | ✅ attivato |
 
 Procedura di attivazione DOPO il passaggio a pubblico (una sola volta,
 `Settings` → `Branches` → `Add branch protection rule` su `main`):
@@ -128,3 +153,18 @@ Procedura di attivazione DOPO il passaggio a pubblico (una sola volta,
    security vulnerabilities» (canale già dichiarato in `SECURITY.md`);
 4. opzionale: `allowed_actions` da «all» a «Select actions» con
    `actions/checkout` e `oven-sh/setup-bun` in allowlist.
+
+### Esiti dell'attivazione post-apertura (05/11/2026, I141)
+
+Tutte le voci «post-apertura» della tabella sono state eseguite via API REST con
+il token admin del proprietario (mai stampato né committato) e verificate con
+GET dedicate: branch protection (PUT 200 al SECONDO tentativo, dopo il lock di
+cambio visibilità), secret scanning + push protection (PATCH 200), PVR (PUT
+204), Dependabot alerts già attive (GET 204). La verifica del repo come
+visitatore anonimo è stata eseguita su clone fresco senza credenziali (§5,
+punto 5). La parte di verifica che spetta all'utente nella UI («lo verifichiamo
+insieme»): Settings → General (banner **Public**, descrizione, topics) ·
+Settings → Code security and analysis (Secret scanning / Push protection /
+Private Vulnerability Reporting = enabled) · Settings → Branches (regola su
+`main`) · tab **Actions** (CI verde) · tab **Security** (alert Dependabot e
+segnalazioni PVR).

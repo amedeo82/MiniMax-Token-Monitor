@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-11-05T15:06:30.060Z
+# Audit implementazioni — 2026-11-05T15:37:56.100Z
 
-- Verifiche totali: **708** · PASS: **708** · FAIL: **0**
+- Verifiche totali: **715** · PASS: **715** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -712,6 +712,13 @@
 | I140 | docs/11 §7: la seconda passata completa sulle 24 aree (05/11/2026) è registrata con esito per area — l'audit non è un evento unico del 17/10 (docs/11-audit-sicurezza.md) | simbolo | PASS | — |
 | I140 | presidio del fix dipendenze: l'override fast-uri ^3.1.9 (versione patchata delle 4 advisory, catena prisma CLI/ajv build-only) resta dichiarato in package.json — la produzione non torna ad advisory silenziosamente (package.json) | simbolo | PASS | — |
 | I140 | i file di community sono raggiungibili dal README (sezione «Sicurezza, licenza e contributi»): nessun file nasce fuori dalla mappa (README.md) | simbolo | PASS | — |
+| I141 | docs/12 §5 registra l'apertura come ESEGUITA (05/11/2026) con l'autorizzazione dell'utente verbatim e gli esiti API — la checklist di pubblicazione non resta aperta a tempo indeterminato (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I141 | il lock transitorio di GitHub durante il cambio di visibilità è registrato (primo PUT branch protection 403, retry riuscito a lock scaduto): nessun esito API viene taciuto (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I141 | la branch protection su main disattiva force push e cancellazioni con il check CI richiesto e enforce_admins off — le operazioni distruttive sul ramo canonico sono bloccate senza toccare il workflow di push diretto (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I141 | secret scanning + push protection attivati al passaggio a pubblico: un segreto pushato in futuro viene bloccato a monte, non solo rilevato dopo (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I141 | il canale di segnalazione privata dichiarato in SECURITY.md è operativo (PUT 204): il contatto di sicurezza del repo pubblico non è solo una promessa (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I141 | la verifica post-pubblicazione ispeziona ciò che il pubblico vede davvero (clone senza credenziali: storia senza .env/.pem/.key, unico hit lo sha512 di bun.lock) invece di fidarsi del solo working tree locale (docs/12-pubblicazione-github.md) | simbolo | PASS | — |
+| I141 | il presidio dell'apertura pubblica è raggiungibile dal README (tabella «Dal → Presidio permanente») (README.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (708 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (715 pass, 0 fail, 0 scoperte)
