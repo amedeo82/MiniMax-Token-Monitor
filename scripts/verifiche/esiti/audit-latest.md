@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-11-06T11:36:55.339Z
+# Audit implementazioni — 2026-11-06T12:25:14.617Z
 
-- Verifiche totali: **725** · PASS: **725** · FAIL: **0**
+- Verifiche totali: **731** · PASS: **731** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -729,6 +729,12 @@
 | I143 | docs/14 fissa il presidio di sicurezza: la Subscription Key vive solo nel SecretStorage di VS Code (cifrato, non sincronizzato tra macchine) — mai in settings.json, mai nel repo (docs/14-estensione-vscode.md) | simbolo | PASS | — |
 | I143 | il README raggiunge docs/14 (tabella documentazione §7) (README.md) | simbolo | PASS | — |
 | I143 | docs/04 §3 registra l'intervento I143 (analisi — nessun codice introdotto) (docs/04-stato-avanzamento.md) | simbolo | PASS | — |
+| I144 | docs/03 §3 cita i moduli post-I85 (sparkline I131): la mappa integrata non può più fermarsi a I85 (docs/03-piano-implementazione.md) | simbolo | PASS | — |
+| I144 | docs/03 cita il quinto modello Prisma RegistroManutenzione (I111): i modelli dati riflettono lo schema reale (era «4 modelli») (docs/03-piano-implementazione.md) | simbolo | PASS | — |
+| I144 | docs/03 §3 dichiara i contatori REALI della suite (era 324/924 con 24+8 file dell'era I50/I81) (docs/03-piano-implementazione.md) | simbolo | PASS | — |
+| I144 | il README dichiara Prisma 7 nel badge e nello stack (major 6→7.10.1 di I115; il badge diceva ancora Prisma 6) (README.md) | simbolo | PASS | — |
+| I144 | il README non torna più a «Prisma 6» (badge e §Stack aggiornati a I144) — assenza richiesta (README.md) | assenza | PASS | — |
+| I144 | docs/03 header «Ultimo aggiornamento» allineato (era fermo a I54 del 12/10): l'intestazione della guida operativa non invecchia più in silenzio (docs/03-piano-implementazione.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (725 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (731 pass, 0 fail, 0 scoperte)

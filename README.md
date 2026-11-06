@@ -9,13 +9,13 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Prisma 6 + SQLite](https://img.shields.io/badge/Prisma_6_%2B_SQLite-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
+[![Prisma 7 + SQLite](https://img.shields.io/badge/Prisma_7_%2B_SQLite-7-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
 [![Bun](https://img.shields.io/badge/Bun-runtime-F472B6?logo=bun&logoColor=white)](https://bun.sh)
 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://minimax-token-monitor.vercel.app/)
 [![Test 644 pass](https://img.shields.io/badge/test-644_pass-31C48D)](tests)
-[![Audit 725 PASS](https://img.shields.io/badge/audit-725_PASS-31C48D)](scripts/verifiche)
+[![Audit 731 PASS](https://img.shields.io/badge/audit-731_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31C48D)](LICENSE)
@@ -199,7 +199,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 #### Audit di riconciliazione
 
-**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 725 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
+**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 731 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
 
 | Dal | Presidio permanente |
 |-----|---------------------|
@@ -233,6 +233,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | I141 | apertura pubblica del repo eseguita e verificata su clone anonimo fresco (storia pubblica senza segreti), branch protection senza force-push/deletion e canali di sicurezza GitHub attivati al passaggio a pubblico (secret scanning, push protection, PVR) |
 | I142 | chiusura della verifica congiunta post-apertura (le conferme UI dell'utente sono registrate verbatim in docs/12 §5) e presidio del non-tracciamento degli script API con estrazione del token (check `nonTracciato`: non rientrano nell'indice senza lasciare traccia nell'audit) |
 | I143 | analisi estensione VS Code documentata in docs/14 con l'insight CORS/Node presidiato (l'extension host è Node.js: l'MVP non richiede modifiche al progetto web) e il vincolo SecretStorage per la chiave — l'implementazione resta un item futuro su autorizzazione |
+| I144 | sincronizzazione completa della documentazione alla codebase corrente: mappa del codice in docs/03 estesa ai moduli post-I85 (+18 voci), contatori suite/audit reali, schema a 5 modelli Prisma, badge e stack allineati alla major Prisma 7 (I115) e i 7 asset Screenshot rigenerati con il marker di versione corrente |
 
 #### Audit di sicurezza
 
@@ -459,7 +460,7 @@ con le env Turso impostate esegue invece la lettura read-only del database remot
 - **Next.js 16** (App Router) + **React 19** + **TypeScript 5**
 - **Tailwind CSS 4** + **shadcn/ui** (Radix UI) + **lucide-react**
 - **Recharts** per il grafico storico
-- **Prisma 6 + SQLite** (`db/custom.db`) in locale, **persistenza portabile** (I106): su deployment serverless (Vercel) lo stesso schema gira su **Turso** via driver adapter libsql, selezionato dall'ambiente (fallback automatico a SQLite in assenza di env) — storico + archivio eventi
+- **Prisma 7 + SQLite** (major 6→7.10.1 con driver adapter libsql, I115) (`db/custom.db`) in locale, **persistenza portabile** (I106): su deployment serverless (Vercel) lo stesso schema gira su **Turso** via driver adapter libsql, selezionato dall'ambiente (fallback automatico a SQLite in assenza di env) — storico + archivio eventi
 - **sonner** per i toast di avviso
 - **localStorage** per impostazioni e mirror client (fonte primaria per la UI, sync offline-first con il server)
 - Proxy server-side (`/api/minimax/usage`) per evitare CORS e proteggere la chiave

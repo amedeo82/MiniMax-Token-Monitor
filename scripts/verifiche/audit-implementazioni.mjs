@@ -1025,6 +1025,13 @@ const CHECKS = [
   check.simbolo("I143", "docs/14-estensione-vscode.md", "SecretStorage", "docs/14 fissa il presidio di sicurezza: la Subscription Key vive solo nel SecretStorage di VS Code (cifrato, non sincronizzato tra macchine) — mai in settings.json, mai nel repo"),
   check.simbolo("I143", "README.md", "docs/14-estensione-vscode", "il README raggiunge docs/14 (tabella documentazione §7)"),
   check.simbolo("I143", "docs/04-stato-avanzamento.md", "estensione VS Code per il monitoraggio del piano durante il coding", "docs/04 §3 registra l'intervento I143 (analisi — nessun codice introdotto)"),
+  /* --- I144 — sincronizzazione documentazione ↔ codebase: mappa docs/03 completata ai moduli reali, Prisma 7 nel README, contatori reali --- */
+  check.simbolo("I144", "docs/03-piano-implementazione.md", "sparkline\\.ts", "docs/03 §3 cita i moduli post-I85 (sparkline I131): la mappa integrata non può più fermarsi a I85"),
+  check.simbolo("I144", "docs/03-piano-implementazione.md", "RegistroManutenzione", "docs/03 cita il quinto modello Prisma RegistroManutenzione (I111): i modelli dati riflettono lo schema reale (era «4 modelli»)"),
+  check.simbolo("I144", "docs/03-piano-implementazione.md", "644 test / 2332 asserzioni", "docs/03 §3 dichiara i contatori REALI della suite (era 324/924 con 24+8 file dell'era I50/I81)"),
+  check.simbolo("I144", "README.md", "Prisma 7", "il README dichiara Prisma 7 nel badge e nello stack (major 6→7.10.1 di I115; il badge diceva ancora Prisma 6)"),
+  check.assenza("I144", "README.md", "Prisma 6", "il README non torna più a «Prisma 6» (badge e §Stack aggiornati a I144)"),
+  check.simbolo("I144", "docs/03-piano-implementazione.md", "2026-11-06 \\(\\*\\*I144 — §3", "docs/03 header «Ultimo aggiornamento» allineato (era fermo a I54 del 12/10): l'intestazione della guida operativa non invecchia più in silenzio"),
   {
     item: "I111",
     what: "APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria",

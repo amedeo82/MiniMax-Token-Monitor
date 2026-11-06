@@ -6,7 +6,7 @@
 > ✅ *confermato* (fonte ufficiale o test empirico) · 🔶 *verosimile* (fonte secondaria/
 > open-source) · ❓ *da verificare*.
 >
-> Ultimo aggiornamento: 2026-10-12 (ri-creato §11: verifica «demo ↔ API ufficiale» I48 con esito su file) · Fonti salvate in `scripts/` (vedi §9).
+> Ultimo aggiornamento: 2026-10-20 (**I125 — §11.3**: ancoraggio delle finestre demo — la settimanale demo è ancorata dal server a lunedì 00:00 UTC; G9 CHIUSA, G13 NUOVA). Precedente: 2026-10-12 (ri-creato §11: verifica «demo ↔ API ufficiale» I48 con esito su file) · Fonti salvate in `scripts/` (vedi §9).
 
 ---
 

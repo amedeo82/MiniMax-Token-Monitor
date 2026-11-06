@@ -5,7 +5,7 @@
 > lavoro con i criteri di accettazione. È la guida operativa per qualsiasi nuova
 > implementazione: nuova funzione → nuova voce nelle fasi (`docs/04`).
 >
-> Ultimo aggiornamento: 2026-10-12 (**I54 — §5.22**: verifica di coerenza inversa «live ↔ demo» RI-eseguita come ricostruzione — matrice a 29 dimensioni con evidenze statiche su file, verdetto «live ⊇ demo», 0 fallimenti; la matrice originale a 23 dimensioni era persa col rollback). Precedente: 2026-10-12 (**I86 + I87 — §5.20**: riconciliazione dei residui dell'era 08/10 con decisioni utente — route Task 7 e scaffold rimossi, versione nel footer, campionatore conservato dormiente — e **modalità kiosk/TV riattivata come item proprio**: ?kiosk=1 + toggle header, viste Quote/Grafico/Analisi con rotazione e dimming notturno 22:00–06:59 Roma, KioskBar sticky al posto del footer, superficie barra rimappata nel tema chiaro). Precedente: 2026-10-12 (passata di allineamento documentale: §3 mappa integrata con i file delle estensioni I50–I85 e nota sui residui non cablati, §4 settings `thresholds` I28 e snippet Prisma a 4 modelli, §7 layout riportato alla pagina attuale, §9 nota sui residui della catena di verifica, §11 roadmap aggiornata — I18/I52 implementate). Precedente: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68).
+> Ultimo aggiornamento: 2026-11-06 (**I144 — §3/§4**: sincronizzazione della mappa del codice alla codebase corrente — la mappa integrata copre ora TUTTI i moduli: +18 voci (17 lib: I91–I143 più il campionatore I49/I56 e i due moduli di supporto db.ts/utils.ts — e `orologio-roma.tsx` I96), contatori reali della suite (644 test / 2332 asserzioni su 53+13 file) e dell'audit (731 verifiche), schema Prisma a 5 modelli con `RegistroManutenzione` (I111); allineato anche il README alla major Prisma 7 di I115 e rigenerati i 7 asset Screenshot con il marker di versione corrente). Precedente: 2026-10-12 (**I54 — §5.22**: verifica di coerenza inversa «live ↔ demo» RI-eseguita come ricostruzione — matrice a 29 dimensioni con evidenze statiche su file, verdetto «live ⊇ demo», 0 fallimenti; la matrice originale a 23 dimensioni era persa col rollback). Precedente: 2026-10-12 (**I86 + I87 — §5.20**: riconciliazione dei residui dell'era 08/10 con decisioni utente — route Task 7 e scaffold rimossi, versione nel footer, campionatore conservato dormiente — e **modalità kiosk/TV riattivata come item proprio**: ?kiosk=1 + toggle header, viste Quote/Grafico/Analisi con rotazione e dimming notturno 22:00–06:59 Roma, KioskBar sticky al posto del footer, superficie barra rimappata nel tema chiaro). Precedente: 2026-10-12 (passata di allineamento documentale: §3 mappa integrata con i file delle estensioni I50–I85 e nota sui residui non cablati, §4 settings `thresholds` I28 e snippet Prisma a 4 modelli, §7 layout riportato alla pagina attuale, §9 nota sui residui della catena di verifica, §11 roadmap aggiornata — I18/I52 implementate). Precedente: 2026-10-12 (§5.19 generalizzazione multi-modello — I82: pivot parametrico a monte con contratto `HistoryPoint[]` invariato, storico per-modello su `ModelUsagePoint` ricreata, selettore general/video con etichette «24 ore», Diagnostica resta su general; schema ripristinato dalla corruzione latente di I68).
 
 ---
 
@@ -74,7 +74,7 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/lib/cycles.ts` | I26 analisi di lungo periodo: `detectCycles()` (segmenta lo storico nei cicli di finestra: reset = salto ≥+15 punti che riporta a ≥85 — `RESET_JUMP`/`RESET_TARGET` — robusto contro sorgenti miste), `summarizeCycles()` (medie sui cicli completati), `weekdayConsumption()` (consumo per giorno Europe/Rome sul calo del minimo progressivo), `heatmapConsumption()` (I32: griglia 7×24 giorno × ora, stessa semantica drawdown, attribuzione alla cella del punto medio), `movingAverage()` (SMA) |
 | `src/lib/demo.ts` | Generatore demo realistico: finestra 5h aperta 3,2h fa, weekly 2,7 giorni fa, video con finestra 24h allineata a mezzanotte UTC e stato 3, jitter per animare il grafico |
 | `src/app/page.tsx` | Stato globale pagina: settings/history/events (localStorage + mirror server I16), fetch/polling **parallelo multi-regione (I53: `Promise.allSettled`, secondaria solo visualizzata)**, import JSON, demo, orologio 1s, transizioni avvisi (toast + notifiche), layout |
-| `prisma/schema.prisma` | 4 modelli SQLite — `UsagePoint` (storico general: t unique, interval, weekly, source, region), `UsageEventRecord` (archivio eventi), `DownsampledPoint` (I68: bucket orari derivati, ricostruibili con backfill), `ModelUsagePoint` (I82: storico per-modello, chiave model+win+t) — nessun dato sensibile |
+| `prisma/schema.prisma` | 5 modelli SQLite — `UsagePoint` (storico general: t unique, interval, weekly, source, region), `UsageEventRecord` (archivio eventi), `DownsampledPoint` (I68: bucket orari derivati, ricostruibili con backfill), `ModelUsagePoint` (I82: storico per-modello, chiave model+win+t), `RegistroManutenzione` (I111: log delle manutenzioni notturne) — nessun dato sensibile |
 | `src/app/api/minimax/usage/route.ts` | Proxy POST → GET MiniMax token_plan/remains; timeout 12s; mappatura errori HTTP/business in italiano; **I18**: campagna di fetch `tryEndpoint()` riusabile (ritenti transitori I51) per primario e fallback `coding_plan/remains` — sul fallimento definitivo per endpoint scomparso tenta l'alternativo e risponde con `fallback {used, primaryEndpoint, reason}` (o `fallbackTried: true`), mai su auth né su errori transitori |
 | `src/app/api/history/route.ts` | I16 persistenza storico (SQLite/Prisma): POST (upsert per `t`, validazione input, pruning FIFO a 10.000 punti + cutoff 90 giorni), GET (`?limit=&since=`, ordinato per `t`), DELETE (svuota). La chiave API non transita mai qui |
 | `src/app/api/events/route.ts` | I27 persistenza registro eventi (SQLite/Prisma): POST (upsert per `id`, validazione tipo/finestra/messaggio, max 500 eventi/richiesta, pruning a 5.000 eventi + cutoff 180 giorni), GET (`?limit=&since=&kind=`, ordinato per `t`), DELETE (svuota). Nessuna chiave API transita qui |
@@ -88,9 +88,9 @@ referer verso terze parti; ③ centralizza timeout, User-Agent e mappatura error
 | `src/components/region-alt-panel.tsx` | **I53** `RegionAltPanel`: panoramica della SECONDA regione (solo con 2ª chiave configurata): stato connessione, piano, crediti, ultimo rilevamento, errore con messaggio, `PanoramicTable` dei modelli della regione alternativa — solo visualizzazione, mai storico/analisi |
 | `src/components/settings-dialog.tsx` | `DashboardSettings` { apiKey, **apiKeyAlt (I53)**, region, refreshSeconds, demoMode, alertsEnabled, **thresholds** (AlertThresholds {h5,h24,weekly} — I28, matrice 3×2 nel tab «Avvisi» con migrazione legacy ADR-12), notifyReset, browserNotifications }, import JSON con validazione, richiesta permesso notifiche |
 
-**Mappa integrata — file aggiunti dalle estensioni (ottobre 2026, I50–I85).** La tabella sopra
+**Mappa integrata — file aggiunti dalle estensioni (ottobre–novembre 2026, I50–I143).** La tabella sopra
 descrive il nucleo originario (02/10) con le patch I18/I28/I31/I32; i file aggiunti dalle
-estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19, stato in
+estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19 per il nucleo I50–I85, nei cataloghi `docs/06`–`docs/08` e nelle analisi `docs/10`–`docs/14` per gli item successivi, stato in
 `docs/04` §3):
 
 | File | Responsabilità (item) |
@@ -113,8 +113,26 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/lib/a11y.ts` | Descrizioni testuali heatmap/calendario/reset clock per screen reader (I79) |
 | `src/lib/model-history.ts` | Storico per-modello: localStorage FIFO 2.000, dedup 20s per-modello, forward-fill, merge (I82) |
 | `src/lib/server-model-history.ts` | Sync server per-modello su `ModelUsagePoint` (SQL raw parametrizzato) (I82) |
+| `src/lib/stats.ts` | Statistiche condivise tra i moduli di analisi: mediana e helper unici al posto delle tre copie in sampling/rate-anomalies/cycles (I91) |
+| `src/lib/http-validate.ts` | Validazione degli input HTTP condivisa dalle API routes: `toEpoch`/`toFloat` unici al posto delle copie identiche in tre rotte (I91) |
+| `src/lib/server-response.ts` | Normalizzazione PURA delle risposte «lista» degli endpoint archivio (`{ok, total, items}`): il fallback offline I52 non può più servire payload di altra forma con `ok:true` (I92) |
+| `src/lib/api-protezione.ts` | Guard `ADMIN_TOKEN` + rate limiting in-memory per-IP sulle SCRITTURE (POST/DELETE degli archivi, POST proxy) (I95) |
+| `src/lib/orologio.ts` | Orologio condiviso a 1 Hz per le «foglie vive» del render: fine del re-render dell'intero albero a ogni secondo (I96) |
+| `src/lib/persist-json.ts` | `persistJson` unico punto di scrittura localStorage: quota esplicita (QuotaExceededError), fallback FIFO, notifica una tantum (I98) |
+| `src/lib/api-schemi.ts` | Schemi zod dei body delle API routes: fine dei check manuali sparsi (I103) |
+| `src/lib/db.ts` | Punto di import CANONICO del client Prisma: da I106 il modulo vivente è `db-factory` (ri-esportazione per stabilità degli import) |
+| `src/lib/db-factory.ts` | Persistenza portabile: motore selezionato dall'ambiente — Turso/libsql e SQLite locale tramite lo stesso driver adapter libsql, regola «URL sempre esplicito» (I106, unificata con la major Prisma 7 in I115) |
+| `src/lib/modalita-persistenza.ts` | Modalità persistenza attiva (locale/Turso) e `livelloLogPrisma` (produzione = warn) per il pannello «Persistenza» (I107) |
+| `src/lib/schema-persistenza.ts` | Gate dello schema: DDL incorporato idempotente (5 tabelle) e bootstrap difensivo sulle rotte DB (I107-fix3: «The table main.DownsampledPoint does not exist» risolto) |
+| `src/lib/manutenzione-db.ts` | Manutenzione del database: anti-rottura, `LIMITI_TURSO_FREE` e rapporto PRAGMA (page_count/freelist), cron notturno 02:30 UTC (I111) |
+| `src/lib/admin-token.ts` | Token admin lato client: la guardia I95 attivabile in produzione senza rompere le policy dei reverse proxy (I120) |
+| `src/lib/storage-chiavi.ts` | Chiavi localStorage dello storico come fonte unica (prima sparpagliate tra page.tsx e model-history.ts): «Svuota storico locale» coerente (I124) |
+| `src/lib/sparkline.ts` | Sparkline SVG pure per le righe di evoluzione: serie min/max, y invertita, scala su min/max della serie (I130/I131) |
+| `src/lib/campione.ts` | Campionatore passivo per le campagne V8: dormiente, ri-cablato nel proxy solo con il blocco marcato ADR-13-R2 (I49/I56; nel repo la fixture sintetica da I136) |
+| `src/lib/utils.ts` | Helper `cn()` di merge classi Tailwind (shadcn/ui) |
 | `src/components/analysis-panel.tsx` | «Analisi di lungo periodo»: Cicli / Per giorno / Per ora (heatmap I32) / Calendario (I58) / Distribuzione (I61) + spreco (I57), prevedibilità (I63), oggi vs media (I64); fonte per-modello (I82) |
 | `src/components/diagnostica-panel.tsx` | «Diagnostica»: ResetClock (I60), salute del monitor (I62), anomalie del ritmo (I70), qualità del campionamento (I71) |
+| `src/components/orologio-roma.tsx` | Foglie vive dell'orologio (header e countdown): si aggiornano al secondo abbonandosi all'orologio condiviso 1 Hz senza ri-renderizzare la pagina (I96) |
 | `src/components/section-nav.tsx` | Nav sezioni sticky con scrollspy condiviso `useScrollSpySezioni` (retry fino al montaggio delle sezioni) (I66/I74/I85) |
 | `src/components/bottom-nav.tsx` | Barra navigazione fissa su mobile <md, stesso scrollspy (I74) |
 | `src/components/section-boundary.tsx` | Error boundary per sezione con skeleton e «Riprova» (I76) |
@@ -128,8 +146,8 @@ estensioni successive sono riassunti qui (design dettagliato in §5.10–§5.19,
 | `src/app/api/manutenzione/cron/route.ts` | `GET` del cron notturno (vercel.json 02:30 UTC, Vercel invia `Authorization: Bearer CRON_SECRET`): ciclo completo con pulizia di ritenuta anche a traffico zero; senza `CRON_SECRET` → 403 onesto, kill-switch `MANUTENZIONE_AUTO_PULIZIA="0"` (I111, docs/10 §5 P1) |
 | `src/app/api/history/models/route.ts` | GET/POST/DELETE storico per-modello su `ModelUsagePoint` (I82) |
 | `src/app/manifest.ts` + `public/sw.js` + `public/sw-shared.js` | PWA: manifest, icone, cache offline, notifiche a tab chiuso (I52) |
-| `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (278 verifiche + coverage check) (I55, esteso a ogni item) |
-| `tests/lib/` (24 file) + `tests/components/` (8 file) | Suite Bun: 324 test / 924 asserzioni (I50/I81 + ogni item) |
+| `scripts/verifiche/audit-implementazioni.mjs` | Audit dichiarativo codice↔documentazione (731 verifiche + coverage check) (I55, esteso a ogni item; contatore reale allineato a I144) |
+| `tests/lib/` (53 file) + `tests/components/` (13 file) | Suite Bun: 644 test / 2332 asserzioni (I50/I81 + ogni item; contatori reali allineati a I144) |
 
 > **Campionatore I49 — CAMPAGNA V8 ESEGUITA E SMONTATA (12/10, §5.23)**: `src/lib/campione.ts`
 > è stato ri-cablato nel proxy per la giornata di campagna con un blocco marcato (ADR-13-R2,
@@ -231,6 +249,8 @@ model ModelUsagePoint {
   @@index([model])
   @@index([t])
 }
+// I111 — quinto modello `RegistroManutenzione`: log delle manutenzioni notturne
+// (l'estratto sopra mostra i 4 modelli storici; `prisma/schema.prisma` resta la fonte completa)
 ```
 
 **Regole di parsing** (`parseUsageResponse`): risposta piatta o annidata sotto `data`;
