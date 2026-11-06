@@ -1,6 +1,6 @@
-# Audit implementazioni — 2026-11-05T16:16:09.087Z
+# Audit implementazioni — 2026-11-06T11:36:55.339Z
 
-- Verifiche totali: **720** · PASS: **720** · FAIL: **0**
+- Verifiche totali: **725** · PASS: **725** · FAIL: **0**
 - Item ✅ in docs/04 senza verifiche dedicate (SCOPERTE): nessuno
 
 | Item | Verifica | Tipo | Esito | Dettaglio |
@@ -364,7 +364,7 @@
 | I105 | contatori suite §Struttura/§Qualità allineati (aggiornare a ogni aggiunta test) (README.md) | simbolo | PASS | — |
 | I123 | contatore §Qualità allineato al numero reale della suite — I122 aveva aggiornato solo §Struttura lasciando §Qualità a 560/1896 (README.md) | simbolo | PASS | — |
 | I123 | badge test allineato al numero reale della suite — I122 lo aveva lasciato a 560 (README.md) | simbolo | PASS | — |
-| I105 | indice documentazione README completo (docs/13 incluso — I139 aggiorna il commento dell'albero, rimasto a 01–12 da I138) (README.md) | simbolo | PASS | — |
+| I105 | indice documentazione README completo (docs/14 incluso — I143 aggiorna il commento dell'albero, rimasto a 01–13 da I139) (README.md) | simbolo | PASS | — |
 | I105 | docs/08 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | docs/09 presente nella tabella indice del README (README.md) | simbolo | PASS | — |
 | I105 | README dichiara il changelog canonico (docs/04 §8) e APP_VERSION come riferimento versione (README.md) | simbolo | PASS | — |
@@ -724,6 +724,11 @@
 | I142 | lo script API dell'apertura (estrazione token admin dal remote, dichiarazione Task 94) resta fuori dall'indice: un commit accidentale non può ripubblicarlo in silenzio — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I142 | il secondo script API post-apertura resta fuori dall'indice: il pattern di estrazione del token non entra nel repo pubblico — nessun file tracciato deve corrispondere | assenza | PASS | — |
 | I142 | il presidio della chiusura della verifica congiunta è raggiungibile dal README (tabella «Dal → Presidio permanente») (README.md) | simbolo | PASS | — |
+| I143 | docs/14 registra l'insight architetturale chiave (§4.2): l'extension host è Node.js e il CORS che impone il proxy browser non esiste — l'MVP non richiede modifiche al progetto web (docs/14-estensione-vscode.md) | simbolo | PASS | — |
+| I143 | l'autorizzazione dell'utente (06/11/2026) è registrata verbatim in docs/14 §9: l'implementazione resta un item futuro (docs/14-estensione-vscode.md) | simbolo | PASS | — |
+| I143 | docs/14 fissa il presidio di sicurezza: la Subscription Key vive solo nel SecretStorage di VS Code (cifrato, non sincronizzato tra macchine) — mai in settings.json, mai nel repo (docs/14-estensione-vscode.md) | simbolo | PASS | — |
+| I143 | il README raggiunge docs/14 (tabella documentazione §7) (README.md) | simbolo | PASS | — |
+| I143 | docs/04 §3 registra l'intervento I143 (analisi — nessun codice introdotto) (docs/04-stato-avanzamento.md) | simbolo | PASS | — |
 | I111 | APP_VERSION allineata al changelog canonico (docs/04 §8, riga più recente) — regola dell'utente «aggiorna sempre la versione», ora presidiata dall'audit e non solo dalla memoria | versione | PASS | — |
 
-Verdetto: **PASS** (720 pass, 0 fail, 0 scoperte)
+Verdetto: **PASS** (725 pass, 0 fail, 0 scoperte)

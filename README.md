@@ -15,7 +15,7 @@ quote live, countdown di reset, analisi d'uso e avvisi, con tutti gli orari nel 
 [![CI](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/amedeo82/MiniMax-Token-Monitor/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-online-2EA44F?logo=vercel&logoColor=white)](https://minimax-token-monitor.vercel.app/)
 [![Test 644 pass](https://img.shields.io/badge/test-644_pass-31C48D)](tests)
-[![Audit 720 PASS](https://img.shields.io/badge/audit-720_PASS-31C48D)](scripts/verifiche)
+[![Audit 725 PASS](https://img.shields.io/badge/audit-725_PASS-31C48D)](scripts/verifiche)
 [![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-5A0FC8)](#funzionalit%C3%A0)
 [![Fuso orario](https://img.shields.io/badge/fuso-Europe%2FRome-4285F4)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31C48D)](LICENSE)
@@ -61,7 +61,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | 4 | [Avvio rapido](#sez-avvio) | locale, demo, chiave reale, import JSON |
 | 5 | [Persistenza server](#sez-persistenza) | SQLite / Turso / Vercel + manutenzione automatica |
 | 6 | [Regole del piano](#sez-regole) | sintesi operativa delle finestre (verdetto V8) |
-| 7 | [Indice della documentazione](#sez-documentazione) | docs/01–13: quando consultare cosa |
+| 7 | [Indice della documentazione](#sez-documentazione) | docs/01–14: quando consultare cosa |
 | 8 | [Stack](#sez-stack) | tecnologie e scelte |
 | 9 | [Struttura del repository](#sez-struttura) | mappa del codice + versione/changelog |
 | 10 | [Verifiche empiriche](#sez-verifiche) | toolkit riproducibile |
@@ -199,7 +199,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 
 #### Audit di riconciliazione
 
-**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 720 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
+**Audit di riconciliazione** (`scripts/verifiche/audit-implementazioni.mjs`): 725 verifiche dichiarative su file/simboli/wiring/assenze con coverage check degli item ✅ — ogni distanza tra documentazione e codice rompe l'audit; dal I111 include il check «versione» che confronta `APP_VERSION` con il changelog canonico (docs/04 §8): **la versione del footer non può più restare indietro**. Presidi permanenti attivati di consegna in consegna:
 
 | Dal | Presidio permanente |
 |-----|---------------------|
@@ -232,6 +232,7 @@ giorno della settimana, media mobile e proiezione di esaurimento.
 | I140 | re-audit completo pre-apertura in docs/11 §7 con il fix dipendenze presidiato (override `fast-uri` in package.json: la produzione non torna ad advisory silenziosamente), 7 file di community presidiati (COC, template issue/PR, SUPPORT, FUNDING) e protezioni del repo registrate in docs/12 §8 |
 | I141 | apertura pubblica del repo eseguita e verificata su clone anonimo fresco (storia pubblica senza segreti), branch protection senza force-push/deletion e canali di sicurezza GitHub attivati al passaggio a pubblico (secret scanning, push protection, PVR) |
 | I142 | chiusura della verifica congiunta post-apertura (le conferme UI dell'utente sono registrate verbatim in docs/12 §5) e presidio del non-tracciamento degli script API con estrazione del token (check `nonTracciato`: non rientrano nell'indice senza lasciare traccia nell'audit) |
+| I143 | analisi estensione VS Code documentata in docs/14 con l'insight CORS/Node presidiato (l'extension host è Node.js: l'MVP non richiede modifiche al progetto web) e il vincolo SecretStorage per la chiave — l'implementazione resta un item futuro su autorizzazione |
 
 #### Audit di sicurezza
 
@@ -442,6 +443,7 @@ con le env Turso impostate esegue invece la lettura read-only del database remot
 | [`docs/11-audit-sicurezza.md`](docs/11-audit-sicurezza.md) | Audit di sicurezza (17/10, I119; **sintesi pubblica I136**): perimetro e metodologia (§1), 24 aree di test (§2), sintesi dei risultati con gravità e remediation (§3), esiti per area (§4), presidi permanenti (§5), checklist di ripetizione (§6) | Prima di ogni rilascio sensibile e come punto di partenza dei prossimi audit; la segnalazione di vulnerabilità segue `SECURITY.md` |
 | [`docs/12-pubblicazione-github.md`](docs/12-pubblicazione-github.md) | Pubblicazione su GitHub (31/10, I136; chiusura I137): esito dell'audit pre-pubblicazione (§2), rotazione token Turso ESEGUITA (§3), riscrittura della storia (§4), passi per aprire il repo (§5), distribuzione per chi clona (§6), presidi attivati (§7) | Prima di rendere pubblico il repo e per distribuire il progetto su altre piattaforme |
 | [`docs/13-analisi-raccolta-background.md`](docs/13-analisi-raccolta-background.md) | Analisi raccolta in background (05/11, I139): comportamento attuale verificato nel codice — il browser è il motore della raccolta (§1), limiti free Vercel/Turso/GitHub verificati con fonti datate (§2), volumi calcolati a 5 min/15 min/1 h — meno dell'1% dei budget (§3), opzioni di scheduling con GitHub Actions raccomandata (§4), architettura consigliata per l'implementazione futura (§5), risposta «ospitare su GitHub» (§6), fonti (§7) | Prima di pianificare la raccolta server-side (I140+) o di ragionare su scheduler e limiti free |
+| [`docs/14-estensione-vscode.md`](docs/14-estensione-vscode.md) | Analisi estensione VS Code (06/11, I143): perché monitorare durante il coding — quota M Plan condivisa tra i tool (§1), come si integra un'estensione: superfici UI, MCP, SecretStorage, packaging VSIX/Marketplace (§2), lato MiniMax con fonti ufficiali e precedenti open-source (§3), riuso dal progetto e insight «extension host = Node.js, niente CORS» (§4), opzioni A via backend / B diretta ⭐ / C ibrida (§5), proposta di sviluppo MVP+fasi con effort (§6), sicurezza e vincoli (§7), fonti (§8) | Prima di autorizzare l'implementazione dell'estensione (MVP §6.2) o di discuterne le fasi |
 
 > **Protocollo per le prossime sessioni**: leggere prima `docs/04-stato-avanzamento.md`
 > (e questo README), lavorare, poi aggiornare lo stato e il changelog. In più
@@ -530,7 +532,7 @@ prisma/schema.prisma                 # UsagePoint + UsageEventRecord + Downsampl
 db/custom.db                         # Database SQLite (bun run db:push)
 public/                              # sw.js + sw-shared.js + icone PWA (I52)
 tests/                               # Suite bun: lib/ (53 file) + components/ (13 componenti) = 644 test / 2332 asserzioni
-docs/          # Questa documentazione (01–13)
+docs/          # Questa documentazione (01–14)
 scripts/       # Artefatti delle ricerche + toolkit verifiche (verifica.mjs, audit-implementazioni.mjs,
                #   backfill-downsample.mjs, quarantena-debris.sh)
 worklog.md     # Registro cronologico delle sessioni di lavoro

@@ -7,12 +7,15 @@
 # (discovery instabile). I file compaiono/scompaiono A ONDATE tra i comandi:
 # lo script RITENTA per ~15s per coglierne una fase presente.
 #
-# Azione: SPOSTA (non cancella) i debris toolchain-breaking in
-# .debris-pre-rollback/ preservando il percorso relativo — reversibile.
+# Azione: SPOSTA (non cancella) i debris toolchain-breaking FUORI dal repo,
+# in /home/z/debris-quarantina-da-rollback preservando il percorso relativo —
+# reversibile. (I143: prima la destinazione era .debris-pre-rollback/ DENTRO il
+# repo — gitignored ma visibile a eslint e alla discovery di bun test: i file
+# in quarantena rompevano lint/test. Fuori dal repo la toolchain li ignora.)
 # I debris inerti (json/png/log) non vengono toccati.
 set -u
 cd "$(dirname "$0")/.."
-DEST=".debris-pre-rollback"
+DEST="/home/z/debris-quarantina-da-rollback"
 mkdir -p "$DEST"
 
 DEBRIS=(
